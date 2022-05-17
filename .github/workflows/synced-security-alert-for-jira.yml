@@ -1,0 +1,38 @@
+name: Dependabot PR to create Jira ticket
+
+on:
+  pull_request:
+    types:
+      - opened
+    branches:
+      - master
+      - main
+      - develop
+#  workflow_dispatch:
+  
+env:
+  JIRA_BASE_URL: https://runai.atlassian.net
+  JIRA_USER_EMAIL: jira-bot@run.ai
+  JIRA_API_TOKEN: ${{ secrets.JIRA_SECRET }}
+  JIRA_PROJECT: RUN
+  JIRA_ISSUE_TYPE: Bug
+
+jobs:
+  create_jira:
+    name: Dependabot Jira
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+    - name: Login to Jira
+      uses: atlassian/gajira-login@master
+    - name: Create Jira Issue
+      id: create
+      uses: atlassian/gajira-create@v2.0.1
+      with:
+        project: ${{ env.JIRA_PROJECT }}
+        issuetype: ${{ env.JIRA_ISSUE_TYPE }}
+        summary: |
+          [Vulnerability fix][Repo: ${{github.event.repository.name }}] ${{github.event.pull_request.title }}
+        description: |
+          Action required: Browse to pull request: ${{github.event.pull_request.html_url }}. If CircleCI tests have passed, force merge the pull request. Note: the Jira - Github integration will not work due to the Dependabot pull request name not including the Jira ticket name.
+        fields: '{"customfield_10014": "RUN-1296"}'  # Security Epic
