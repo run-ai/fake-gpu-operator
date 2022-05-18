@@ -1,17 +1,41 @@
 BUILD_DIR="./bin"
+COMPONENT="$1"
 
-compile:
+DOCKER_REPO_BASE="localhost:5001/fake-gpu-operator"
+DOCKER_REPO_FULL="${DOCKER_REPO_BASE}/${COMPONENT}"
+DOCKER_TAG="dev"
+DOCKER_IMAGE_NAME="${DOCKER_REPO_FULL}:${DOCKER_TAG}"
+NAMESPACE="gpu-operator"
+
+build:
 	go build -o ${BUILD_DIR}/ ./cmd/...
 
-device-plugin-image:
-	docker build -t device-plugin --target device_plugin .
+clean:
+	rm -rf ${BUILD_DIR}
 
-status-updater-image:
-	docker build -t status-updater --target status_updater .
+image:
+	docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
+.PHONY: image
 
-status-exporter-image:
-	docker build -t status-exporter --target status_exporter .
+images:
+	make image COMPONENT=device-plugin
+	make image COMPONENT=status-updater
+	make image COMPONENT=status-exporter
+.PHONY: images
 
-images: device-plugin-image status-updater-image status-exporter-image
+push:
+	docker push ${DOCKER_IMAGE_NAME}
+.PHONY: push
 
-all: compile-all
+restart: 
+	kubectl delete pod -l component=${COMPONENT} --force -n ${NAMESPACE}
+.PHONY: restart
+
+deploy: image push restart
+.PHONY: deploy
+
+deploy-all:
+	make image push restart COMPONENT=device-plugin
+	make image push restart COMPONENT=status-updater
+	make image push restart COMPONENT=status-exporter
+.PHONY: deploy-all
