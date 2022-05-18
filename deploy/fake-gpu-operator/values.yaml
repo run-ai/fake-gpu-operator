@@ -3,18 +3,21 @@ devicePlugin:
     pullPolicy: Always
     repository: local-registry:5000/fake-gpu-operator/device-plugin
     tag: shaibi
+  resources: {}
 
 statusUpdater:
   image:
     pullPolicy: Always
     repository: local-registry:5000/fake-gpu-operator/status-updater
     tag: shaibi
+  resources: {}
 
 statusExporter:
   image:
     pullPolicy: Always
     repository: local-registry:5000/fake-gpu-operator/status-exporter
     tag: shaibi
+  resources: {}
 
 initialTopology:
   mig-strategy: mixed
@@ -23,13 +26,13 @@ initialTopology:
       gpu-memory: 11441
       gpu-product: Tesla-K80
       gpus:
-        - id: GPU-8fc73fbd-91f0-697e-57ef-fc978bd54af1
-        - id: GPU-kdiue726-57ef-91f0-837f-qjk49djklsk8
-        - id: GPU-kdiue726-57ef-91f0-837f-qjk49djklsk9
+        - id: GPU-6de1ec65-e910-5703-838b-ca2779350d75
+        - id: GPU-0592860a-dde6-5271-b4d4-2e09c493ac17
+        - id: GPU-5acec625-9708-5daf-9606-31a390e15034
     runai-worker2:
       gpu-memory: 11441
       gpu-product: Tesla-K80
       gpus:
-        - id: GPU-8fc73fbd-91f0-697e-57ef-fc978bd54af1
-        - id: GPU-kdiue726-57ef-91f0-837f-qjk49djklsk8
-        - id: GPU-kdiue726-57ef-91f0-837f-qjk49djklsk9
+        - id: GPU-874d39c4-b9c2-5bcb-bd07-c20f10728e74
+        - id: GPU-46c8bc28-11d7-5dc3-b0e2-a618e2b67921
+        - id: GPU-46108677-5f0e-5798-b76d-62580837de06

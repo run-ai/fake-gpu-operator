@@ -20,6 +20,9 @@ spec:
     spec:
       containers:
         - image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag }}"
+          imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
+          resources:
+            {{- toYaml .Values.statusExporter.resources | nindent 12 }}
           name: nvidia-dcgm-exporter
           env:
             - name: NODE_NAME
@@ -43,6 +46,7 @@ spec:
       schedulerName: default-scheduler
       serviceAccount: status-exporter
       serviceAccountName: status-exporter
+
       tolerations:
         - effect: NoSchedule
           key: nvidia.com/gpu

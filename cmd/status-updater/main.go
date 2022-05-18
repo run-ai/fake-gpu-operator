@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/run-ai/gpu-mock-stack/internal/common/config"
 	"github.com/run-ai/gpu-mock-stack/internal/status-updater/handle"
 	"github.com/run-ai/gpu-mock-stack/internal/status-updater/inform"
 	"k8s.io/client-go/kubernetes"
@@ -15,7 +16,8 @@ import (
 func main() {
 	log.Println("Fake Status Updater Running")
 
-	validateEnvs()
+	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
+	config.ValidateConfig(requiredEnvVars)
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -36,14 +38,4 @@ func main() {
 	s := <-sig
 	log.Printf("Received signal \"%v\"\n", s)
 	close(stopper)
-}
-
-func validateEnvs() {
-	requiredEnvs := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
-	for _, env := range requiredEnvs {
-		if os.Getenv(env) == "" {
-			log.Printf("%s must be set\n", env)
-			os.Exit(1)
-		}
-	}
 }

@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/run-ai/gpu-mock-stack/internal/common/config"
 	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
 	"github.com/run-ai/gpu-mock-stack/internal/deviceplugin"
 )
@@ -13,7 +14,8 @@ import (
 func main() {
 	log.Println("Fake Device Plugin Running")
 
-	validateEnvs()
+	requiredEnvVars := []string{"TOPOLOGY_PATH", "NODE_NAME"}
+	config.ValidateConfig(requiredEnvVars)
 
 	topology, err := topology.GetNodeTopologyFromFs(os.Getenv("TOPOLOGY_PATH"), os.Getenv("NODE_NAME"))
 	if err != nil {
@@ -29,14 +31,4 @@ func main() {
 
 	s := <-sig
 	log.Printf("Received signal \"%v\"\n", s)
-}
-
-func validateEnvs() {
-	requiredEnvs := []string{"TOPOLOGY_PATH", "NODE_NAME"}
-	for _, env := range requiredEnvs {
-		if os.Getenv(env) == "" {
-			log.Printf("%s must be set\n", env)
-			os.Exit(1)
-		}
-	}
 }

@@ -62,7 +62,6 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 func createDevices(devCount int) []*pluginapi.Device {
 	var devs []*pluginapi.Device
 	for i := 0; i < devCount; i++ {
-		// GuyTODO: use a real UUID
 		u, _ := uuid.NewRandom()
 		devs = append(devs, &pluginapi.Device{
 			ID:     u.String(),

@@ -20,14 +20,9 @@ spec:
       containers:
         - name: status-updater
           image: "{{ .Values.statusUpdater.image.repository }}:{{ .Values.statusUpdater.image.tag }}"
-          imagePullPolicy: Always
+          imagePullPolicy: "{{ .Values.statusUpdater.image.pullPolicy }}"
           resources:
-            requests:
-              cpu: 100m
-              memory: 100Mi
-            limits:
-              cpu: 100m
-              memory: 100Mi
+            {{- toYaml .Values.statusUpdater.resources | nindent 12 }}
           env:
             - name: TOPOLOGY_CM_NAME
               value: topology
