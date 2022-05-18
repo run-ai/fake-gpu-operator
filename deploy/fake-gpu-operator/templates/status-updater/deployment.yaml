@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: status-updater
+
+  labels:
+    app: status-updater
+spec:
+  selector:
+    matchLabels:
+      app: status-updater
+      component: status-updater
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: status-updater
+        component: status-updater
+    spec:
+      containers:
+        - name: status-updater
+          image: "{{ .Values.statusUpdater.image.repository }}:{{ .Values.statusUpdater.image.tag }}"
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 100m
+              memory: 100Mi
+          env:
+            - name: TOPOLOGY_CM_NAME
+              value: topology
+            - name: TOPOLOGY_CM_NAMESPACE
+              value: gpu-operator
+      restartPolicy: Always
+      serviceAccountName: status-updater

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    openshift.io/scc: nvidia-dcgm-exporter
+  labels:
+    app: nvidia-dcgm-exporter
+    component: status-exporter
+  name: nvidia-dcgm-exporter
+
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-dcgm-exporter
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nvidia-dcgm-exporter
+    spec:
+      containers:
+        - image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag }}"
+          name: nvidia-dcgm-exporter
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: TOPOLOGY_CM_NAME
+              value: topology
+            - name: TOPOLOGY_CM_NAMESPACE
+              value: gpu-operator
+          ports:
+            - containerPort: 9400
+              name: http
+          volumeMounts:
+            - mountPath: /etc/config/
+              name: topology
+      nodeSelector:
+        nvidia.com/gpu.deploy.dcgm-exporter: "true"
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccount: status-exporter
+      serviceAccountName: status-exporter
+      tolerations:
+        - effect: NoSchedule
+          key: nvidia.com/gpu
+          operator: Exists
+      volumes:
+        - configMap:
+            name: topology
+          name: topology
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
