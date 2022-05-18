@@ -27,6 +27,6 @@ spec:
             - name: TOPOLOGY_CM_NAME
               value: topology
             - name: TOPOLOGY_CM_NAMESPACE
-              value: gpu-operator
+              value: "{{ .Release.Namespace }}"
       restartPolicy: Always
       serviceAccountName: status-updater

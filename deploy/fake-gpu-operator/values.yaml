@@ -18,6 +18,7 @@ statusExporter:
     repository: local-registry:5000/fake-gpu-operator/status-exporter
     tag: shaibi
   resources: {}
+  topologyMaxExportInterval: 10s
 
 initialTopology:
   mig-strategy: mixed

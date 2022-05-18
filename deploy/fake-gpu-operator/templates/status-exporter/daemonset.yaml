@@ -32,7 +32,9 @@ spec:
             - name: TOPOLOGY_CM_NAME
               value: topology
             - name: TOPOLOGY_CM_NAMESPACE
-              value: gpu-operator
+              value: "{{ .Release.Namespace }}"
+            - name: TOPOLOGY_MAX_EXPORT_INTERVAL
+              value: "{{ .Values.statusExporter.topologyMaxExportInterval }}"
           ports:
             - containerPort: 9400
               name: http

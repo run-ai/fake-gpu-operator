@@ -66,6 +66,7 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
 			if err != nil {
 				panic(err)
 			}
+
 			w.publishTopology(clusterTopology)
 
 		case <-stopCh:
