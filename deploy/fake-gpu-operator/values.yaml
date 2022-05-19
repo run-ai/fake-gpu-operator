@@ -22,12 +22,13 @@ statusExporter:
 
 initialTopology:
   mig-strategy: mixed
-  nodes:
-    runai-worker:
-      gpu-count: 8
-      gpu-memory: 11441
-      gpu-product: Tesla-K80
-    runai-worker2:
-      gpu-count: 8
-      gpu-memory: 11441
-      gpu-product: Tesla-K80
+  nodes: {}
+    # nodes can be defined in the following ways:
+    # runai-worker:
+    #   gpu-count: 8
+    #   gpu-memory: 11441
+    #   gpu-product: Tesla-K80
+    # runai-worker2:
+    #   gpu-count: 16
+    #   gpu-memory: 11441
+    #   gpu-product: Tesla-K80

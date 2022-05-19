@@ -172,9 +172,11 @@ func (p *PodEventHandler) resetTopologyStatus() error {
 		return err
 	}
 
-	for _, node := range clusterTopology.Nodes {
+	for nodeName, node := range clusterTopology.Nodes {
 		if node.GpuCount != 0 && len(node.Gpus) != node.GpuCount {
+			log.Printf("Node %s has %d GPUs, but %d GPUs are requested. Generating GPUs...\n", nodeName, len(node.Gpus), node.GpuCount)
 			node.Gpus = generateGpuDetails(node.GpuCount)
+			clusterTopology.Nodes[nodeName] = node
 		}
 
 		for _, gpu := range node.Gpus {
