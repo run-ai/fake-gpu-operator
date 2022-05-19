@@ -166,7 +166,6 @@ func (p *PodEventHandler) updateTopology(newTopology *topology.ClusterTopology, 
 	return err
 }
 
-// ResetTopologyStatus resets the status of the topology configmap
 func (p *PodEventHandler) resetTopologyStatus() error {
 	cm, clusterTopology, err := p.getTopology()
 	if err != nil {
@@ -174,10 +173,25 @@ func (p *PodEventHandler) resetTopologyStatus() error {
 	}
 
 	for _, node := range clusterTopology.Nodes {
+		if node.GpuCount != 0 && len(node.Gpus) != node.GpuCount {
+			node.Gpus = generateGpuDetails(node.GpuCount)
+		}
+
 		for _, gpu := range node.Gpus {
 			gpu.Metrics = topology.GpuMetrics{}
 		}
 	}
 
 	return p.updateTopology(clusterTopology, cm)
+}
+
+func generateGpuDetails(gpuCount int) []topology.GpuDetails {
+	gpus := make([]topology.GpuDetails, gpuCount)
+	for idx := range gpus {
+		gpus[idx] = topology.GpuDetails{
+			ID: fmt.Sprintf("gpu-%d", idx),
+		}
+	}
+
+	return gpus
 }

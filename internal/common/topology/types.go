@@ -9,6 +9,7 @@ type ClusterTopology struct {
 }
 
 type NodeTopology struct {
+	GpuCount   int          `yaml:"gpu-count"`
 	GpuMemory  int          `yaml:"gpu-memory"`
 	GpuProduct string       `yaml:"gpu-product"`
 	Gpus       []GpuDetails `yaml:"gpus"`

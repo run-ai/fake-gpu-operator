@@ -38,9 +38,6 @@ spec:
           ports:
             - containerPort: 9400
               name: http
-          volumeMounts:
-            - mountPath: /etc/config/
-              name: topology
       nodeSelector:
         nvidia.com/gpu.deploy.dcgm-exporter: "true"
       priorityClassName: system-node-critical
@@ -48,15 +45,10 @@ spec:
       schedulerName: default-scheduler
       serviceAccount: status-exporter
       serviceAccountName: status-exporter
-
       tolerations:
         - effect: NoSchedule
           key: nvidia.com/gpu
           operator: Exists
-      volumes:
-        - configMap:
-            name: topology
-          name: topology
   updateStrategy:
     rollingUpdate:
       maxSurge: 0
