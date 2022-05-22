@@ -94,7 +94,7 @@ func (p *PodEventHandler) processPodEvents(stopCh <-chan struct{}) {
 }
 
 func (p *PodEventHandler) handleAdd(podEvent *inform.PodEvent, clusterTopology *topology.ClusterTopology, topologyCm *v1.ConfigMap) error {
-	requestedGpus := podEvent.Pod.Spec.Containers[0].Resources.Requests.Name("nvidia.com/gpu", "")
+	requestedGpus := podEvent.Pod.Spec.Containers[0].Resources.Limits.Name("nvidia.com/gpu", "")
 	if requestedGpus == nil {
 		return fmt.Errorf("no GPUs requested in pod %s", podEvent.Pod.Name)
 	}
@@ -102,10 +102,10 @@ func (p *PodEventHandler) handleAdd(podEvent *inform.PodEvent, clusterTopology *
 	requestedGpusCount := requestedGpus.Value()
 	log.Printf("Requested GPUs: %d\n", requestedGpusCount)
 	for idx, gpu := range clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].Gpus {
-		if gpu.Metrics.GpuStatus.Utilization == 0 {
-			log.Printf("GPU %s is free\n", gpu.ID)
-			gpu.Metrics.GpuStatus.Utilization = 100
-			gpu.Metrics.GpuStatus.FbUsed = clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].GpuMemory
+		if gpu.Metrics.Status.Utilization == 0 {
+			log.Printf("GPU %s is free, allocating...\n", gpu.ID)
+			gpu.Metrics.Status.Utilization = 100
+			gpu.Metrics.Status.FbUsed = clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].GpuMemory
 			gpu.Metrics.Metadata.Namespace = podEvent.Pod.Namespace
 			gpu.Metrics.Metadata.Pod = podEvent.Pod.Name
 			gpu.Metrics.Metadata.Container = podEvent.Pod.Spec.Containers[0].Name

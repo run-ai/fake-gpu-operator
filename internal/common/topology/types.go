@@ -21,13 +21,16 @@ type GpuDetails struct {
 }
 
 type GpuMetrics struct {
-	Metadata struct {
-		Namespace string `yaml:"namespace"`
-		Pod       string `yaml:"pod"`
-		Container string `yaml:"container"`
-	} `yaml:"metadata"`
-	GpuStatus
+	Metadata GpuMetricsMetadata `yaml:"metadata"`
+	Status   GpuStatus          `yaml:"status"`
 }
+
+type GpuMetricsMetadata struct {
+	Namespace string `yaml:"namespace"`
+	Pod       string `yaml:"pod"`
+	Container string `yaml:"container"`
+}
+
 type GpuStatus struct {
 	Utilization int `yaml:"utilization"`
 	FbUsed      int `yaml:"fb-used"`

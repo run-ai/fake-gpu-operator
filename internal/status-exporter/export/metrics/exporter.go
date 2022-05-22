@@ -67,9 +67,9 @@ func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
 			"container": gpu.Metrics.Metadata.Container,
 		}
 
-		gpuUtilization.With(labels).Set(float64(gpu.Metrics.Utilization))
-		gpuFbUsed.With(labels).Set(float64(gpu.Metrics.FbUsed))
-		gpuFbFree.With(labels).Set(float64(node.GpuMemory - gpu.Metrics.FbUsed))
+		gpuUtilization.With(labels).Set(float64(gpu.Metrics.Status.Utilization))
+		gpuFbUsed.With(labels).Set(float64(gpu.Metrics.Status.FbUsed))
+		gpuFbFree.With(labels).Set(float64(node.GpuMemory - gpu.Metrics.Status.FbUsed))
 	}
 }
 
