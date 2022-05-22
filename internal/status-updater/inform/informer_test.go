@@ -3,6 +3,7 @@ package inform_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ var _ = Describe("Informer", func() {
 
 	var (
 		kubeclient *fake.Clientset
-		inf        *inform.Informer
+		informer   *inform.Informer
 		pod        *v1.Pod
 		ch         chan *inform.PodEvent
 		stopCh     chan struct{}
@@ -35,15 +36,21 @@ var _ = Describe("Informer", func() {
 
 	BeforeEach(func() {
 		kubeclient = fake.NewSimpleClientset()
-		inf = inform.NewInformer(kubeclient)
+		informer = inform.NewInformer(kubeclient)
 		ch = make(chan *inform.PodEvent)
-		inf.Subscribe(ch)
+		informer.Subscribe(ch)
 		stopCh = make(chan struct{})
-		go inf.Run(stopCh)
+		go func() {
+			// Somehow the informer may not catch events if it is starting in the same
+			// time as the events submission, so we wait.
+			time.Sleep(50 * time.Millisecond)
+			informer.Run(stopCh)
+		}()
 	})
 
 	AfterEach(func() {
 		close(stopCh)
+		<-ch
 	})
 
 	Context("pod event is received", func() {
