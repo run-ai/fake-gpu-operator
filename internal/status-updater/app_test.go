@@ -27,7 +27,7 @@ const (
 	podName             = "fake-pod-name"
 	containerName       = "fake-container-name"
 	node                = "fake-node"
-	gpuCount            = 2
+	nodeGpuCount        = 2
 )
 
 func TestStatusUpdater(t *testing.T) {
@@ -46,7 +46,7 @@ var _ = Describe("StatusUpdater", func() {
 			Nodes: map[string]topology.NodeTopology{
 				node: {
 					GpuMemory:  11441,
-					GpuCount:   gpuCount,
+					GpuCount:   nodeGpuCount,
 					GpuProduct: "Tesla-K80",
 				},
 			},
@@ -74,35 +74,38 @@ var _ = Describe("StatusUpdater", func() {
 	When("the status updater is started", func() {
 		It("should reset the cluster topology", func() {
 			go status_updater.Run()
-			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(gpuCount)))
+			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount)))
 		})
 	})
 
-	When("GPU pod is added", func() {
+	When("informed of a GPU pod", func() {
 		type testCase struct {
-			gpuCount int64
-			podPhase v1.PodPhase
+			podGpuCount int64
+			podPhase    v1.PodPhase
 		}
+
 		cases := []testCase{}
 
-		for i := int64(0); i < gpuCount; i++ {
+		for i := int64(1); i <= nodeGpuCount; i++ {
 			for _, phase := range []v1.PodPhase{v1.PodPending, v1.PodRunning, v1.PodSucceeded, v1.PodFailed, v1.PodUnknown} {
 				cases = append(cases, testCase{
-					gpuCount: i,
-					podPhase: phase,
+					podGpuCount: i,
+					podPhase:    phase,
 				})
 			}
 		}
 
 		for _, caseDetails := range cases {
-			caseName := fmt.Sprintf("GPU count %d, pod phase %s", caseDetails.gpuCount, caseDetails.podPhase)
-			It(caseName, func() {
-				pod := createPod(caseDetails.gpuCount, caseDetails.podPhase)
+			caseBaseName := fmt.Sprintf("GPU count %d, pod phase %s", caseDetails.podGpuCount, caseDetails.podPhase)
+			It(caseBaseName, func() {
+				go status_updater.Run()
+
+				pod := createPod(caseDetails.podGpuCount, caseDetails.podPhase)
 				kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 
-				expectedTopology := createTopology(gpuCount)
+				expectedTopology := createTopology(nodeGpuCount)
 				if caseDetails.podPhase == v1.PodRunning {
-					for i := 0; i < int(caseDetails.gpuCount); i++ {
+					for i := 0; i < int(caseDetails.podGpuCount); i++ {
 						expectedTopology.Nodes[node].Gpus[i].Metrics.Status.Utilization = 100
 						expectedTopology.Nodes[node].Gpus[i].Metrics.Status.FbUsed = expectedTopology.Nodes[node].GpuMemory
 						expectedTopology.Nodes[node].Gpus[i].Metrics.Metadata.Pod = podName
@@ -111,8 +114,10 @@ var _ = Describe("StatusUpdater", func() {
 					}
 				}
 
-				go status_updater.Run()
 				Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
+
+				kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+				Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount)))
 			})
 		}
 	})
@@ -155,7 +160,7 @@ func createTopology(gpuCount int64) *topology.ClusterTopology {
 		Nodes: map[string]topology.NodeTopology{
 			node: {
 				GpuMemory:  11441,
-				GpuCount:   2,
+				GpuCount:   int(gpuCount),
 				GpuProduct: "Tesla-K80",
 				Gpus:       gpus,
 			},

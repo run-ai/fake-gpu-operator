@@ -2,6 +2,8 @@
 package inform
 
 import (
+	"log"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/informers"
@@ -82,16 +84,19 @@ func (inf *Informer) Subscribe(subscriber chan<- *PodEvent) {
 func (inf *Informer) Run(stopCh <-chan struct{}) {
 	defer inf.closeSubscribers()
 
+	log.Printf("Starting informer\n")
 	inf.podInformer.Run(stopCh)
 }
 
 func (inf *Informer) closeSubscribers() {
+	log.Printf("Closing informer subscribers\n")
 	for _, subscriber := range inf.subscribers {
 		close(subscriber)
 	}
 }
 
 func (inf *Informer) publishPodEvent(pod *v1.Pod, eventType EventType) {
+	log.Printf("Publishing pod event: %s\n", pod.Name)
 	for _, subscriber := range inf.subscribers {
 		subscriber <- &PodEvent{
 			Pod:       pod,
