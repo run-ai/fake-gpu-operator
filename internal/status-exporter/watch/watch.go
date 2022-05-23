@@ -9,5 +9,5 @@ import (
 
 type Interface interface {
 	Subscribe(subscriber chan<- *topology.ClusterTopology)
-	Watch(stopCh <-chan struct{})
+	Watch(stopCh <-chan struct{}, readyCh chan<- struct{})
 }

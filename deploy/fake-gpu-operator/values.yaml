@@ -23,7 +23,7 @@ statusExporter:
 initialTopology:
   mig-strategy: mixed
   nodes: {}
-    # nodes can be defined in the following ways:
+    # nodes can be defined in the following way:
     # runai-worker:
     #   gpu-count: 8
     #   gpu-memory: 11441

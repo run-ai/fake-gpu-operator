@@ -16,10 +16,10 @@ func GetFromKube(kubeclient kubernetes.Interface) (*ClusterTopology, error) {
 		panic(err)
 	}
 
-	return ParseConfigMap(topologyCm)
+	return FromConfigMap(topologyCm)
 }
 
-func ParseConfigMap(cm *corev1.ConfigMap) (*ClusterTopology, error) {
+func FromConfigMap(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 	var clusterTopology ClusterTopology
 	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)
 	if err != nil {
@@ -27,4 +27,23 @@ func ParseConfigMap(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 	}
 
 	return &clusterTopology, nil
+}
+
+func ToConfigMap(clusterTopology *ClusterTopology) (*corev1.ConfigMap, error) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      os.Getenv("TOPOLOGY_CM_NAME"),
+			Namespace: os.Getenv("TOPOLOGY_CM_NAMESPACE"),
+		},
+		Data: make(map[string]string),
+	}
+
+	topologyData, err := yaml.Marshal(clusterTopology)
+	if err != nil {
+		return nil, err
+	}
+
+	cm.Data[CmTopologyKey] = string(topologyData)
+
+	return cm, nil
 }

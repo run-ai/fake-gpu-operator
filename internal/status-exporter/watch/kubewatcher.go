@@ -30,13 +30,17 @@ func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
 	w.subscribers = append(w.subscribers, subscriber)
 }
 
-func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
+func (w *KubeWatcher) Watch(stopCh <-chan struct{}, readyCh chan<- struct{}) {
 	cmWatch, err := w.kubeclient.CoreV1().ConfigMaps(os.Getenv("TOPOLOGY_CM_NAMESPACE")).Watch(context.TODO(), metav1.ListOptions{
 		FieldSelector: "metadata.name=" + os.Getenv("TOPOLOGY_CM_NAME"),
 		Watch:         true,
 	})
 	if err != nil {
 		panic(err)
+	}
+
+	if readyCh != nil {
+		readyCh <- struct{}{}
 	}
 
 	maxInterval, err := time.ParseDuration(os.Getenv("TOPOLOGY_MAX_EXPORT_INTERVAL"))
@@ -52,7 +56,7 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
 				if cm, ok := e.Object.(*corev1.ConfigMap); ok {
 					ticker.Reset(maxInterval)
 					log.Printf("Got topology update, publishing...\n")
-					clusterTopology, err := topology.ParseConfigMap(cm)
+					clusterTopology, err := topology.FromConfigMap(cm)
 					if err != nil {
 						panic(err)
 					}

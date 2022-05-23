@@ -20,15 +20,15 @@ var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 	return kubernetes.NewForConfigOrDie(c)
 }
 
-func Run() {
+func Run(readyCh chan<- struct{}) {
 	requiredEnvVars := []string{"NODE_NAME", "TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
 	config.ValidateConfig(requiredEnvVars)
 
-	config, err := rest.InClusterConfig()
+	config, err := InClusterConfigFn()
 	if err != nil {
 		panic(err.Error())
 	}
-	kubeclient := kubernetes.NewForConfigOrDie(config)
+	kubeclient := KubeClientFn(config)
 
 	// Watch for changes, and export metrics
 	stopper := make(chan struct{})
@@ -36,7 +36,7 @@ func Run() {
 	var metricExporter export.Interface = metrics.NewMetricsExporter(watcher)
 	var labelsExporter export.Interface = labels.NewLabelsExporter(watcher, kubeclient)
 
-	go watcher.Watch(stopper)
+	go watcher.Watch(stopper, readyCh)
 	go metricExporter.Run(stopper)
 	go labelsExporter.Run(stopper)
 

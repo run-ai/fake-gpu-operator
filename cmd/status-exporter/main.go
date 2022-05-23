@@ -9,5 +9,5 @@ import (
 func main() {
 	log.Println("Fake Status Exporter Running")
 
-	status_exporter.Run()
+	status_exporter.Run(nil)
 }
