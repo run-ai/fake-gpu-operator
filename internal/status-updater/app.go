@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/run-ai/gpu-mock-stack/internal/common/config"
-	"github.com/run-ai/gpu-mock-stack/internal/status-updater/handle"
-	"github.com/run-ai/gpu-mock-stack/internal/status-updater/inform"
+	"github.com/run-ai/fake-gpu-operator/internal/common/config"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/handle"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

@@ -11,8 +11,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
-	"github.com/run-ai/gpu-mock-stack/internal/status-updater/inform"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

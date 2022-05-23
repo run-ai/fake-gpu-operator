@@ -6,7 +6,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	status_updater "github.com/run-ai/gpu-mock-stack/internal/status-updater"
+	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 )
 
 var InClusterConfigFn = rest.InClusterConfig

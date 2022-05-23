@@ -1,4 +1,4 @@
-module github.com/run-ai/gpu-mock-stack
+module github.com/run-ai/fake-gpu-operator
 
 go 1.18
 

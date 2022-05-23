@@ -10,9 +10,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/watch"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
 )
 
 type MetricsExporter struct {

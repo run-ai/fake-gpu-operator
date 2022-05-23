@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"

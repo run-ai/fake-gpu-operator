@@ -9,9 +9,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/watch"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
 	"k8s.io/client-go/kubernetes"
 )
 

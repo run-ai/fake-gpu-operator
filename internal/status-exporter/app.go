@@ -6,11 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/run-ai/gpu-mock-stack/internal/common/config"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export/labels"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export/metrics"
-	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/watch"
+	"github.com/run-ai/fake-gpu-operator/internal/common/config"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

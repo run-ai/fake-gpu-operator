@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	status_exporter "github.com/run-ai/gpu-mock-stack/internal/status-exporter"
+	status_exporter "github.com/run-ai/fake-gpu-operator/internal/status-exporter"
 )
 
 func main() {

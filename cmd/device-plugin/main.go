@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/run-ai/gpu-mock-stack/internal/common/config"
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
-	"github.com/run-ai/gpu-mock-stack/internal/deviceplugin"
+	"github.com/run-ai/fake-gpu-operator/internal/common/config"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/deviceplugin"
 )
 
 func main() {

@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"

@@ -4,7 +4,7 @@ Watches for changes in the topology status and sends the new topology to all sub
 package watch
 
 import (
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 )
 
 type Interface interface {

@@ -16,8 +16,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
-	"github.com/run-ai/gpu-mock-stack/internal/common/topology"
-	status_updater "github.com/run-ai/gpu-mock-stack/internal/status-updater"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 )
 
 const (
