@@ -52,23 +52,29 @@ var _ = Describe("StatusExporter", func() {
 		kubeclient kubernetes.Interface
 	)
 
-	BeforeEach(func() {
-		// Prepare the status exporter
-		fakeNode := &corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   nodeName,
-				Labels: map[string]string{},
-			},
-		}
-		kubeclient = fake.NewSimpleClientset(fakeNode)
-		setupFakes(kubeclient)
-		setupConfig()
+	// BeforeEach(func() {
+	// 	// Prepare the status exporter
+	// })
+	fakeNode := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   nodeName,
+			Labels: map[string]string{},
+		},
+	}
+	kubeclient = fake.NewSimpleClientset(fakeNode)
+	setupFakes(kubeclient)
+	setupConfig()
 
-		readyChan := make(chan struct{})
-		go status_exporter.Run(readyChan)
-		// Wait for the status exporter to initialize
-		<-readyChan
-	})
+	readyChan := make(chan struct{})
+	go status_exporter.Run(readyChan)
+	// Wait for the status exporter to initialize
+	<-readyChan
+
+	// Create initial topology
+	initialTopology := createInitialTopology()
+	cm, err := topology.ToConfigMap(initialTopology)
+	Expect(err).To(BeNil())
+	kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 
 	cases := getTestCases()
 
@@ -80,7 +86,8 @@ var _ = Describe("StatusExporter", func() {
 			cm, err := topology.ToConfigMap(caseDetails.clusterTopology)
 			Expect(err).ToNot(HaveOccurred())
 
-			kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+			_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
+			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(getNodeLabelsFromKube(kubeclient)).WithTimeout(19 * time.Second).Should(Equal(caseDetails.expectedLabels))
 			Eventually(getNodeMetrics()).Should(ContainElements(caseDetails.expectedMetrics))
@@ -292,6 +299,12 @@ func getTestCases() map[string]testCase {
 					},
 				},
 			},
+			expectedLabels: map[string]string{
+				"nvidia.com/gpu.memory":   "20000",
+				"nvidia.com/gpu.count":    "2",
+				"nvidia.com/mig.strategy": "mixed",
+				"nvidia.com/gpu.product":  "Tesla P100",
+			},
 			expectedMetrics: []*dto.MetricFamily{
 				{
 					Name: createPtr("DCGM_FI_DEV_GPU_UTIL"),
@@ -363,6 +376,34 @@ func getTestCases() map[string]testCase {
 							}),
 							Gauge: &dto.Gauge{
 								Value: createPtr(float64(20000)),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func createInitialTopology() *topology.ClusterTopology {
+	return &topology.ClusterTopology{
+		MigStrategy: "mixed",
+		Nodes: map[string]topology.NodeTopology{
+			nodeName: {
+				GpuMemory:  20000,
+				GpuProduct: "Tesla P100",
+				Gpus: []topology.GpuDetails{
+					{
+						ID: "fake-gpu-id-1",
+						Metrics: topology.GpuMetrics{
+							Metadata: topology.GpuMetricsMetadata{
+								Namespace: podNamespace,
+								Pod:       podName,
+								Container: containerName,
+							},
+							Status: topology.GpuStatus{
+								Utilization: 100,
+								FbUsed:      20000,
 							},
 						},
 					},
