@@ -33,7 +33,6 @@ func main() {
 	var metricExporter export.Interface = metrics.NewMetricsExporter(watcher)
 	var labelsExporter export.Interface = labels.NewLabelsExporter(watcher, kubeclient)
 
-	// Wait for
 	go watcher.Watch(stopper)
 	go metricExporter.Run(stopper)
 	go labelsExporter.Run(stopper)
