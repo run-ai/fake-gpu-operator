@@ -30,11 +30,11 @@ type PodEventHandler struct {
 
 var _ Interface = &PodEventHandler{}
 
-func NewPodEventHandler(kubeclient kubernetes.Interface, informer inform.Interface) PodEventHandler {
+func NewPodEventHandler(kubeclient kubernetes.Interface, informer inform.Interface) *PodEventHandler {
 	podEvents := make(chan *inform.PodEvent)
 	informer.Subscribe(podEvents)
 
-	p := PodEventHandler{
+	p := &PodEventHandler{
 		podEvents:  podEvents,
 		kubeclient: kubeclient,
 	}

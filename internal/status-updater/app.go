@@ -28,8 +28,8 @@ func Run() {
 	}
 	kubeclient := KubeClientFn(config)
 
-	informer := inform.NewInformer(kubeclient)
-	handler := handle.NewPodEventHandler(kubeclient, informer)
+	var informer inform.Interface = inform.NewInformer(kubeclient)
+	var handler handle.Interface = handle.NewPodEventHandler(kubeclient, informer)
 
 	stopper := make(chan struct{})
 	go handler.Run(stopper)

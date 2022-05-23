@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/run-ai/gpu-mock-stack/internal/common/config"
+	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export"
 	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export/labels"
 	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/export/metrics"
 	"github.com/run-ai/gpu-mock-stack/internal/status-exporter/watch"
@@ -28,9 +29,9 @@ func main() {
 
 	// Watch for changes, and export metrics
 	stopper := make(chan struct{})
-	watcher := watch.NewKubeWatcher(kubeclient)
-	metricExporter := metrics.NewMetricsExporter(watcher)
-	labelsExporter := labels.NewLabelsExporter(watcher, kubeclient)
+	var watcher watch.Interface = watch.NewKubeWatcher(kubeclient)
+	var metricExporter export.Interface = metrics.NewMetricsExporter(watcher)
+	var labelsExporter export.Interface = labels.NewLabelsExporter(watcher, kubeclient)
 
 	// Wait for
 	go watcher.Watch(stopper)
