@@ -1,21 +1,21 @@
 devicePlugin:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-lab/fake-gpu-operator/device-plugin
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/device-plugin
     tag: 0.0.1
   resources: {}
 
 statusUpdater:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-lab/fake-gpu-operator/status-updater
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/status-updater
     tag: 0.0.1
   resources: {}
 
 statusExporter:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-lab/fake-gpu-operator/status-exporter
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/status-exporter
     tag: 0.0.1
   resources: {}
   topologyMaxExportInterval: 10s

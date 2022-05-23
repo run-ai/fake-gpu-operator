@@ -49,6 +49,8 @@ spec:
         - effect: NoSchedule
           key: nvidia.com/gpu
           operator: Exists
+      imagePullSecrets:
+        - name: gcr-secret
   updateStrategy:
     rollingUpdate:
       maxSurge: 0
