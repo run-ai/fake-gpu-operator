@@ -35,9 +35,17 @@ func NewDevicePlugin(topology *topology.NodeTopology) *DevicePlugin {
 	}
 
 	return &DevicePlugin{
-		devs:   createDevices(len(topology.Gpus)),
+		devs:   createDevices(getGpuCount(topology)),
 		socket: serverSock,
 	}
+}
+
+func getGpuCount(topology *topology.NodeTopology) int {
+	ret := topology.GpuCount
+	if ret == 0 {
+		ret = len(topology.Gpus)
+	}
+	return ret
 }
 
 func (m *DevicePlugin) GetDevicePluginOptions(context.Context, *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
