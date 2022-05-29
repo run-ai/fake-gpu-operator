@@ -12,6 +12,8 @@
 *.dll
 *.so
 *.dylib
+*.DS_Store
+*.tgz
 
 # Test binary, built with `go test -c`
 *.test
