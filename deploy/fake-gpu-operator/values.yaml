@@ -1,0 +1,34 @@
+devicePlugin:
+  image:
+    pullPolicy: Always
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/device-plugin
+    tag: 0.0.1
+  resources: {}
+
+statusUpdater:
+  image:
+    pullPolicy: Always
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/status-updater
+    tag: 0.0.1
+  resources: {}
+
+statusExporter:
+  image:
+    pullPolicy: Always
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/status-exporter
+    tag: 0.0.1
+  resources: {}
+  topologyMaxExportInterval: 10s
+
+initialTopology:
+  mig-strategy: mixed
+  nodes: {}
+    # nodes can be defined in the following way:
+    # runai-worker:
+    #   gpu-count: 8
+    #   gpu-memory: 11441
+    #   gpu-product: Tesla-K80
+    # runai-worker2:
+    #   gpu-count: 16
+    #   gpu-memory: 11441
+    #   gpu-product: Tesla-K80

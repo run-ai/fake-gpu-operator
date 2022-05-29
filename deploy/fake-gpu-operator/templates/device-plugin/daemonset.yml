@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    openshift.io/scc: hostmount-anyuid
+  labels:
+    app: device-plugin
+  name: device-plugin
+
+spec:
+  selector:
+    matchLabels:
+      app: device-plugin
+      component: device-plugin
+  template:
+    metadata:
+      labels:
+        app: device-plugin
+        component: device-plugin
+    spec:
+      containers:
+        - image: "{{ .Values.devicePlugin.image.repository }}:{{ .Values.devicePlugin.image.tag }}"
+          imagePullPolicy: "{{ .Values.devicePlugin.image.pullPolicy }}"
+          resources:
+            {{- toYaml .Values.devicePlugin.resources | nindent 12 }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: TOPOLOGY_PATH
+              value: /etc/config/topology.yml
+          imagePullPolicy: Always
+          name: nvidia-device-plugin-ctr
+          securityContext:
+            privileged: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/kubelet/device-plugins
+              name: device-plugin
+            - mountPath: /etc/config/
+              name: topology
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        nvidia.com/gpu.deploy.device-plugin: "true"
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      serviceAccountName: nvidia-device-plugin
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - effect: NoSchedule
+          key: nvidia.com/gpu
+          operator: Exists
+      imagePullSecrets:
+        - name: gcr-secret
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/device-plugins
+            type: ""
+          name: device-plugin
+        - configMap:
+            name: topology
+          name: topology
