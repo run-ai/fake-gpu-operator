@@ -167,6 +167,7 @@ func (p *PodEventHandler) updateTopology(newTopology *topology.ClusterTopology, 
 }
 
 func (p *PodEventHandler) resetTopologyStatus() error {
+	log.Println("Resetting topology status")
 	cm, clusterTopology, err := p.getTopology()
 	if err != nil {
 		return err
@@ -179,8 +180,8 @@ func (p *PodEventHandler) resetTopologyStatus() error {
 			clusterTopology.Nodes[nodeName] = node
 		}
 
-		for _, gpu := range node.Gpus {
-			gpu.Metrics = topology.GpuMetrics{}
+		for gpuIdx := range node.Gpus {
+			clusterTopology.Nodes[nodeName].Gpus[gpuIdx].Metrics = topology.GpuMetrics{}
 		}
 	}
 

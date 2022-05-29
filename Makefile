@@ -31,11 +31,11 @@ restart:
 	kubectl delete pod -l component=${COMPONENT} --force -n ${NAMESPACE}
 .PHONY: restart
 
-deploy: image push restart
+deploy: image push
 .PHONY: deploy
 
 deploy-all:
-	make image push restart COMPONENT=device-plugin
-	make image push restart COMPONENT=status-updater
-	make image push restart COMPONENT=status-exporter
+	make image push COMPONENT=device-plugin
+	make image push COMPONENT=status-updater
+	make image push COMPONENT=status-exporter
 .PHONY: deploy-all
