@@ -33,7 +33,7 @@
          - install_project_dependencies
          - run:
              command: |
-              curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
+              curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
               golangci-lint run -v --timeout 5m
 
     test:
