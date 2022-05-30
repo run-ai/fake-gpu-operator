@@ -59,7 +59,7 @@
         - run:
             name: "Run Service tests"
             command: |
-              (go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests --compilers=1 --randomize-all --randomize-suites --fail-on-pending --keep-going --cover --race --trace  --json-report=report.json)
+              (go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests --compilers=1 --randomize-all --randomize-suites --fail-on-pending --keep-going --cover --race --trace  --json-report=report.json --coverprofile="coverprofile.out")
         - store_artifacts:
             name: "Store artifacts"
             path: /tmp/artifacts
