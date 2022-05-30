@@ -1,31 +1,173 @@
-version: 2.1
-jobs: # we now have TWO jobs, so that a workflow can coordinate them!
-  one: # This is our first job.
-    docker: # it uses the docker executor
-      - image: cimg/ruby:2.6.8 # specifically, a docker image with ruby 2.6.8
-        auth:
-          username: mydockerhub-user
-          password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
-    # Steps are a list of commands to run inside the docker container above.
-    steps:
-      - checkout # this pulls code down from GitHub
-      - run: echo "A first hello" # This prints "A first hello" to stdout.
-      - run: sleep 25 # a command telling the job to "sleep" for 25 seconds.
-  two: # This is our second job.
-    docker: # it runs inside a docker image, the same as above.
-      - image: cimg/ruby:3.0.2
-        auth:
-          username: mydockerhub-user
-          password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
-    steps:
-      - checkout
-      - run: echo "A more familiar hi" # We run a similar echo command to above.
-      - run: sleep 15 # and then sleep for 15 seconds.
-# Under the workflows: map, we can coordinate our two jobs, defined above.
-workflows:
-  version: 2
-  one_and_two: # this is the name of our workflow
-    jobs: # and here we list the jobs we are going to run.
-      - one
-      - two
+  version: 2.1
+  executors:
+    runai-executor:
+      docker:
+        - image: cimg/go:1.18.2
 
+  commands:
+    install_project_dependencies:
+      steps:
+        - checkout
+        - run:
+            name: "Install project dependencies"
+            command: |
+              go mod download
+              go mod verify
+
+    pre_docker_commands:
+      steps:
+        - run:
+            name: "Docker gcr login"
+            command: cat gcr_auth.json | docker login -u _json_key --password-stdin https://gcr.io
+        - run:
+            name: "Docker Red Hat login"
+            command: echo "$REDHAT_DOCKER_PASS" | docker login -u $REDHAT_DOCKER_USER --password-stdin https://registry.redhat.io
+        - setup_remote_docker:
+            docker_layer_caching: true
+  jobs:
+    lint:
+      executor: runai-executor
+      steps:
+         - setup_remote_docker:
+              docker_layer_caching: true
+         - install_project_dependencies
+         - run:
+             command: |
+              curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
+              golangci-lint run -v --timeout 5m
+
+    test:
+      executor: runai-executor
+      steps:
+        - setup_remote_docker:
+              docker_layer_caching: true
+        - install_project_dependencies
+        - run:
+            name: "Create a temp directory for artifacts"
+            command: |
+              mkdir -p /tmp/artifacts
+              mkdir -p /tmp/artifacts/test-results
+              mkdir -p /tmp/artifacts/test-results/unit-tests
+              mkdir -p /tmp/artifacts/test-results/service-tests
+
+        # - run:
+        #     name: "Run Unit tests"
+        #     command: |
+        #       echo "Running Unit tests"
+        #       gotestsum --junitfile /tmp/artifacts/test-results/unit-tests/unit-tests.xml -f standard-verbose -- -count 1 -coverprofile=coverageresult.out ./pkg/...
+        #       go tool cover -html=coverageresult.out -o coverage.html
+        #       mv coverage.html /tmp/artifactse
+        - run:
+            name: "Run Service tests"
+            command: |
+              (go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests --compilers=1 --randomize-all --randomize-suites --fail-on-pending --keep-going --cover --race --trace  --json-report=report.json)
+        - store_artifacts:
+            name: "Store artifacts"
+            path: /tmp/artifacts
+
+        - store_test_results:
+            name: "Store test results"
+            path: /tmp/artifacts/test-results
+
+    build:
+      executor: runai-executor
+      steps:
+        - checkout
+        - run:
+            name: "build"
+            command: |
+              mkdir bin
+              make build
+    deploy_to_staging:
+      executor: runai-executor
+      steps:
+        - checkout
+        - run:
+            name: "Extract gcloud private key to file"
+            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
+        - pre_docker_commands
+        - run:
+            name: "Push to Google Cloud"
+            command: |
+              TAG=${CIRCLE_TAG/v/''}
+              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
+              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=tal-test
+
+        - test_runai_operator
+    deploy_to_production:
+      executor: runai-executor
+      steps:
+        - checkout
+        - run:
+            name: "Extract gcloud private key to file"
+            command: echo "$PRODUCTION_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
+
+        - pre_docker_commands
+        - run:
+            name: "Push to Google Cloud"
+            command: |
+              TAG=${CIRCLE_TAG/v/''}
+              DOCKER_REPO_BASE="gcr.io/run-ai-prod/fake-gpu-operator"
+              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=tal-test
+  workflows:
+    version: 2
+    production:
+      jobs:
+        - lint:
+            filters:
+              branches:
+                ignore: /.*/
+              tags:
+                only: /^v.*/
+        - test:
+            filters:
+              branches:
+                ignore: /.*/
+              tags:
+                only: /^v.*/
+        - build:
+            filters:
+              branches:
+                ignore: /.*/
+              tags:
+                only: /^v.*/
+        - deploy_to_production:
+            requires:
+              - build
+              - lint
+              - test
+
+            filters:
+              branches:
+                ignore: /.*/
+              tags:
+                only: /^v.*/
+
+    build_test_deploy:
+      jobs:
+        - build:
+            filters:
+              tags:
+                ignore: /^v.*/
+
+        - lint:
+            filters:
+              tags:
+                ignore: /^v.*/
+        - test:
+            filters:
+              tags:
+                ignore: /^v.*/
+
+        - deploy_to_staging:
+            requires:
+              - build
+              - lint
+              - test
+
+            filters:
+              tags:
+                ignore: /^v.*/
+              branches:
+                only:
+                  - main
