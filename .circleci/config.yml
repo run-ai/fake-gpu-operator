@@ -90,10 +90,8 @@
             name: "Push to Google Cloud"
             command: |
               TAG=${CIRCLE_TAG/v/''}
-              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
-              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=tal-test
-
-        - test_runai_operator
+              DOCKER_REPO_BASE="gcr.io/run-ai-lab/fake-gpu-operator"
+              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=tal-test-staging
     deploy_to_production:
       executor: runai-executor
       steps:
@@ -107,8 +105,8 @@
             name: "Push to Google Cloud"
             command: |
               TAG=${CIRCLE_TAG/v/''}
-              DOCKER_REPO_BASE="gcr.io/run-ai-prod/fake-gpu-operator"
-              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=tal-test
+              DOCKER_REPO_BASE="gcr.io/run-ai-lab/fake-gpu-operator"
+              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=taltestprod
   workflows:
     version: 2
     production:
