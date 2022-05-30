@@ -159,7 +159,7 @@
         - deploy_to_staging:
             requires:
               - build
-              - lint
+              # - lint
               - test
 
             filters:
@@ -167,4 +167,5 @@
                 ignore: /^v.*/
               branches:
                 only:
-                  - main
+                  - RUN-3997/CI-CD
+                  # - main
