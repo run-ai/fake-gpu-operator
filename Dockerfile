@@ -1,6 +1,6 @@
 FROM golang:1.18.2-alpine as common-builder
 
-WORKDIR /go/src/github.com/run-ai/fake-gpu-operator
+WORKDIR $GOPATH/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
 RUN go mod download
@@ -30,6 +30,7 @@ RUN make build
 FROM alpine:3.16.0 as device-plugin
 RUN ls -la 
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
+
 ENTRYPOINT ["/bin/device-plugin"]
 
 FROM alpine:3.16.0 as status-updater
