@@ -75,7 +75,7 @@
         - run:
             name: "build"
             command: |
-              mkdir binbon
+              mkdir bin
               make build
     deploy_to_staging:
       executor: runai-executor
@@ -162,7 +162,7 @@
             requires:
               - build
               # - lint
-              - test
+              # - test
 
             filters:
               tags:

@@ -12,18 +12,21 @@ FROM common-builder as device-plugin-builder
 
 COPY cmd/device-plugin ./cmd/device-plugin
 COPY internal/deviceplugin ./internal/deviceplugin
+RUN pwd
 RUN make build
 
 FROM common-builder as status-updater-builder
 
 COPY cmd/status-updater ./cmd/status-updater
 COPY internal/status-updater ./internal/status-updater
+RUN pwd
 RUN make build
 
 FROM common-builder as status-exporter-builder
 
 COPY cmd/status-exporter ./cmd/status-exporter
 COPY internal/status-exporter ./internal/status-exporter
+RUN pwd
 RUN make build
 
 FROM golang:1.18 as device-plugin
