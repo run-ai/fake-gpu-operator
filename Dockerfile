@@ -1,6 +1,6 @@
 FROM golang:1.18 as common-builder
 
-WORKDIR /build
+WORKDIR /go/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
 RUN go mod download
@@ -28,17 +28,17 @@ RUN make build
 
 FROM golang:1.18 as device-plugin
 
-COPY --from=device-plugin-builder /build/bin/device-plugin /bin/
+COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
 ENTRYPOINT ["/bin/device-plugin"]
 
 FROM golang:1.18 as status-updater
 
-COPY --from=status-updater-builder /build/bin/status-updater /bin/
+COPY --from=status-updater-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-updater /bin/
 ENTRYPOINT ["/bin/status-updater"]
 
 FROM golang:1.18 as status-exporter
 
-COPY --from=status-exporter-builder /build/bin/status-exporter /bin/
+COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /bin/
 ENTRYPOINT ["/bin/status-exporter"]
 
 
