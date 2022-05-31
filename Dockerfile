@@ -1,10 +1,9 @@
-FROM golang:1.18.2-alpine as common-builder
+FROM golang:1.18 as common-builder
 
 WORKDIR $GOPATH/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
 RUN go mod download
-RUN apk add --update --no-cache make gcc musl-dev
 
 COPY Makefile .
 COPY internal/common ./internal/common
