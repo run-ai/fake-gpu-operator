@@ -1,6 +1,7 @@
 package deviceplugin
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
@@ -53,9 +55,16 @@ func (m *DevicePlugin) GetDevicePluginOptions(context.Context, *pluginapi.Empty)
 }
 
 func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error) {
-	c, err := grpc.Dial(unixSocketPath, grpc.WithInsecure(), grpc.WithBlock(),
-		grpc.WithTimeout(timeout),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	c, err := grpc.DialContext(
+		ctx,
+		unixSocketPath,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+		grpc.WithContextDialer(func(_ context.Context, addr string) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
 		}),
 	)
@@ -93,7 +102,12 @@ func (m *DevicePlugin) Start() error {
 	m.server = grpc.NewServer([]grpc.ServerOption{}...)
 	pluginapi.RegisterDevicePluginServer(m.server, m)
 
-	go m.server.Serve(sock)
+	go func() {
+		err := m.server.Serve(sock)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
 	// Wait for server to start by launching a blocking connexion
 	conn, err := dial(m.socket, 5*time.Second)
@@ -139,7 +153,10 @@ func (m *DevicePlugin) Register(kubeletEndpoint, resourceName string) error {
 }
 
 func (m *DevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.DevicePlugin_ListAndWatchServer) error {
-	s.Send(&pluginapi.ListAndWatchResponse{Devices: m.devs})
+	err := s.Send(&pluginapi.ListAndWatchResponse{Devices: m.devs})
+	if err != nil {
+		fmt.Printf("Failed to send devices to Kubelet: %v\n", err)
+	}
 
 	for {
 		select {
@@ -148,7 +165,10 @@ func (m *DevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.DevicePlugin
 		case d := <-m.health:
 			// FIXME: there is no way to recover from the Unhealthy state.
 			d.Health = pluginapi.Unhealthy
-			s.Send(&pluginapi.ListAndWatchResponse{Devices: m.devs})
+			err := s.Send(&pluginapi.ListAndWatchResponse{Devices: m.devs})
+			if err != nil {
+				log.Printf("failed to send unhealthy update: %v", err)
+			}
 		}
 	}
 }
@@ -195,7 +215,10 @@ func (m *DevicePlugin) Serve() error {
 	err = m.Register(pluginapi.KubeletSocket, resourceName)
 	if err != nil {
 		log.Printf("Could not register device plugin: %s", err)
-		m.Stop()
+		stopErr := m.Stop()
+		if stopErr != nil {
+			log.Printf("Could not stop device plugin: %s", stopErr)
+		}
 		return err
 	}
 	log.Println("Registered device plugin with Kubelet")

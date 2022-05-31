@@ -73,8 +73,9 @@ var _ = Describe("StatusExporter", func() {
 	// Create initial topology
 	initialTopology := createInitialTopology()
 	cm, err := topology.ToConfigMap(initialTopology)
-	Expect(err).To(BeNil())
-	kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+	Expect(err).To(Not(HaveOccurred()))
+	_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+	Expect(err).To(Not(HaveOccurred()))
 
 	cases := getTestCases()
 
@@ -109,8 +110,8 @@ func setupConfig() {
 }
 
 func setupEnvs() {
-	os.Setenv("TOPOLOGY_CM_NAME", "fake-cm-name")
-	os.Setenv("TOPOLOGY_CM_NAMESPACE", "fake-cm-namespace")
+	os.Setenv("TOPOLOGY_CM_NAME", topologyCmName)
+	os.Setenv("TOPOLOGY_CM_NAMESPACE", topologyCmNamespace)
 	os.Setenv("NODE_NAME", nodeName)
 	os.Setenv("KUBERNETES_SERVICE_HOST", "fake-k8s-service-host")
 	os.Setenv("KUBERNETES_SERVICE_PORT", "fake-k8s-service-port")

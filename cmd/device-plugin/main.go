@@ -24,7 +24,10 @@ func main() {
 	}
 
 	devicePlugin := deviceplugin.NewDevicePlugin(topology)
-	devicePlugin.Serve()
+	if err = devicePlugin.Serve(); err != nil {
+		log.Printf("Failed to serve device plugin: %s\n", err)
+		os.Exit(1)
+	}
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
