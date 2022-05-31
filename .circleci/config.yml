@@ -75,7 +75,7 @@
         - run:
             name: "build"
             command: |
-              mkdir bin
+              mkdir binbon
               make build
     deploy_to_staging:
       executor: runai-executor
