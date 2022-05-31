@@ -88,24 +88,24 @@
         - run:
             name: "Push to Google Cloud"
             command: |
-              TAG=${CIRCLE_TAG/v/''}
-              DOCKER_REPO_BASE="gcr.io/run-ai-lab/fake-gpu-operator"
-              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=tal-test-staging
+              TAG=${git rev-parse main}
+              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"                            
+              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
     deploy_to_production:
       executor: runai-executor
       steps:
         - checkout
         - run:
             name: "Extract gcloud private key to file"
-            command: echo "$PRODUCTION_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
+            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
 
         - pre_docker_commands
         - run:
             name: "Push to Google Cloud"
             command: |
               TAG=${CIRCLE_TAG/v/''}
-              DOCKER_REPO_BASE="gcr.io/run-ai-lab/fake-gpu-operator"
-              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=taltestprod
+              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
+              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
   workflows:
     version: 2
     production:
