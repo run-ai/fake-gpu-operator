@@ -8,7 +8,7 @@ DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
 build:
-	go build -o ${BUILD_DIR}/ ./cmd/...
+	go build -o ${BUILD_DIR} ./cmd/...
 
 clean:
 	rm -rf ${BUILD_DIR}
