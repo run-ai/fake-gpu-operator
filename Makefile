@@ -1,4 +1,4 @@
-BUILD_DIR="./bin"
+BUILD_DIR=./bin
 COMPONENT="$1"
 
 DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
@@ -8,7 +8,7 @@ DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
 build:
-	go build -o ${BUILD_DIR} ./cmd/...
+	go build -o ${BUILD_DIR}/ ./cmd/...
 
 clean:
 	rm -rf ${BUILD_DIR}
