@@ -75,7 +75,10 @@ func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
 
 func setupServer() {
 	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":9400", nil)
+	err := http.ListenAndServe(":9400", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func generateFakeHostname(nodeName string) string {

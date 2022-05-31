@@ -74,7 +74,8 @@ var _ = Describe("Informer", func() {
 
 		When("pod is not requesting GPUs", func() {
 			It("should not publish event", func() {
-				kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+				_, err := kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+				Expect(err).ToNot(HaveOccurred())
 				Eventually(ch).Should(BeEmpty())
 			})
 		})
@@ -91,7 +92,8 @@ var _ = Describe("Informer", func() {
 					})
 
 					It("should not publish event", func() {
-						kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						_, err := kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						Expect(err).ToNot(HaveOccurred())
 						Eventually(ch).Should(BeEmpty())
 					})
 				})
@@ -102,7 +104,8 @@ var _ = Describe("Informer", func() {
 					})
 
 					It("should publish event", func() {
-						kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						_, err := kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						Expect(err).NotTo(HaveOccurred())
 						Eventually(ch).Should(Receive(Equal(&inform.PodEvent{pod, inform.ADD})))
 					})
 				})
@@ -112,9 +115,11 @@ var _ = Describe("Informer", func() {
 				When("Running status is not changed", func() {
 					It("should not publish event", func() {
 						pod.Status.Phase = v1.PodRunning
-						kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						_, err := kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						Expect(err).ToNot(HaveOccurred())
 						Eventually(ch).Should(Receive(Equal(&inform.PodEvent{pod, inform.ADD})))
-						kubeclient.CoreV1().Pods("default").Update(context.TODO(), pod, metav1.UpdateOptions{})
+						_, err = kubeclient.CoreV1().Pods("default").Update(context.TODO(), pod, metav1.UpdateOptions{})
+						Expect(err).ToNot(HaveOccurred())
 						Eventually(ch).Should(BeEmpty())
 					})
 				})
@@ -123,19 +128,23 @@ var _ = Describe("Informer", func() {
 					When("the old pod isn't running and the new pod is running", func() {
 						It("should publish ADD event", func() {
 							pod.Status.Phase = v1.PodPending
-							kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+							_, err := kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+							Expect(err).To(Not(HaveOccurred()))
 							pod.Status.Phase = v1.PodRunning
-							kubeclient.CoreV1().Pods("default").Update(context.TODO(), pod, metav1.UpdateOptions{})
+							_, err = kubeclient.CoreV1().Pods("default").Update(context.TODO(), pod, metav1.UpdateOptions{})
+							Expect(err).To(Not(HaveOccurred()))
 							Eventually(ch).Should(Receive(Equal(&inform.PodEvent{pod, inform.ADD})))
 						})
 					})
 					When("the old pod is running and the new pod isn't running", func() {
 						It("should publish DELETE event", func() {
 							pod.Status.Phase = v1.PodRunning
-							kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+							_, err := kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+							Expect(err).To(Not(HaveOccurred()))
 							Eventually(ch).Should(Receive(Equal(&inform.PodEvent{pod, inform.ADD})))
 							pod.Status.Phase = v1.PodPending
-							kubeclient.CoreV1().Pods("default").Update(context.TODO(), pod, metav1.UpdateOptions{})
+							_, err = kubeclient.CoreV1().Pods("default").Update(context.TODO(), pod, metav1.UpdateOptions{})
+							Expect(err).To(Not(HaveOccurred()))
 							Eventually(ch).Should(Receive(Equal(&inform.PodEvent{pod, inform.DELETE})))
 						})
 					})
@@ -147,9 +156,11 @@ var _ = Describe("Informer", func() {
 				When("the pod was running", func() {
 					It("should publish DELETE event", func() {
 						pod.Status.Phase = v1.PodRunning
-						kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						_, err := kubeclient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+						Expect(err).ToNot(HaveOccurred())
 						Eventually(ch).Should(Receive(Equal(&inform.PodEvent{pod, inform.ADD})))
-						kubeclient.CoreV1().Pods("default").Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+						err = kubeclient.CoreV1().Pods("default").Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+						Expect(err).ToNot(HaveOccurred())
 						Eventually(ch).Should(Receive(Equal(&inform.PodEvent{pod, inform.DELETE})))
 					})
 				})

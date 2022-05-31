@@ -66,7 +66,8 @@ var _ = Describe("StatusUpdater", func() {
 
 		kubeclient = fake.NewSimpleClientset()
 
-		kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), topologyConfigMap, metav1.CreateOptions{})
+		_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), topologyConfigMap, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
 		setupFakes(kubeclient)
 		setupConfig()
 	})
@@ -101,7 +102,8 @@ var _ = Describe("StatusUpdater", func() {
 				go status_updater.Run()
 
 				pod := createPod(caseDetails.podGpuCount, caseDetails.podPhase)
-				kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+				_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedTopology := createTopology(nodeGpuCount)
 				if caseDetails.podPhase == v1.PodRunning {
@@ -116,7 +118,8 @@ var _ = Describe("StatusUpdater", func() {
 
 				Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
 
-				kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+				err = kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+				Expect(err).ToNot(HaveOccurred())
 				Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount)))
 			})
 		}
