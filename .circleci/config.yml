@@ -85,6 +85,8 @@
             name: "Extract gcloud private key to file"
             command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
         - pre_docker_commands
+        - attach_workspace:
+            at: ./bin
         - run:
             name: "Push to Google Cloud"
             command: |
