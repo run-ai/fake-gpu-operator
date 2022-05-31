@@ -10,20 +10,20 @@ COPY internal/common ./internal/common
 
 FROM common-builder as device-plugin-builder
 
-COPY cmd/device-plugin ./cmd/device-plugin
-COPY internal/deviceplugin ./internal/deviceplugin
+COPY cmd/device-plugin /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin/cmd/device-plugin
+COPY internal/deviceplugin /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin/internal/deviceplugin
 RUN make build
 
 FROM common-builder as status-updater-builder
 
-COPY cmd/status-updater ./cmd/status-updater
-COPY internal/status-updater ./internal/status-updater
+COPY cmd/status-updater /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin/cmd/status-updater
+COPY internal/status-updater /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin/internal/status-updater
 RUN make build
 
 FROM common-builder as status-exporter-builder
 
-COPY cmd/status-exporter ./cmd/status-exporter
-COPY internal/status-exporter ./internal/status-exporter
+COPY cmd/status-exporter /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin/cmd/status-exporter
+COPY internal/status-exporter /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin/internal/status-exporter
 RUN make build
 
 FROM golang:1.18 as device-plugin
