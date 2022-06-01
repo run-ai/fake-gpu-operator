@@ -10,9 +10,11 @@ NAMESPACE=gpu-operator
 build:
 	go get ./...
 	go build -o ${BUILD_DIR}/ ./cmd/...
+.PHONY: build
 
 clean:
 	rm -rf ${BUILD_DIR}
+.PHONY: clean
 
 image:
 	docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
