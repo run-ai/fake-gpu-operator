@@ -21,12 +21,6 @@ COPY ./cmd/status-exporter/ ./cmd/status-exporter/
 COPY ./internal/status-exporter/ ./internal/status-exporter/
 RUN make build COMPONENT=status-exporter
 
-FROM common-builder as service-tests
-COPY cmd/ ./cmd/
-COPY internal/ ./internal/
-RUN mkdir -p /tmp/artifacts
-RUN make test-all
-
 FROM alpine:3.16.0 as device-plugin
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
 ENTRYPOINT ["/bin/device-plugin"]
