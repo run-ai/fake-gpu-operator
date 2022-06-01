@@ -131,19 +131,14 @@
 
     build_test_deploy:
       jobs:
-        # - build:
-        #     filters:
-        #       tags:
-        #         ignore: /^v.*/
-
-        # - lint:
-        #     filters:
-        #       tags:
-        #         ignore: /^v.*/
-        # - test:
-        #     filters:
-        #       tags:
-        #         ignore: /^v.*/
+        - lint:
+            filters:
+              tags:
+                ignore: /^v.*/
+        - test:
+            filters:
+              tags:
+                ignore: /^v.*/
 
         - deploy_to_staging:
             requires:
