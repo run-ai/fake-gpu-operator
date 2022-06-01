@@ -88,7 +88,7 @@
         - run:
             name: "Push to Google Cloud"
             command: |
-              TAG=$(git rev-parDOCKER_REPO_BASEse main)
+              TAG=$(git rev-parse main)
               DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
               make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
     deploy_to_production:
