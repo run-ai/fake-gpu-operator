@@ -27,6 +27,12 @@ push:
 	docker push ${DOCKER_IMAGE_NAME}
 .PHONY: push
 
+push-all:
+	make push COMPONENT=device-plugin
+	make push COMPONENT=status-updater
+	make push COMPONENT=status-exporter
+.PHONY: push-all
+
 restart: 
 	kubectl delete pod -l component=${COMPONENT} --force -n ${NAMESPACE}
 .PHONY: restart
