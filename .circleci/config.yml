@@ -2,7 +2,7 @@
   executors:
     runai-executor:
       docker:
-        - image: cimg/go:1.18.2
+        - image: cimg/base:stable-18.04
 
   commands:
     install_project_dependencies:
@@ -85,13 +85,11 @@
             name: "Extract gcloud private key to file"
             command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
         - pre_docker_commands
-        - attach_workspace:
-            at: ./bin
         - run:
             name: "Push to Google Cloud"
             command: |
-              TAG=$(git rev-parse main)
-              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"                            
+              TAG=$(git rev-parDOCKER_REPO_BASEse main)
+              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
               make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
     deploy_to_production:
       executor: runai-executor
@@ -144,25 +142,25 @@
 
     build_test_deploy:
       jobs:
-        - build:
-            filters:
-              tags:
-                ignore: /^v.*/
+        # - build:
+        #     filters:
+        #       tags:
+        #         ignore: /^v.*/
 
-        - lint:
-            filters:
-              tags:
-                ignore: /^v.*/
-        - test:
-            filters:
-              tags:
-                ignore: /^v.*/
+        # - lint:
+        #     filters:
+        #       tags:
+        #         ignore: /^v.*/
+        # - test:
+        #     filters:
+        #       tags:
+        #         ignore: /^v.*/
 
         - deploy_to_staging:
-            requires:
-              - build
-              # - lint
-              # - test
+            # requires:
+            #   - build
+            #   # - lint
+            #   # - test
 
             filters:
               tags:

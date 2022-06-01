@@ -40,6 +40,13 @@ deploy-all:
 	make image push COMPONENT=status-exporter
 .PHONY: deploy-all
 
+image-test:
+	mkdir -p /tmp/artifacts/test-results
+	mkdir -p /tmp/artifacts/test-results/unit-tests
+	mkdir -p /tmp/artifacts/test-results/service-tests
+	docker build -t test-image --target test .
+.PHONY: image-test
+
 test-all:
-	ginkgo run ./...
+	 go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests --compilers=1 --randomize-all --randomize-suites --fail-on-pending --keep-going --timeout=5m --race --trace  --json-report=report.json
 .PHONY: test-all
