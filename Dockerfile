@@ -9,17 +9,17 @@ COPY internal/common ./internal/common
 FROM common-builder as device-plugin-builder
 COPY ./cmd/device-plugin/ ./cmd/device-plugin/
 COPY ./internal/deviceplugin/ ./internal/deviceplugin/
-RUN make build
+RUN make build COMPONENT=device-plugin
 
 FROM common-builder as status-updater-builder
 COPY ./cmd/status-updater/ ./cmd/status-updater/
 COPY ./internal/status-updater/ ./internal/status-updater/
-RUN make build
+RUN make build COMPONENT=status-updater
 
 FROM common-builder as status-exporter-builder
 COPY ./cmd/status-exporter/ ./cmd/status-exporter/
 COPY ./internal/status-exporter/ ./internal/status-exporter/
-RUN make build
+RUN make build COMPONENT=status-exporter
 
 FROM common-builder as test
 COPY cmd/ ./cmd/
