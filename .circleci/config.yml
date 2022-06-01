@@ -5,6 +5,7 @@
         - image: cimg/base:stable-18.04
   orbs:
     buildkit: springload/buildkit@0.1.2
+    gh: circleci/github-cli@2.0
 
   commands:
     install_project_dependencies:
