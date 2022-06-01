@@ -14,7 +14,7 @@ clean:
 	rm -rf ${BUILD_DIR}
 
 image:
-	docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
+	docker build --progress=plain -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
 .PHONY: image
 
 images:

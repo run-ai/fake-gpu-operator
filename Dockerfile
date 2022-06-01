@@ -13,6 +13,8 @@ FROM common-builder as device-plugin-builder
 
 COPY cmd/device-plugin ./cmd/device-plugin
 COPY internal/deviceplugin ./internal/deviceplugin
+RUN ls -la
+RUN pwd
 RUN make build
 
 
