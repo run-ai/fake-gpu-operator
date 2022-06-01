@@ -13,7 +13,7 @@ FROM common-builder as device-plugin-builder
 
 COPY cmd/device-plugin ./cmd/device-plugin
 COPY internal/deviceplugin ./internal/deviceplugin
-RUN pwd
+RUN ls /go/src/github.com/run-ai/fake-gpu-operator/internal/deviceplugin
 RUN make build
 
 
