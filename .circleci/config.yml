@@ -3,6 +3,8 @@
     runai-executor:
       docker:
         - image: cimg/base:stable-18.04
+  orbs:
+    buildkit: springload/buildkit@0.1.2
 
   commands:
     install_project_dependencies:
@@ -26,7 +28,7 @@
             docker_layer_caching: true
   jobs:
     lint:
-      executor: runai-executor
+      executor: buildkit/default
       steps:
          - setup_remote_docker:
               docker_layer_caching: true
@@ -36,7 +38,7 @@
               curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
               golangci-lint run -v --timeout 5m
     test:
-      executor: runai-executor
+      executor: buildkit/default
       steps:
         - setup_remote_docker:
               docker_layer_caching: true
@@ -69,7 +71,7 @@
             path: /tmp/artifacts/test-results
 
     build:
-      executor: runai-executor
+      executor: buildkit/default
       steps:
         - checkout
         - run:
@@ -78,7 +80,7 @@
               mkdir bin
               make build
     deploy_to_staging:
-      executor: runai-executor
+      executor: buildkit/default
       steps:
         - checkout
         - run:
@@ -93,7 +95,7 @@
               make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
               make push-all
     deploy_to_production:
-      executor: runai-executor
+      executor: buildkit/default
       steps:
         - checkout
         - run:
