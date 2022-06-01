@@ -90,7 +90,8 @@
             command: |
               TAG=$(git rev-parse main)
               DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
-              make deploy-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
+              make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
+              make push-all
     deploy_to_production:
       executor: runai-executor
       steps:
@@ -105,7 +106,7 @@
             command: |
               TAG=${CIRCLE_TAG/v/''}
               DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
-              make iamges DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
+              make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
               make push-all
   workflows:
     version: 2
