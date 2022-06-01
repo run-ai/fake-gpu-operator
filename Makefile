@@ -14,12 +14,12 @@ clean:
 	rm -rf ${BUILD_DIR}
 
 image:
-	docker build --progress=plain -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
+	docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
 .PHONY: image
 
 images:
-	make image COMPONENT=device-plugin
 	make image COMPONENT=status-updater
+	make image COMPONENT=device-plugin
 	make image COMPONENT=status-exporter
 .PHONY: images
 
