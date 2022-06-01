@@ -10,9 +10,9 @@ COPY internal/common ./internal/common
 
 
 FROM common-builder as device-plugin-builder
-
 COPY cmd/device-plugin ./cmd/device-plugin
 COPY internal/deviceplugin ./internal/deviceplugin
+RUN go get ./...
 RUN make build
 
 
