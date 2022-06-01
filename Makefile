@@ -8,6 +8,7 @@ DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
 build:
+	go get ./...
 	go build -o ${BUILD_DIR}/ ./cmd/...
 
 clean:
@@ -18,8 +19,8 @@ image:
 .PHONY: image
 
 images:
-	make image COMPONENT=status-updater
 	make image COMPONENT=device-plugin
+	make image COMPONENT=status-updater
 	make image COMPONENT=status-exporter
 .PHONY: images
 
