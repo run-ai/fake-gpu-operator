@@ -21,7 +21,7 @@ COPY ./cmd/status-exporter/ ./cmd/status-exporter/
 COPY ./internal/status-exporter/ ./internal/status-exporter/
 RUN make build COMPONENT=status-exporter
 
-FROM common-builder as test-suite
+FROM common-builder as service-tests
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 RUN mkdir -p /tmp/artifacts
