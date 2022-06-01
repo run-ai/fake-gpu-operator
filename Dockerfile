@@ -18,14 +18,14 @@ RUN make build
 
 FROM common-builder as status-updater-builder
 
-COPY cmd/status-updater ./cmd/status-updater
+COPY cmd/status-updater/ ./cmd/status-updater/
 COPY internal/status-updater ./internal/status-updater
 RUN make build
 
 
 FROM common-builder as status-exporter-builder
 
-COPY cmd/status-exporter ./cmd/status-exporter
+COPY cmd/status-exporter/ ./cmd/status-exporter/
 COPY internal/status-exporter ./internal/status-exporter
 RUN make build
 
