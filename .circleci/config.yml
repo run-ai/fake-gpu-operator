@@ -93,10 +93,11 @@
         - pre_docker_commands
         - run:
             name: "Build Images"
+            environment:
+              CIRCLE_TAG: <<pipeline.git.tag>>
             command: |
-              TAG=$(git rev-parse main)
               DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
-              make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
+              make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${CIRCLE_TAG}
         - run:
             name: "Push to Google Cloud"
             command: |
