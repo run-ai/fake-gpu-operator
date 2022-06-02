@@ -183,10 +183,14 @@
             requires:
               - lint
               - test
+            filters:
+              branches:
+                ignore: /.*/
+              tags:
+                only: /^v.*/  
         - operator_deploy_staging:
             requires:
-              - lint
-              - test
+              - deploy_to_production
             filters:
               branches:
                 ignore: /.*/
@@ -214,5 +218,4 @@
                 ignore: /^v.*/
               branches:
                 only:
-                  - RUN-3997/CI-CD
-                  # - main
+                  - main
