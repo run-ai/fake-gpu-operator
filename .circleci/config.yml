@@ -21,6 +21,7 @@
 
     pre_docker_commands:
       steps:
+        - remote_docker
         - run:
             name: "Extract gcloud private key to file"
             command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
@@ -30,7 +31,6 @@
         - run:
             name: "Docker Red Hat login"
             command: echo "$REDHAT_DOCKER_PASS" | docker login -u $REDHAT_DOCKER_USER --password-stdin https://registry.redhat.io
-        - remote_docker
 
 
     operator_update_version_in_helm_chart:
