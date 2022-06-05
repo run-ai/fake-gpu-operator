@@ -185,7 +185,7 @@
                 ignore: /.*/
               tags:
                 only: /^v.*/  
-        # - chart_build_staging
+        
         - helm_operator_build_staging:
             requires:
               - deploy_to_production
@@ -194,6 +194,15 @@
                 ignore: /.*/
               tags:
                 only: /^v.*/
+        - chart_build_staging:
+            requires:
+              - helm_operator_build_staging
+            filters:
+              branches:
+                ignore: /.*/
+              tags:
+                only: /^v.*/
+
 
     build_test_deploy:
       jobs:
