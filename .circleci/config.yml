@@ -139,7 +139,7 @@
               helm repo add stable https://charts.helm.sh/stable
               helm repo add runai "$RUNAI_REPO_URL"
               helm repo update
-              helm dep update .
+              helm dep update ./deploy/fake-gpu-operator/
             
     chart_build_staging:
       working_directory: ~/go/src/github.com/run-ai/fake-gpu-operator
