@@ -20,7 +20,7 @@ setup_helm_client() {
     tar xzfv "$HELM_TARBALL"
 
     PATH="$(pwd)/linux-amd64/:$PATH"
-}
+} 
 
 authenticate() {
     echo "Authenticating with Google Cloud..."

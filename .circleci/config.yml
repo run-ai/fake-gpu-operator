@@ -27,8 +27,10 @@
         - run:
             name: "Docker Red Hat login"
             command: echo "$REDHAT_DOCKER_PASS" | docker login -u $REDHAT_DOCKER_USER --password-stdin https://registry.redhat.io
-        - setup_remote_docker:
-            docker_layer_caching: true
+        - run:
+            name: "Extract gcloud private key to file"
+            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
+        - remote_docker
 
 
     operator_update_version_in_runai_helm_chart:
@@ -45,8 +47,7 @@
     lint:
       executor: runai-executor
       steps:
-         - setup_remote_docker:
-              docker_layer_caching: true
+         - remote_docker
          - install_project_dependencies
          - run:
              command: |
@@ -55,8 +56,7 @@
     test:
       executor: runai-executor
       steps:
-        - setup_remote_docker:
-              docker_layer_caching: true
+        - remote_docker
         - install_project_dependencies
         - run:
             name: "Create a temp directory for artifacts"
@@ -87,9 +87,6 @@
       executor: runai-executor
       steps:
         - checkout
-        - run:
-            name: "Extract gcloud private key to file"
-            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
         - pre_docker_commands
         - run:
             name: "Build Images"
@@ -108,10 +105,6 @@
       executor: runai-executor
       steps:
         - checkout
-        - run:
-            name: "Extract gcloud private key to file"
-            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
-
         - pre_docker_commands
         - run:
             name: "Push to Google Cloud"
@@ -123,45 +116,50 @@
               make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
               make push-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
 
-    operator_deploy_staging:
-      working_directory: ~/go/src/github.com/run-ai/fake-gpu-operator
-      docker:
-        - image: google/cloud-sdk:276.0.0 # Later versions do not have pip
-      steps:
-        - checkout
-        - remote_docker
-        - run:
-            name: "Extract gcloud private key to file"
-            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
-        - pre_docker_commands
-        - run:
-            name: Install Golang
-            command: curl -L https://git.io/vQhTU | bash -s -- --version 1.17
-        - run:
-            name: Test and deploy operator
-            environment:
-              CIRCLE_SHA1: <<pipeline.git.revision>>
-              CIRCLE_TAG: <<pipeline.git.tag>>
-              RUNAI_REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
-              UPLOAD_TARGET: staging
-              GCLOUD_PROJECT: run-ai-staging
-            command: |
-              # get golang in PATH
-              source ~/.bashrc
-              script/uploadOperator.sh
-        - run:
-            name: Package and publish chart to staging
-            environment:
-              CIRCLE_SHA1: <<pipeline.git.revision>>
-              CIRCLE_TAG: <<pipeline.git.tag>>
-              PIPELINE_NUMBER: <<pipeline.number>>
-              REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
-              BUCKET: gs://fake-gpu-operator
-              UPLOAD_TARGET: staging
-              GCLOUD_PROJECT: run-ai-staging
-            command: |
-              cd runai-chart
-              script/uploadChart.sh
+  helm_operator_build_staging:
+    docker:
+      - image: google/cloud-sdk:276.0.0
+    steps:
+      - checkout
+      - remote_docker
+      - pre_docker_commands
+      - run:
+          name: "build helm operator for staging"
+          environment:
+            HELM_URL: https://get.helm.sh
+            HELM_TARBALL: helm-v3.7.1-linux-amd64.tar.gz
+            RUNAI_REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
+          command: |
+            echo "Setting up Helm client..."
+
+            curl --user-agent curl-ci-sync -sSL -o "$HELM_TARBALL" "$HELM_URL/$HELM_TARBALL"
+            tar xzfv "$HELM_TARBALL"
+            PATH="$(pwd)/linux-amd64/:$PATH"
+
+            sed -i "s/CHART_VERSION/0.0.0-$CIRCLE_SHA1/g" deploy/fake-gpu-operator/Chart.yaml
+            helm repo add stable https://charts.helm.sh/stable
+            helm repo add runai "$RUNAI_REPO_URL"
+            helm repo update
+            helm dep update .
+            
+  chart_build_staging:
+    working_directory: ~/go/src/github.com/run-ai/fake-gpu-operator
+    docker:
+      - image: google/cloud-sdk:276.0.0 # Later versions do not have pip
+    steps:
+      - checkout
+      - run:
+          name: Package and publish chart to staging
+          environment:
+            CIRCLE_SHA1: <<pipeline.git.revision>>
+            CIRCLE_TAG: <<pipeline.git.tag>>
+            PIPELINE_NUMBER: <<pipeline.number>>
+            REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
+            BUCKET: gs://fake-gpu-operator
+            UPLOAD_TARGET: staging
+            GCLOUD_PROJECT: run-ai-staging
+          command: |
+            script/uploadChart.sh
 
   workflows:
     version: 2
@@ -188,7 +186,8 @@
                 ignore: /.*/
               tags:
                 only: /^v.*/  
-        - operator_deploy_staging:
+        - chart_build_staging
+        - operator_update_version_in_runai_helm_chart:
             requires:
               - deploy_to_production
             filters:
