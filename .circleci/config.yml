@@ -30,7 +30,6 @@
         - run:
             name: "Docker Red Hat login"
             command: echo "$REDHAT_DOCKER_PASS" | docker login -u $REDHAT_DOCKER_USER --password-stdin https://registry.redhat.io
-        - remote_docker
 
 
     operator_update_version_in_helm_chart:
