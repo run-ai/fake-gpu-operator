@@ -21,7 +21,7 @@
 
     pre_docker_commands:
       steps:
-              - run:
+        - run:
             name: "Extract gcloud private key to file"
             command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
         - run:
