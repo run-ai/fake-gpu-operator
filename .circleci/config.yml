@@ -40,7 +40,7 @@
             command: |
               TAG=${CIRCLE_TAG/v/''}
               echo "Updating fake-gpu-operator new version number $TAG in runai helm chart directory..."
-              sed -i "0,/^\([[:space:]]*tag: *\).*/s//\1$TAG/" deploy/fake-gpu-operator/values.yaml
+              sed -i "s/CHART_VERSION/$CIRCLE_TAG/g" deploy/fake-gpu-operator/values.yaml
 
   jobs:
     lint:
@@ -135,7 +135,7 @@
               tar xzfv "$HELM_TARBALL"
               PATH="$(pwd)/linux-amd64/:$PATH"
 
-              sed -i "s/CHART_VERSION/0.0.0-$CIRCLE_SHA1/g" deploy/fake-gpu-operator/Chart.yaml
+              sed -i "s/CHART_VERSION/$CIRCLE_TAG/g" deploy/fake-gpu-operator/Chart.yaml
               helm repo add stable https://charts.helm.sh/stable
               helm repo add runai "$RUNAI_REPO_URL"
               helm repo update
