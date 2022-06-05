@@ -33,7 +33,7 @@
         - remote_docker
 
 
-    operator_update_version_in_runai_helm_chart:
+    operator_update_version_in_helm_chart:
       steps:
         - run:
             name: Update version in helm chart
@@ -123,6 +123,7 @@
       - checkout
       - remote_docker
       - pre_docker_commands
+      - operator_update_version_in_helm_chart
       - run:
           name: "build helm operator for staging"
           environment:
@@ -186,8 +187,7 @@
                 ignore: /.*/
               tags:
                 only: /^v.*/  
-        - chart_build_staging
-        - operator_update_version_in_runai_helm_chart:
+        - helm_operator_build_staging:
             requires:
               - deploy_to_production
             filters:
