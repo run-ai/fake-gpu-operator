@@ -40,8 +40,7 @@
             command: |
               TAG=${CIRCLE_TAG/v/''}
               echo "Updating fake-gpu-operator new version number $TAG in runai helm chart directory..."
-              cd deploy/fake-gpu-operator
-              sed -i "0,/^\([[:space:]]*tag: *\).*/s//\1$TAG/" values.yaml
+              sed -i "0,/^\([[:space:]]*tag: *\).*/s//\1$TAG/" deploy/fake-gpu-operator/values.yaml
 
   jobs:
     lint:
