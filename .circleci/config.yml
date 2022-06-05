@@ -22,14 +22,14 @@
     pre_docker_commands:
       steps:
         - run:
+            name: "Extract gcloud private key to file"
+            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
+        - run:
             name: "Docker gcr login"
             command: cat gcr_auth.json | docker login -u _json_key --password-stdin https://gcr.io
         - run:
             name: "Docker Red Hat login"
             command: echo "$REDHAT_DOCKER_PASS" | docker login -u $REDHAT_DOCKER_USER --password-stdin https://registry.redhat.io
-        - run:
-            name: "Extract gcloud private key to file"
-            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
         - remote_docker
 
 
