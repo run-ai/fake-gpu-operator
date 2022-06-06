@@ -58,7 +58,7 @@ upload() {
         gsutil -h "Cache-Control:no-cache,max-age=0" -m rsync "$sync_dir" "$BUCKET"
 
         # Make sure index.yaml is synced last
-        gsutil -h "Cache-Control:no-cache,max-age=0" cp "$indtex_dir/index.yaml" "$BUCKET"
+        gsutil -h "Cache-Control:no-cache,max-age=0" cp "$index_dir/index.yaml" "$BUCKET"
     else
             echo "[ERROR] Exiting because unable to update index. Not safe to push update."
             exit 1
