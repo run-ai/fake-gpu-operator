@@ -160,7 +160,7 @@
                 only: /^v.*/
 
 
-    test_lint:
+    test_lint_deploy:
       jobs:
         - lint:
             filters:
