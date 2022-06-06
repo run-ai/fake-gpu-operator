@@ -155,7 +155,7 @@
               PIPELINE_NUMBER: <<pipeline.number>>
               REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
               BUCKET: gs://fake-gpu-operator
-              UPLOAD_TARGET: staging
+              UPLOAD_TARGET: prod
               GCLOUD_PROJECT: run-ai-staging
             command: |
               chmod u+x script/uploadChart.sh

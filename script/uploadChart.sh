@@ -30,6 +30,7 @@ authenticate() {
 
 upload() {
     echo "Uploading the new Run:AI fake-gpu helm chart to $UPLOAD_TARGET..."
+    cd deploy/fake-gpu-operator/
     CHART_VERSION=$(echo "$PIPELINE_NUMBER-$CIRCLE_SHA1" | awk -F '-' '{short_sha=substr($2,1,7); printf("%s-%s",$1, short_sha)}')
     local sync_dir="stable-sync"
     local index_dir="stable-index"
@@ -45,7 +46,6 @@ upload() {
         echo "[ERROR] Exiting because unable to copy index locally. Not safe to proceed."
         exit 1
     fi
-    cd deploy/fake-gpu-operator/
     sed -i "s/"CHART_VERSION"/$CHART_VERSION/g" Chart.yaml
     helm repo add ingress-nginx "https://kubernetes.github.io/ingress-nginx"
     helm repo update
