@@ -50,7 +50,7 @@ upload() {
     helm repo add ingress-nginx "https://kubernetes.github.io/ingress-nginx"
     helm repo update
     helm dep update .
-    helm package deploy/fake-gpu-opeartor/. -n runai --destination "$sync_dir"
+    helm package deploy/fake-gpu-opeartor/ -n runai --destination "$sync_dir"
     if helm repo index --url "$REPO_URL" --merge "$index_dir/index.yaml" "$sync_dir"; then
         # Move updated index.yaml to sync folder so we don't push the old one again
         mv -f "$sync_dir/index.yaml" "$index_dir/index.yaml"
