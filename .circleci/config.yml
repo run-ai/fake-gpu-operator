@@ -158,8 +158,9 @@
               UPLOAD_TARGET: staging
               GCLOUD_PROJECT: run-ai-staging
             command: |
-              chmod u+x script/uploadChart.sh
-              script/uploadChart.sh
+              cd script
+              chmod u+x uploadChart.sh
+              uploadChart.sh
 
   workflows:
     version: 2
@@ -187,17 +188,17 @@
               tags:
                 only: /^v.*/  
         
-        - helm_operator_build_staging:
-            # requires:
-            #   - deploy_to_production
-            filters:
-              branches:
-                ignore: /.*/
-              tags:
-                only: /^v.*/
+        # - helm_operator_build_staging:
+        #     # requires:
+        #     #   - deploy_to_production
+        #     filters:
+        #       branches:
+        #         ignore: /.*/
+        #       tags:
+        #         only: /^v.*/
         - chart_build_staging:
-            requires:
-              - helm_operator_build_staging
+            # requires:
+            #   - helm_operator_build_staging
             filters:
               branches:
                 ignore: /.*/
