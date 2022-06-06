@@ -135,8 +135,6 @@
               curl --user-agent curl-ci-sync -sSL -o "$HELM_TARBALL" "$HELM_URL/$HELM_TARBALL"
               tar xzfv "$HELM_TARBALL"
               PATH="$(pwd)/linux-amd64/:$PATH"
-
-              sed -i s/0.0.0/$TAG/g deploy/fake-gpu-operator/Chart.yaml
               sed -i "s/CHART_VERSION/$TAG/g" deploy/fake-gpu-operator/Chart.yaml
               helm repo add stable https://charts.helm.sh/stable
               helm repo add runai "$RUNAI_REPO_URL"
