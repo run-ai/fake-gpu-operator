@@ -151,9 +151,9 @@
               tags:
                 only: /^v.*/
         - deploy_to_production:
-            # requires:
-            #   - lint
-            #   - test
+            requires:
+              - lint
+              - test
             filters:
               branches:
                 ignore: /.*/
