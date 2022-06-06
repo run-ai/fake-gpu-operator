@@ -67,20 +67,6 @@ upload() {
     return 0
 }
 
-# update_operator_version() {
-#   if [[ $CHART_VERSION == 1* ]]; then
-#     echo "Updating operator new version number in production..."
-#     git config --global user.email "circleci@run.ai"
-#     git config --global user.name "circleci-runai"
-#     git clone https://github.com/run-ai/backend.git
-#     cd backend/build/helm/runai-backend/templates
-#     sed -i "0,/^\([[:space:]]*RUN_AI_OPERATOR_VERSION: *\).*/s//\1$OPERATOR_TAG/" env-configmap.yaml
-#     git add env-configmap.yaml
-#     git commit -m "updated operator production version to $OPERATOR_TAG"
-#     git push
-#   fi
-# }
-
 log_error() {
     printf '\e[31mERROR: %s\n\e[39m' "$1" >&2
 }

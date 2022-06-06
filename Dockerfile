@@ -32,20 +32,3 @@ ENTRYPOINT ["/bin/status-updater"]
 FROM alpine:3.16.0 as status-exporter
 COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /bin/
 ENTRYPOINT ["/bin/status-exporter"]
-
-
-###### Debug images
-# FROM golang:1.18.2-alpine as debugger
-# RUN go install github.com/go-delve/delve/cmd/dlv@latest
-
-# FROM debugger as device-plugin-debug
-
-# RUN pwd
-# RUN ls -la
-# COPY --from=device-plugin-builder $GOPATH/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
-# ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "-l", ":10000", "--api-version=2", "/bin/device-plugin", "--"]
-
-# FROM debugger as status-updater-debug
-
-# COPY --from=status-updater-builder $GOPATH/src/github.com/run-ai/fake-gpu-operator/bin/status-updater /bin/
-# ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "-l", ":10000", "--api-version=2", "/bin/status-updater", "--"]

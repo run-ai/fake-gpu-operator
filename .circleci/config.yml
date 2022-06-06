@@ -62,16 +62,7 @@
             command: |
               mkdir -p /tmp/artifacts
               mkdir -p /tmp/artifacts/test-results
-              mkdir -p /tmp/artifacts/test-results/unit-tests
               mkdir -p /tmp/artifacts/test-results/service-tests
-
-        # - run:
-        #     name: "Run Unit tests"
-        #     command: |
-        #       echo "Running Unit tests"
-        #       gotestsum --junitfile /tmp/artifacts/test-results/unit-tests/unit-tests.xml -f standard-verbose -- -count 1 -coverprofile=coverageresult.out ./pkg/...
-        #       go tool cover -html=coverageresult.out -o coverage.html
-        #       mv coverage.html /tmp/artifactse
         - run:
             name: "Run Service tests"
             command: |
