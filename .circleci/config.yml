@@ -158,9 +158,8 @@
               UPLOAD_TARGET: staging
               GCLOUD_PROJECT: run-ai-staging
             command: |
-              cd script
-              chmod u+x uploadChart.sh
-              uploadChart.sh
+              chmod u+x script/uploadChart.sh
+              script/uploadChart.sh
 
   workflows:
     version: 2
