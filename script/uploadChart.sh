@@ -39,6 +39,7 @@ upload() {
       CHART_VERSION=${CIRCLE_TAG/v/''}
       sed -i "s/tag:.*/tag: $CHART_VERSION/g" deploy/fake-gpu-operator/values.yaml
     else
+      sed -i "s/tag:.*/tag: $CIRCLE_SHA1/g" deploy/fake-gpu-operator/values.yaml
       sed -i "s/env:.*/env: $UPLOAD_TARGET/g; s/tag:.*/tag: $CIRCLE_SHA1/g" deploy/fake-gpu-operator/values.yaml
     fi
 
