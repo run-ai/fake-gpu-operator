@@ -129,7 +129,7 @@
               HELM_TARBALL: helm-v3.7.1-linux-amd64.tar.gz
               RUNAI_REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
             command: |
-              TAG=${${CIRCLE_TAG/v/''}}
+              TAG=${CIRCLE_TAG/v/''}
               echo "Setting up Helm client..."
 
               curl --user-agent curl-ci-sync -sSL -o "$HELM_TARBALL" "$HELM_URL/$HELM_TARBALL"
@@ -160,6 +160,7 @@
               UPLOAD_TARGET: staging
               GCLOUD_PROJECT: run-ai-staging
             command: |
+              chmod u+x script/uploadChart.sh
               script/uploadChart.sh
 
   workflows:
