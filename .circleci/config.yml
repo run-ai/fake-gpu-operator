@@ -38,7 +38,7 @@
         - run:
             name: Update version in helm chart
             command: |
-              TAG=${${CIRCLE_TAG/v/''}}
+              TAG=${CIRCLE_TAG/v/''}
               echo "Updating fake-gpu-operator new version number $TAG in runai helm chart directory..."
               sed -i s/0.0.0/$TAG/g deploy/fake-gpu-operator/values.yaml
 
