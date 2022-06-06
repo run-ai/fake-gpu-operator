@@ -46,7 +46,7 @@ upload() {
         exit 1
     fi
 
-    sed -i "s/"CHART_VERSION"/$CHART_VERSION/g" Chart.yaml
+    sed -i "s/"CHART_VERSION"/$CHART_VERSION/g" deploy/fake-gpu-operator/Chart.yaml
     helm repo add ingress-nginx "https://kubernetes.github.io/ingress-nginx"
     helm repo update
     helm dep update .
