@@ -114,33 +114,6 @@
               DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
               make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
               make push-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
-
-    helm_operator_build_staging:
-      docker:
-        - image: google/cloud-sdk:276.0.0
-      steps:
-        - checkout
-        - pre_docker_commands
-        - operator_update_version_in_helm_chart
-        - run:
-            name: "build helm operator for staging"
-            environment:
-              HELM_URL: https://get.helm.sh
-              HELM_TARBALL: helm-v3.7.1-linux-amd64.tar.gz
-              RUNAI_REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
-            command: |
-              TAG=${CIRCLE_TAG/v/''}
-              echo "Setting up Helm client..."
-
-              curl --user-agent curl-ci-sync -sSL -o "$HELM_TARBALL" "$HELM_URL/$HELM_TARBALL"
-              tar xzfv "$HELM_TARBALL"
-              PATH="$(pwd)/linux-amd64/:$PATH"
-              sed -i "s/CHART_TAG/$TAG/g" deploy/fake-gpu-operator/Chart.yaml
-              helm repo add stable https://charts.helm.sh/stable
-              helm repo add runai "$RUNAI_REPO_URL"
-              helm repo update
-              helm dep update ./deploy/fake-gpu-operator/
-            
     chart_build_staging:
       working_directory: ~/go/src/github.com/run-ai/fake-gpu-operator
       docker:
@@ -186,18 +159,9 @@
                 ignore: /.*/
               tags:
                 only: /^v.*/  
-        
-        # - helm_operator_build_staging:
-        #     # requires:
-        #     #   - deploy_to_production
-        #     filters:
-        #       branches:
-        #         ignore: /.*/
-        #       tags:
-        #         only: /^v.*/
         - chart_build_staging:
-            # requires:
-            #   - helm_operator_build_staging
+            requires:
+              - deploy_to_production
             filters:
               branches:
                 ignore: /.*/
