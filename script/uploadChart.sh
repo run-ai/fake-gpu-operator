@@ -45,12 +45,12 @@ upload() {
         echo "[ERROR] Exiting because unable to copy index locally. Not safe to proceed."
         exit 1
     fi
-
-    sed -i "s/"CHART_VERSION"/$CHART_VERSION/g" deploy/fake-gpu-operator/Chart.yaml
+    cd deploy/fake-gpu-operator/
+    sed -i "s/"CHART_VERSION"/$CHART_VERSION/g" Chart.yaml
     helm repo add ingress-nginx "https://kubernetes.github.io/ingress-nginx"
     helm repo update
     helm dep update .
-    helm package deploy/fake-gpu-opeartor/ -n runai --destination "$sync_dir"
+    helm package . -n runai --destination "$sync_dir"
     if helm repo index --url "$REPO_URL" --merge "$index_dir/index.yaml" "$sync_dir"; then
         # Move updated index.yaml to sync folder so we don't push the old one again
         mv -f "$sync_dir/index.yaml" "$index_dir/index.yaml"
@@ -58,7 +58,7 @@ upload() {
         gsutil -h "Cache-Control:no-cache,max-age=0" -m rsync "$sync_dir" "$BUCKET"
 
         # Make sure index.yaml is synced last
-        gsutil -h "Cache-Control:no-cache,max-age=0" cp "$index_dir/index.yaml" "$BUCKET"
+        gsutil -h "Cache-Control:no-cache,max-age=0" cp "$indtex_dir/index.yaml" "$BUCKET"
     else
             echo "[ERROR] Exiting because unable to update index. Not safe to push update."
             exit 1
