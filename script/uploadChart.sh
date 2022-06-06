@@ -37,8 +37,9 @@ upload() {
 
     if [[ "$UPLOAD_TARGET" == "prod" ]]; then
       CHART_VERSION=${CIRCLE_TAG/v/''}
+      sed -i "s/tag:.*/tag: $CHART_VERSION/g" values.yaml
     else
-      sed -i "s/env:.*/env: $UPLOAD_TARGET/g; s/tag:.*/tag: $CIRCLE_SHA1/g" deploy/fake-gpu-operator/values.yaml
+      sed -i "s/tag:.*/tag: $CIRCLE_SHA1/g" values.yaml
     fi
 
     mkdir -p "$sync_dir"
