@@ -10,7 +10,7 @@
 
 # Phase 1
 
-## Mock requirements
+## Mock requirements 
 
 - Node resources
   - `nvidia.com/gpu`
