@@ -2,7 +2,7 @@ devicePlugin:
   image:
     pullPolicy: Always
     repository: gcr.io/run-ai-staging/fake-gpu-operator/device-plugin
-    tag: 0.0.1
+    tag: 0.0.0
   resources: 
     requests:
       cpu: "100m"
@@ -15,7 +15,7 @@ statusUpdater:
   image:
     pullPolicy: Always
     repository: gcr.io/run-ai-staging/fake-gpu-operator/status-updater
-    tag: 0.0.1
+    tag: 0.0.0
   resources: 
     requests:
       cpu: "200m"
@@ -28,7 +28,7 @@ statusExporter:
   image:
     pullPolicy: Always
     repository: gcr.io/run-ai-staging/fake-gpu-operator/status-exporter
-    tag: 0.0.1
+    tag: 0.0.0
   resources: 
     requests:
       cpu: "100m"
