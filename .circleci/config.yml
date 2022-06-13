@@ -2,7 +2,7 @@
   executors:
     runai-executor:
       docker:
-        - image: cimg/go:1.18.2
+        - image: cimg/base:stable
   
   commands:
     remote_docker:

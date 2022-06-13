@@ -3,7 +3,7 @@ COMPONENT="$1"
 
 DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
 DOCKER_REPO_FULL=${DOCKER_REPO_BASE}/${COMPONENT}
-DOCKER_TAG=0.0.2
+DOCKER_TAG=untrusted
 DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
@@ -16,7 +16,7 @@ clean:
 .PHONY: clean
 
 image:
-	docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
+	docker buildx build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} --platform=linux/amd64,linux/arm64 .
 .PHONY: image
 
 images:
