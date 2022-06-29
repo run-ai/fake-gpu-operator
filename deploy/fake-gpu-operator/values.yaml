@@ -24,6 +24,19 @@ statusUpdater:
       cpu: "400m"
       memory: "400Mi"
 
+topologyServer:
+  image:
+    pullPolicy: Always
+    repository: gcr.io/run-ai-lab/shaibi/topology-server/main.go-955301f53b399b7a99c897579b38ad4e
+    tag: latest
+  resources: 
+    requests:
+      cpu: "100m"
+      memory: "100Mi"
+    limits:
+      cpu: "200m"
+      memory: "200Mi"
+
 statusExporter:
   image:
     pullPolicy: Always

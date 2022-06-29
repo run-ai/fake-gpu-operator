@@ -8,7 +8,7 @@ DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
 build:
-	go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
+	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
 .PHONY: build
 
 clean:

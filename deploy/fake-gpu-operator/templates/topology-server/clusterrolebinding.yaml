@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: topology-server
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: topology-server
+subjects:
+  - kind: ServiceAccount
+    name: topology-server
+    namespace: "{{ .Release.Namespace }}"
