@@ -21,14 +21,14 @@ COPY ./cmd/status-exporter/ ./cmd/status-exporter/
 COPY ./internal/status-exporter/ ./internal/status-exporter/
 RUN make build COMPONENT=status-exporter
 
-FROM alpine:3.16.0 as device-plugin
+FROM ubuntu as device-plugin
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
 ENTRYPOINT ["/bin/device-plugin"]
 
-FROM alpine:3.16.0 as status-updater
+FROM ubuntu as status-updater
 COPY --from=status-updater-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-updater /bin/
 ENTRYPOINT ["/bin/status-updater"]
 
-FROM alpine:3.16.0 as status-exporter
+FROM ubuntu as status-exporter
 COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /bin/
 ENTRYPOINT ["/bin/status-exporter"]
