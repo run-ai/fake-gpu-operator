@@ -184,6 +184,12 @@ func (m *DevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.AllocateReq
 			Envs: map[string]string{
 				"MOCK_NVIDIA_VISIBLE_DEVICES": strings.Join(req.DevicesIDs, ","),
 			},
+			Mounts: []*pluginapi.Mount{
+				{
+					ContainerPath: "/bin/nvidia-smi",
+					HostPath:      "/var/lib/runai/shared/bin/nvidia-smi",
+				},
+			},
 		}
 
 		responses.ContainerResponses = append(responses.ContainerResponses, &response)
