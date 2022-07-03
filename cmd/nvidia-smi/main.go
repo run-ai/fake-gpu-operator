@@ -37,7 +37,7 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	nodeName := os.Getenv("NODE_NAME")
 
 	// Send http request to topology-server to get the topology
-	resp, err := http.Get("http://topology-server.gpu-operator/")
+	resp, err := http.Get("http://topology-server.gpu-operator/topology")
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +55,17 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	args.GpuProduct = nodeTopology.GpuProduct
-	args.GpuTotalMem = nodeTopology.GpuMemory
+
+	gpuPortion := 1.0
+	// READ RUNAI_NUM_OF_GPUS float env variable
+	numOfGpus := os.Getenv("RUNAI_NUM_OF_GPUS")
+	if numOfGpus != "" {
+		gpuPortion, err = strconv.ParseFloat(numOfGpus, 32)
+		if err != nil {
+			panic(err)
+		}
+	}
+	args.GpuTotalMem = int(float64(nodeTopology.GpuMemory) * gpuPortion)
 
 	var gpuIdx int
 	if os.Getenv("NVIDIA_VISIBLE_DEVICES") == "" {
@@ -79,7 +89,7 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	args.GpuIdx = gpuIdx
-	args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Metrics.Status.FbUsed)
+	args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Metrics.Status.FbUsed) * float32(gpuPortion)
 	args.GpuUtil = nodeTopology.Gpus[gpuIdx].Metrics.Status.Utilization
 
 	// Read /proc/1/cmdline to get the process name
@@ -136,7 +146,7 @@ func printArgs(args nvidiaSmiArgs) {
 	t.AppendRow(table.Row{"", "", "              MIG M."})
 	t.AppendSeparator()
 	t.AppendRow(table.Row{fmt.Sprintf("%s  %s%s", sizeString(strconv.Itoa(args.GpuIdx), 3, true), sizeString(args.GpuProduct, 12, false), sizeString("Off", 13, true)), fmt.Sprintf("%s %s", sizeString("00000001:00:00.0", 16, false), sizeString("Off", 3, true)), sizeString("Off", 20, true)})
-	t.AppendRow(table.Row{"N/A   33C    P8    11W /  70W", sizeString(fmt.Sprintf("%dMiB / %dMiB", args.GpuTotalMem, args.GpuTotalMem), 20, true), fmt.Sprintf("%s %s", sizeString(strconv.Itoa(args.GpuUtil)+"%", 8, true), sizeString("Default", 11, true))})
+	t.AppendRow(table.Row{"N/A   33C    P8    11W /  70W", sizeString(fmt.Sprintf("%dMiB / %dMiB", int(args.GpuUsedMem), args.GpuTotalMem), 20, true), fmt.Sprintf("%s %s", sizeString(strconv.Itoa(args.GpuUtil)+"%", 8, true), sizeString("Default", 11, true))})
 	t.AppendRow(table.Row{"", "", sizeString("N/A", 20, true)})
 	t.AppendSeparator()
 	t.Render()

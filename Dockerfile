@@ -21,8 +21,18 @@ COPY ./cmd/status-exporter/ ./cmd/status-exporter/
 COPY ./internal/status-exporter/ ./internal/status-exporter/
 RUN make build COMPONENT=status-exporter
 
+FROM common-builder as topology-server-builder
+COPY ./cmd/topology-server/ ./cmd/topology-server/
+RUN make build COMPONENT=topology-server
+
+FROM common-builder as nvidia-smi-builder
+COPY ./cmd/nvidia-smi/ ./cmd/nvidia-smi/
+COPY ./internal/nvidia-smi/ ./internal/nvidia-smi/
+RUN make build COMPONENT=nvidia-smi
+
 FROM ubuntu as device-plugin
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
+COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
 ENTRYPOINT ["/bin/device-plugin"]
 
 FROM ubuntu as status-updater
@@ -32,3 +42,7 @@ ENTRYPOINT ["/bin/status-updater"]
 FROM ubuntu as status-exporter
 COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /bin/
 ENTRYPOINT ["/bin/status-exporter"]
+
+FROM ubuntu as topology-server
+COPY --from=topology-server-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/topology-server /bin/
+ENTRYPOINT ["/bin/topology-server"]

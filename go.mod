@@ -7,6 +7,7 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.3.3
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0
+	github.com/otiai10/copy v1.7.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/client_model v0.2.0
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
