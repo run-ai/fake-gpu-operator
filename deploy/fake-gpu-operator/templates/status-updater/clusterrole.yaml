@@ -18,3 +18,9 @@ rules:
     verbs:
       - get
       - update
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - list

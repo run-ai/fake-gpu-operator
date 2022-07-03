@@ -6,6 +6,7 @@ import "fmt"
 type ClusterTopology struct {
 	MigStrategy string                  `yaml:"mig-strategy"`
 	Nodes       map[string]NodeTopology `yaml:"nodes"`
+	Config      Config                  `yaml:"config"`
 }
 
 type NodeTopology struct {
@@ -34,6 +35,17 @@ type GpuMetricsMetadata struct {
 type GpuStatus struct {
 	Utilization int `yaml:"utilization"`
 	FbUsed      int `yaml:"fb-used"`
+}
+
+type Config struct {
+	NodeAutofill NodeAutofillSettings `yaml:"node-autofill"`
+}
+
+type NodeAutofillSettings struct {
+	Enabled    bool   `yaml:"enabled"`
+	GpuCount   int    `yaml:"gpu-count"`
+	GpuMemory  int    `yaml:"gpu-memory"`
+	GpuProduct string `yaml:"gpu-product"`
 }
 
 // Errors
