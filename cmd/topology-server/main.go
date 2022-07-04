@@ -32,7 +32,10 @@ func main() {
 		log.Printf("Returning cluster topology: %s", clusterTopologyJSON)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(clusterTopologyJSON)
+		_, err = w.Write(clusterTopologyJSON)
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	log.Printf("Serving on port 8080")
