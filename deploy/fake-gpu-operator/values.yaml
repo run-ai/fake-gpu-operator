@@ -27,8 +27,8 @@ statusUpdater:
 topologyServer:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-lab/shaibi/topology-server/main.go-955301f53b399b7a99c897579b38ad4e
-    tag: latest
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/topology-server
+    tag: 0.0.1
   resources: 
     requests:
       cpu: "100m"
