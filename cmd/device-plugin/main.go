@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/otiai10/copy"
 	"github.com/run-ai/fake-gpu-operator/internal/common/config"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/deviceplugin"
@@ -21,6 +22,14 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to get topology: %s\n", err)
 		os.Exit(1)
+	}
+
+	if _, err := os.Stat("/runai/bin/nvidia-smi"); os.IsNotExist(err) {
+		log.Println("nvidia-smi not found on host, copying it from /runai/bin")
+		err = copy.Copy("/bin/nvidia-smi", "/runai/bin/nvidia-smi")
+		if err != nil {
+			log.Printf("Failed to copy nvidia-smi: %s\n", err)
+		}
 	}
 
 	devicePlugin := deviceplugin.NewDevicePlugin(topology)

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: topology-server
+
+  labels:
+    app: topology-server
+spec:
+  selector:
+    matchLabels:
+      app: topology-server
+      component: topology-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: topology-server
+        component: topology-server
+    spec:
+      containers:
+        - name: topology-server
+          image: "{{ .Values.topologyServer.image.repository }}:{{ .Values.topologyServer.image.tag }}"
+          imagePullPolicy: "{{ .Values.topologyServer.image.pullPolicy }}"
+          resources:
+            {{- toYaml .Values.topologyServer.resources | nindent 12 }}
+          env:
+            - name: TOPOLOGY_CM_NAME
+              value: topology
+            - name: TOPOLOGY_CM_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+          ports:
+            - name: http
+              containerPort: 8080
+      restartPolicy: Always
+      serviceAccountName: topology-server
+      imagePullSecrets:
+        - name: gcr-secret

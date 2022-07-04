@@ -8,7 +8,7 @@ DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
 build:
-	go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
+	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
 .PHONY: build
 
 clean:
@@ -23,6 +23,7 @@ images:
 	make image COMPONENT=device-plugin
 	make image COMPONENT=status-updater
 	make image COMPONENT=status-exporter
+	make image COMPONENT=topology-server
 .PHONY: images
 
 push:
@@ -33,6 +34,7 @@ push-all:
 	make push COMPONENT=device-plugin
 	make push COMPONENT=status-updater
 	make push COMPONENT=status-exporter
+	make push COMPONENT=topology-server
 .PHONY: push-all
 
 restart: 
@@ -46,6 +48,7 @@ deploy-all:
 	make image push COMPONENT=device-plugin
 	make image push COMPONENT=status-updater
 	make image push COMPONENT=status-exporter
+	make image push COMPONENT=topology-server
 .PHONY: deploy-all
 
 image-test:

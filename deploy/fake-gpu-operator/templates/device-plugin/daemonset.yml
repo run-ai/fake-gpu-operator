@@ -37,6 +37,8 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
+            - mountPath: /runai/bin
+              name: runai-bin-directory
             - mountPath: /var/lib/kubelet/device-plugins
               name: device-plugin
             - mountPath: /etc/config/
@@ -62,3 +64,7 @@ spec:
         - configMap:
             name: topology
           name: topology
+        - hostPath:
+            path: /var/lib/runai/shared/bin
+            type: DirectoryOrCreate
+          name: runai-bin-directory

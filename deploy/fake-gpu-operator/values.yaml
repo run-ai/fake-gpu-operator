@@ -24,6 +24,19 @@ statusUpdater:
       cpu: "400m"
       memory: "400Mi"
 
+topologyServer:
+  image:
+    pullPolicy: Always
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/topology-server
+    tag: 0.0.1
+  resources: 
+    requests:
+      cpu: "100m"
+      memory: "100Mi"
+    limits:
+      cpu: "200m"
+      memory: "200Mi"
+
 statusExporter:
   image:
     pullPolicy: Always
