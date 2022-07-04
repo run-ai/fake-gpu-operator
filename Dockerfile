@@ -27,7 +27,6 @@ RUN make build COMPONENT=topology-server
 
 FROM common-builder as nvidia-smi-builder
 COPY ./cmd/nvidia-smi/ ./cmd/nvidia-smi/
-COPY ./internal/nvidia-smi/ ./internal/nvidia-smi/
 RUN make build COMPONENT=nvidia-smi
 
 FROM ubuntu as device-plugin
