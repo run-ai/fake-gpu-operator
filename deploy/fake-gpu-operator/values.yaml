@@ -1,3 +1,6 @@
+environment:
+  openshift: false
+
 devicePlugin:
   image:
     pullPolicy: Always
