@@ -3,6 +3,7 @@ package topology
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -12,9 +13,12 @@ import (
 
 func (m *PodGpuUsageStatusMap) Utilization() int {
 	var sum int
-	for k := range *m {
-		// sum += v.Utilization.Random()
-		sum += m.knativeUtilization(string(k))
+	for k, v := range *m {
+		if v.IsInferencePod {
+			sum += m.knativeUtilization(string(k))
+		} else {
+			sum += v.Utilization.Random()
+		}
 	}
 
 	return int(math.Min(100, float64(sum)))
@@ -33,10 +37,9 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 	query := fmt.Sprintf("(rate(revision_app_request_count[1m]) + on(pod) group_left(uid) kube_pod_info{uid=\"%s\"})", uid)
 	params := url.Values{}
 	params.Set("query", query)
-	fmt.Printf("GUY Sending request to %s\n", "http://runai-cluster-kube-prometh-prometheus.monitoring:9090/api/v1/query?"+params.Encode())
 	res, err := http.Get("http://runai-cluster-kube-prometh-prometheus.monitoring:9090/api/v1/query?" + params.Encode())
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		log.Printf("Error: %v\n", err)
 		return 0
 	}
 	defer res.Body.Close()
@@ -44,7 +47,7 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 	// ReadAll body
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		log.Printf("Error: %v\n", err)
 		return 0
 	}
 

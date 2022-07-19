@@ -40,8 +40,9 @@ type GpuMetricsMetadata struct {
 }
 
 type GpuUsageStatus struct {
-	Utilization Range `yaml:"utilization"`
-	FbUsed      int   `yaml:"fb-used"`
+	Utilization    Range `yaml:"utilization"`
+	FbUsed         int   `yaml:"fb-used"`
+	IsInferencePod bool  `yaml:"is-inference-pod"`
 }
 
 type Range struct {

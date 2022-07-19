@@ -36,11 +36,13 @@ func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory
 
 	switch podType {
 	case "train":
-		return generateGpuUsageStatus(topology.Range{Min: 80, Max: 100}, gpuFraction, totalGpuMemory)
+		return generateGpuUsageStatus(topology.Range{Min: 80, Max: 100}, gpuFraction, totalGpuMemory, false)
 	case "build", "interactive-preemptible":
-		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory)
+		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, false)
+	case "inference":
+		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, true)
 	default:
-		return generateGpuUsageStatus(defaultGpuUtil, gpuFraction, totalGpuMemory)
+		return generateGpuUsageStatus(defaultGpuUtil, gpuFraction, totalGpuMemory, false)
 	}
 }
 
@@ -67,9 +69,10 @@ func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
 	return podGroupType, nil
 }
 
-func generateGpuUsageStatus(gpuUtilization topology.Range, gpuFraction float64, totalGpuMemory int) topology.GpuUsageStatus {
+func generateGpuUsageStatus(gpuUtilization topology.Range, gpuFraction float64, totalGpuMemory int, isInferencePod bool) topology.GpuUsageStatus {
 	return topology.GpuUsageStatus{
-		Utilization: gpuUtilization,
-		FbUsed:      int(float64(totalGpuMemory) * gpuFraction),
+		Utilization:    gpuUtilization,
+		FbUsed:         int(float64(totalGpuMemory) * gpuFraction),
+		IsInferencePod: isInferencePod,
 	}
 }
