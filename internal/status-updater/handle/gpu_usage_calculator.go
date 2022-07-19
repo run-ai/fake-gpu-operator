@@ -37,7 +37,7 @@ func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory
 	switch podType {
 	case "train":
 		return generateGpuUsageStatus(topology.Range{Min: 80, Max: 100}, gpuFraction, totalGpuMemory)
-	case "build":
+	case "build", "interactive-preemptible":
 		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory)
 	default:
 		return generateGpuUsageStatus(defaultGpuUtil, gpuFraction, totalGpuMemory)
