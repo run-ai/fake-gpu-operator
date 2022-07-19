@@ -2,6 +2,7 @@ package topology
 
 import (
 	"math/rand"
+	"time"
 )
 
 func (r *Range) Random() int {
@@ -9,5 +10,6 @@ func (r *Range) Random() int {
 		return r.Min
 	}
 
+	rand.Seed(time.Now().UnixNano())
 	return r.Min + rand.Intn(r.Max-r.Min)
 }
