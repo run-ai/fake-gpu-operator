@@ -177,8 +177,11 @@ func getTestCases() map[string]testCase {
 									},
 									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
 										podName: topology.GpuUsageStatus{
-											Utilization: 100,
-											FbUsed:      20000,
+											Utilization: topology.Range{
+												Min: 80,
+												Max: 80,
+											},
+											FbUsed: 20000,
 										},
 									},
 								},
@@ -211,7 +214,7 @@ func getTestCases() map[string]testCase {
 								"container": containerName,
 							}),
 							Gauge: &dto.Gauge{
-								Value: createPtr(float64(100)),
+								Value: createPtr(float64(80)),
 							},
 						},
 					},
@@ -280,8 +283,11 @@ func getTestCases() map[string]testCase {
 									},
 									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
 										podName: topology.GpuUsageStatus{
-											Utilization: 100,
-											FbUsed:      20000,
+											Utilization: topology.Range{
+												Min: 100,
+												Max: 100,
+											},
+											FbUsed: 20000,
 										},
 									},
 								},
@@ -296,8 +302,11 @@ func getTestCases() map[string]testCase {
 									},
 									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
 										podName: topology.GpuUsageStatus{
-											Utilization: 100,
-											FbUsed:      20000,
+											Utilization: topology.Range{
+												Min: 100,
+												Max: 100,
+											},
+											FbUsed: 20000,
 										},
 									},
 								},
@@ -410,8 +419,11 @@ func createInitialTopology() *topology.ClusterTopology {
 							},
 							PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
 								podName: topology.GpuUsageStatus{
-									Utilization: 100,
-									FbUsed:      20000,
+									Utilization: topology.Range{
+										Min: 100,
+										Max: 100,
+									},
+									FbUsed: 20000,
 								},
 							},
 						},
