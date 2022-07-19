@@ -12,8 +12,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	dfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
+	kfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -25,6 +30,7 @@ const (
 	topologyCmNamespace = "fake-cm-namespace"
 	podNamespace        = "fake-pod-namespace"
 	podName             = "fake-pod-name"
+	podUID              = "fake-pod-uid"
 	containerName       = "fake-container-name"
 	node                = "fake-node"
 	nodeGpuCount        = 2
@@ -37,7 +43,8 @@ func TestStatusUpdater(t *testing.T) {
 
 var _ = Describe("StatusUpdater", func() {
 	var (
-		kubeclient kubernetes.Interface
+		kubeclient    kubernetes.Interface
+		dynamicClient dynamic.Interface
 	)
 
 	BeforeEach(func() {
@@ -64,11 +71,14 @@ var _ = Describe("StatusUpdater", func() {
 			},
 		}
 
-		kubeclient = fake.NewSimpleClientset()
+		kubeclient = kfake.NewSimpleClientset()
+		scheme := runtime.NewScheme()
+		scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "scheduling.run.ai", Version: "v1", Kind: "PodGroup"}, &unstructured.UnstructuredList{})
+		dynamicClient = dfake.NewSimpleDynamicClient(scheme)
 
 		_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), topologyConfigMap, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		setupFakes(kubeclient)
+		setupFakes(kubeclient, dynamicClient)
 		setupConfig()
 	})
 
@@ -108,8 +118,15 @@ var _ = Describe("StatusUpdater", func() {
 				expectedTopology := createTopology(nodeGpuCount)
 				if caseDetails.podPhase == v1.PodRunning {
 					for i := 0; i < int(caseDetails.podGpuCount); i++ {
-						expectedTopology.Nodes[node].Gpus[i].Metrics.Status.Utilization = 100
-						expectedTopology.Nodes[node].Gpus[i].Metrics.Status.FbUsed = expectedTopology.Nodes[node].GpuMemory
+						expectedTopology.Nodes[node].Gpus[i].Metrics.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+							podUID: topology.GpuUsageStatus{
+								Utilization: topology.Range{
+									Min: 100,
+									Max: 100,
+								},
+								FbUsed: expectedTopology.Nodes[node].GpuMemory,
+							},
+						}
 						expectedTopology.Nodes[node].Gpus[i].Metrics.Metadata.Pod = podName
 						expectedTopology.Nodes[node].Gpus[i].Metrics.Metadata.Container = containerName
 						expectedTopology.Nodes[node].Gpus[i].Metrics.Metadata.Namespace = podNamespace
@@ -132,12 +149,15 @@ func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.Clus
 	}
 }
 
-func setupFakes(kubeclient kubernetes.Interface) {
+func setupFakes(kubeclient kubernetes.Interface, dynamicClient dynamic.Interface) {
 	status_updater.InClusterConfigFn = func() (*rest.Config, error) {
 		return nil, nil
 	}
 	status_updater.KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 		return kubeclient
+	}
+	status_updater.DynamicClientFn = func(c *rest.Config) dynamic.Interface {
+		return dynamicClient
 	}
 }
 
@@ -155,6 +175,9 @@ func createTopology(gpuCount int64) *topology.ClusterTopology {
 	for i := int64(0); i < gpuCount; i++ {
 		gpus[i] = topology.GpuDetails{
 			ID: fmt.Sprintf("gpu-%d", i),
+			Metrics: topology.GpuMetrics{
+				PodGpuUsageStatus: topology.PodGpuUsageStatusMap{},
+			},
 		}
 	}
 
@@ -176,6 +199,7 @@ func createPod(gpuCount int64, phase v1.PodPhase) *v1.Pod {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
 			Namespace: podNamespace,
+			UID:       podUID,
 		},
 		Spec: v1.PodSpec{
 			NodeName: node,

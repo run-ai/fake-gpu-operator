@@ -1,6 +1,10 @@
 package topology
 
-import "fmt"
+import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/types"
+)
 
 // Types
 type ClusterTopology struct {
@@ -21,9 +25,12 @@ type GpuDetails struct {
 	Metrics GpuMetrics `yaml:"metrics"`
 }
 
+type PodGpuUsageStatusMap map[types.UID]GpuUsageStatus
+
 type GpuMetrics struct {
 	Metadata GpuMetricsMetadata `yaml:"metadata"`
-	Status   GpuStatus          `yaml:"status"`
+	// Maps PodUID to its GPU usage status
+	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"podGpuUsageStatus"`
 }
 
 type GpuMetricsMetadata struct {
@@ -32,9 +39,14 @@ type GpuMetricsMetadata struct {
 	Container string `yaml:"container"`
 }
 
-type GpuStatus struct {
-	Utilization int `yaml:"utilization"`
-	FbUsed      int `yaml:"fb-used"`
+type GpuUsageStatus struct {
+	Utilization Range `yaml:"utilization"`
+	FbUsed      int   `yaml:"fb-used"`
+}
+
+type Range struct {
+	Min int `yaml:"min"`
+	Max int `yaml:"max"`
 }
 
 type Config struct {

@@ -35,7 +35,7 @@ func NewInformer(kubeclient kubernetes.Interface) *Informer {
 		FilterFunc: func(obj interface{}) bool {
 			switch pod := obj.(type) {
 			case *v1.Pod:
-				return isPodRequestingGpu(pod)
+				return isPodRequestingGpu(pod) || isSharedGpuPod(pod)
 			default:
 				return false
 			}
@@ -111,4 +111,9 @@ func isPodRunning(pod *v1.Pod) bool {
 
 func isPodRequestingGpu(pod *v1.Pod) bool {
 	return !pod.Spec.Containers[0].Resources.Limits["nvidia.com/gpu"].Equal(resource.MustParse("0"))
+}
+
+func isSharedGpuPod(pod *v1.Pod) bool {
+	_, ok := pod.Annotations["runai-gpu"]
+	return ok
 }
