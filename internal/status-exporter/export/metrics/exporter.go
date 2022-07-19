@@ -79,6 +79,7 @@ func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
 		}
 
 		utilization := gpu.Metrics.PodGpuUsageStatus.Utilization()
+		log.Printf("GUY GPU utilization: %v\n", utilization)
 		fbUsed := gpu.Metrics.PodGpuUsageStatus.FbUsed(node.GpuMemory)
 
 		gpuUtilization.With(labels).Set(float64(utilization))
