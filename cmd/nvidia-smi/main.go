@@ -91,7 +91,6 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	args.GpuIdx = gpuIdx
 	args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion)
 	args.GpuUtil = nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.Utilization()
-	fmt.Print("GPU utilization: ", args.GpuUtil, "%\n")
 
 	// Read /proc/1/cmdline to get the process name
 	cmdlineFile, err := os.Open("/proc/1/cmdline")
