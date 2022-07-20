@@ -35,7 +35,8 @@ func NewInformer(kubeclient kubernetes.Interface) *Informer {
 		FilterFunc: func(obj interface{}) bool {
 			switch pod := obj.(type) {
 			case *v1.Pod:
-				return isPodRequestingGpu(pod) || isSharedGpuPod(pod)
+				return (pod != nil) &&
+					(isPodRequestingGpu(pod) || isSharedGpuPod(pod))
 			default:
 				return false
 			}

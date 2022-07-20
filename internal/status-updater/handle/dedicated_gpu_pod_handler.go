@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func (p *PodEventHandler) handleDedicatedGpuPodAdd(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+func (p *PodEventHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
 	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name("nvidia.com/gpu", "")
 	if requestedGpus == nil {
 		return fmt.Errorf("no GPUs requested in pod %s", pod.Name)
@@ -40,7 +40,7 @@ func (p *PodEventHandler) handleDedicatedGpuPodAdd(pod *v1.Pod, clusterTopology 
 	return nil
 }
 
-func (p *PodEventHandler) handleDedicatedGpuPodDelete(pod *v1.Pod, clusterTopology *topology.ClusterTopology) {
+func (p *PodEventHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.ClusterTopology) {
 	for idx, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&

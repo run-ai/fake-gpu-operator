@@ -20,7 +20,20 @@ var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 	return kubernetes.NewForConfigOrDie(c)
 }
 
-func Run(readyCh chan<- struct{}) {
+type App struct {
+	stopper chan struct{}
+}
+
+func NewApp() *App {
+	app := &App{
+		stopper: make(chan struct{}),
+	}
+	return app
+}
+
+func (app *App) Run(readyCh chan<- struct{}) {
+	defer app.Stop()
+
 	requiredEnvVars := []string{"NODE_NAME", "TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
 	config.ValidateConfig(requiredEnvVars)
 
@@ -45,5 +58,8 @@ func Run(readyCh chan<- struct{}) {
 
 	s := <-sig
 	log.Printf("Received signal \"%v\"\n", s)
-	close(stopper)
+}
+
+func (app *App) Stop() {
+	close(app.stopper)
 }

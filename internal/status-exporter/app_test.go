@@ -52,9 +52,6 @@ var _ = Describe("StatusExporter", func() {
 		kubeclient kubernetes.Interface
 	)
 
-	// BeforeEach(func() {
-	// 	// Prepare the status exporter
-	// })
 	fakeNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   nodeName,
@@ -66,11 +63,11 @@ var _ = Describe("StatusExporter", func() {
 	setupConfig()
 
 	readyChan := make(chan struct{})
-	go status_exporter.Run(readyChan)
+	app := status_exporter.NewApp()
+	go app.Run(readyChan)
 	// Wait for the status exporter to initialize
 	<-readyChan
 
-	// Create initial topology
 	initialTopology := createInitialTopology()
 	cm, err := topology.ToConfigMap(initialTopology)
 	Expect(err).To(Not(HaveOccurred()))

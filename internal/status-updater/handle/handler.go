@@ -91,12 +91,12 @@ func (p *PodEventHandler) processPodEvents(stopCh <-chan struct{}) {
 }
 
 func (p *PodEventHandler) handleAdd(podEvent *inform.PodEvent, clusterTopology *topology.ClusterTopology, topologyCm *v1.ConfigMap) error {
-	err := p.handleDedicatedGpuPodAdd(podEvent.Pod, clusterTopology)
+	err := p.handleDedicatedGpuPodAddition(podEvent.Pod, clusterTopology)
 	if err != nil {
 		return err
 	}
 
-	err = p.handleSharedGpuPodAdd(podEvent.Pod, clusterTopology)
+	err = p.handleSharedGpuPodAddition(podEvent.Pod, clusterTopology)
 	if err != nil {
 		return err
 	}
@@ -105,9 +105,9 @@ func (p *PodEventHandler) handleAdd(podEvent *inform.PodEvent, clusterTopology *
 }
 
 func (p *PodEventHandler) handleDelete(podEvent *inform.PodEvent, clusterTopology *topology.ClusterTopology, topologyCm *v1.ConfigMap) error {
-	p.handleDedicatedGpuPodDelete(podEvent.Pod, clusterTopology)
+	p.handleDedicatedGpuPodDeletion(podEvent.Pod, clusterTopology)
 
-	err := p.handleSharedGpuPodDelete(podEvent.Pod, clusterTopology)
+	err := p.handleSharedGpuPodDeletion(podEvent.Pod, clusterTopology)
 	if err != nil {
 		return err
 	}

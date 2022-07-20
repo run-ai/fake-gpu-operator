@@ -36,6 +36,7 @@ const (
 	reservationPodNs            = "runai-reservation"
 	reservationPodName          = "gpu-reservation-pod"
 	reservationPodContainerName = "reservation-pod-container"
+	podGroupName                = "pg"
 	node                        = "fake-node"
 	nodeGpuCount                = 2
 )
@@ -49,6 +50,7 @@ var _ = Describe("StatusUpdater", func() {
 	var (
 		kubeclient    kubernetes.Interface
 		dynamicClient dynamic.Interface
+		app           *status_updater.App
 	)
 
 	BeforeEach(func() {
@@ -84,11 +86,17 @@ var _ = Describe("StatusUpdater", func() {
 		Expect(err).ToNot(HaveOccurred())
 		setupFakes(kubeclient, dynamicClient)
 		setupConfig()
+
+		app = status_updater.NewApp()
+		go app.Run()
+	})
+
+	AfterEach(func() {
+		app.Stop()
 	})
 
 	When("the status updater is started", func() {
 		It("should reset the cluster topology", func() {
-			go status_updater.Run()
 			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount)))
 		})
 	})
@@ -104,7 +112,7 @@ var _ = Describe("StatusUpdater", func() {
 
 		for i := int64(1); i <= nodeGpuCount; i++ {
 			for _, phase := range []v1.PodPhase{v1.PodPending, v1.PodRunning, v1.PodSucceeded, v1.PodFailed, v1.PodUnknown} {
-				for _, workloadType := range []string{"build", "train", "interactive-preemptible"} {
+				for _, workloadType := range []string{"build", "train", "interactive-preemptible", "inference"} {
 					cases = append(cases, testCase{
 						podGpuCount:  i,
 						podPhase:     phase,
@@ -116,11 +124,13 @@ var _ = Describe("StatusUpdater", func() {
 
 		for _, caseDetails := range cases {
 			caseBaseName := fmt.Sprintf("GPU count %d, pod phase %s, workloadType: %s", caseDetails.podGpuCount, caseDetails.podPhase, caseDetails.workloadType)
+			caseDetails := caseDetails
 			It(caseBaseName, func() {
-				go status_updater.Run()
-
 				pod := createDedicatedGpuPod(caseDetails.podGpuCount, caseDetails.podPhase)
 				_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+				Expect(err).ToNot(HaveOccurred())
+				podGroup := createPodGroup(caseDetails.workloadType)
+				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				expectedTopology := createTopology(nodeGpuCount)
@@ -128,8 +138,9 @@ var _ = Describe("StatusUpdater", func() {
 					for i := 0; i < int(caseDetails.podGpuCount); i++ {
 						expectedTopology.Nodes[node].Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 							podUID: topology.GpuUsageStatus{
-								Utilization: getWorkloadTypeExpectedUtilization(caseDetails.workloadType),
-								FbUsed:      expectedTopology.Nodes[node].GpuMemory,
+								Utilization:    getWorkloadTypeExpectedUtilization(caseDetails.workloadType),
+								FbUsed:         expectedTopology.Nodes[node].GpuMemory,
+								IsInferencePod: caseDetails.workloadType == "inference",
 							},
 						}
 						expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Pod = podName
@@ -149,8 +160,6 @@ var _ = Describe("StatusUpdater", func() {
 
 	When("informed of a shared GPU pod", func() {
 		It("should update the cluster topology at its reservation pod location", func() {
-			go status_updater.Run()
-
 			// Test reservation pod handling
 			reservationPod := createReservationPod(0)
 			_, err := kubeclient.CoreV1().Pods(reservationPodNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
@@ -167,10 +176,14 @@ var _ = Describe("StatusUpdater", func() {
 			_, err = kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
+			podGroup := createPodGroup("train")
+			_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
 			expectedTopology.Nodes[node].Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 				podUID: topology.GpuUsageStatus{
 					Utilization: topology.Range{
-						Min: 100,
+						Min: 80,
 						Max: 100,
 					},
 					FbUsed: int(float64(expectedTopology.Nodes[node].GpuMemory) * 0.5),
@@ -184,7 +197,8 @@ var _ = Describe("StatusUpdater", func() {
 
 func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.ClusterTopology, error) {
 	return func() (*topology.ClusterTopology, error) {
-		return topology.GetFromKube(kubeclient)
+		ret, err := topology.GetFromKube(kubeclient)
+		return ret, err
 	}
 }
 
@@ -239,6 +253,9 @@ func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase) *v1.Pod {
 			Name:      podName,
 			Namespace: podNamespace,
 			UID:       podUID,
+			Annotations: map[string]string{
+				"pod-group-name": podGroupName,
+			},
 		},
 		Spec: v1.PodSpec{
 			NodeName: node,
@@ -266,8 +283,9 @@ func createSharedGpuPod(gpuIdx int, gpuFraction float64, phase v1.PodPhase) *v1.
 			Namespace: podNamespace,
 			UID:       podUID,
 			Annotations: map[string]string{
-				"runai-gpu":    strconv.Itoa(gpuIdx),
-				"gpu-fraction": fmt.Sprintf("%f", gpuFraction),
+				"runai-gpu":      strconv.Itoa(gpuIdx),
+				"gpu-fraction":   fmt.Sprintf("%f", gpuFraction),
+				"pod-group-name": podGroupName,
 			},
 		},
 		Spec: v1.PodSpec{
@@ -312,6 +330,22 @@ func createReservationPod(gpuIdx int) *v1.Pod {
 	}
 }
 
+func createPodGroup(workloadType string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "scheduling.run.ai/v1",
+			"kind":       "PodGroup",
+			"metadata": map[string]interface{}{
+				"name":      podGroupName,
+				"namespace": podNamespace,
+			},
+			"spec": map[string]interface{}{
+				"priorityClassName": workloadType,
+			},
+		},
+	}
+}
+
 func getWorkloadTypeExpectedUtilization(workloadType string) topology.Range {
 	switch workloadType {
 	case "train":
@@ -319,7 +353,7 @@ func getWorkloadTypeExpectedUtilization(workloadType string) topology.Range {
 			Min: 80,
 			Max: 100,
 		}
-	case "build", "interactive-preemptible":
+	case "build", "interactive-preemptible", "inference":
 		return topology.Range{
 			Min: 0,
 			Max: 0,

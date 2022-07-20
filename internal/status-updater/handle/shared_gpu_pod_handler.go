@@ -16,7 +16,7 @@ const (
 	runaiReservationNs = "runai-reservation"
 )
 
-func (p *PodEventHandler) handleSharedGpuPodAdd(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+func (p *PodEventHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
 	if !isSharedGpuPod(pod) {
 		return nil
 	}
@@ -35,7 +35,7 @@ func (p *PodEventHandler) handleSharedGpuPodAdd(pod *v1.Pod, clusterTopology *to
 	return nil
 }
 
-func (p *PodEventHandler) handleSharedGpuPodDelete(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+func (p *PodEventHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
 	if !isSharedGpuPod(pod) {
 		return nil
 	}
