@@ -24,13 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if _, err := os.Stat("/runai/bin/nvidia-smi"); os.IsNotExist(err) {
-		log.Println("nvidia-smi not found on host, copying it from /runai/bin")
-		err = copy.Copy("/bin/nvidia-smi", "/runai/bin/nvidia-smi")
-		if err != nil {
-			log.Printf("Failed to copy nvidia-smi: %s\n", err)
-		}
-	}
+	initNvidiaSmi()
 
 	devicePlugin := deviceplugin.NewDevicePlugin(topology)
 	if err = devicePlugin.Serve(); err != nil {
@@ -43,4 +37,20 @@ func main() {
 
 	s := <-sig
 	log.Printf("Received signal \"%v\"\n", s)
+}
+
+func initNvidiaSmi() {
+	srcFileInfo, err := os.Stat("/bin/nvidia-smi")
+	if os.IsNotExist(err) {
+		log.Println("nvidia-smi not found in /bin/nvidia-smi")
+		return
+	}
+
+	if destFileInfo, err := os.Stat("/runai/bin/nvidia-smi"); os.IsNotExist(err) || destFileInfo.ModTime().Before(srcFileInfo.ModTime()) {
+		log.Println("nvidia-smi is missing or outdated on the host, copying it from /runai/bin")
+		err = copy.Copy("/bin/nvidia-smi", "/runai/bin/nvidia-smi")
+		if err != nil {
+			log.Printf("Failed to copy nvidia-smi: %s\n", err)
+		}
+	}
 }
