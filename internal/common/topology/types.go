@@ -21,19 +21,19 @@ type NodeTopology struct {
 }
 
 type GpuDetails struct {
-	ID      string     `yaml:"id"`
-	Metrics GpuMetrics `yaml:"metrics"`
+	ID     string    `yaml:"id"`
+	Status GpuStatus `yaml:"status"`
 }
 
 type PodGpuUsageStatusMap map[types.UID]GpuUsageStatus
 
-type GpuMetrics struct {
-	Metadata GpuMetricsMetadata `yaml:"metadata"`
+type GpuStatus struct {
+	AllocatedBy ContainerDetails `yaml:"allocated-by"`
 	// Maps PodUID to its GPU usage status
-	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"podGpuUsageStatus"`
+	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"pod-gpu-usage-status"`
 }
 
-type GpuMetricsMetadata struct {
+type ContainerDetails struct {
 	Namespace string `yaml:"namespace"`
 	Pod       string `yaml:"pod"`
 	Container string `yaml:"container"`

@@ -37,6 +37,7 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 	query := fmt.Sprintf("(rate(revision_app_request_count[1m]) + on(pod) group_left(uid) kube_pod_info{uid=\"%s\"})", uid)
 	params := url.Values{}
 	params.Set("query", query)
+
 	res, err := http.Get("http://runai-cluster-kube-prometh-prometheus.monitoring:9090/api/v1/query?" + params.Encode())
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -44,7 +45,6 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 	}
 	defer res.Body.Close()
 
-	// ReadAll body
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
@@ -52,12 +52,12 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 	}
 
 	val := gjson.Get(string(body), "data.result.#.value").Array()
-	if len(val) == 0 {
+	if len(val) < 1 {
 		return 0
 	}
 
 	val = val[0].Array()
-	if len(val) == 0 {
+	if len(val) < 2 {
 		return 0
 	}
 

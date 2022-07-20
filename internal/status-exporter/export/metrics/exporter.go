@@ -73,13 +73,13 @@ func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
 			"device":    "nvidia" + strconv.Itoa(gpuIdx),
 			"modelName": node.GpuProduct,
 			"Hostname":  generateFakeHostname(nodeName),
-			"namespace": gpu.Metrics.Metadata.Namespace,
-			"pod":       gpu.Metrics.Metadata.Pod,
-			"container": gpu.Metrics.Metadata.Container,
+			"namespace": gpu.Status.AllocatedBy.Namespace,
+			"pod":       gpu.Status.AllocatedBy.Pod,
+			"container": gpu.Status.AllocatedBy.Container,
 		}
 
-		utilization := gpu.Metrics.PodGpuUsageStatus.Utilization()
-		fbUsed := gpu.Metrics.PodGpuUsageStatus.FbUsed(node.GpuMemory)
+		utilization := gpu.Status.PodGpuUsageStatus.Utilization()
+		fbUsed := gpu.Status.PodGpuUsageStatus.FbUsed(node.GpuMemory)
 
 		gpuUtilization.With(labels).Set(float64(utilization))
 		gpuFbUsed.With(labels).Set(float64(fbUsed))

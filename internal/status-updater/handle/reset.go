@@ -33,7 +33,7 @@ func (p *PodEventHandler) resetTopologyStatus() error {
 		}
 
 		for gpuIdx := range node.Gpus {
-			clusterTopology.Nodes[nodeName].Gpus[gpuIdx].Metrics = topology.GpuMetrics{}
+			clusterTopology.Nodes[nodeName].Gpus[gpuIdx].Status = topology.GpuStatus{}
 		}
 	}
 
@@ -55,6 +55,10 @@ func (p *PodEventHandler) autoConfigNodes(clusterTopology *topology.ClusterTopol
 		if node.Labels["nvidia.com/gpu.deploy.dcgm-exporter"] == "true" && node.Labels["nvidia.com/gpu.deploy.device-plugin"] == "true" {
 			relevantNodes = append(relevantNodes, node.Name)
 		}
+	}
+
+	if clusterTopology.Nodes == nil {
+		clusterTopology.Nodes = make(map[string]topology.NodeTopology)
 	}
 
 	for _, nodeName := range relevantNodes {

@@ -74,7 +74,7 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 		// Search clusterTopology for the podName
 		for _, node := range clusterTopology.Nodes {
 			for idx, gpu := range node.Gpus {
-				if gpu.Metrics.Metadata.Pod == podName {
+				if gpu.Status.AllocatedBy.Pod == podName {
 					gpuIdx = idx
 				}
 			}
@@ -89,8 +89,8 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	args.GpuIdx = gpuIdx
-	args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Metrics.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion)
-	args.GpuUtil = nodeTopology.Gpus[gpuIdx].Metrics.PodGpuUsageStatus.Utilization()
+	args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion)
+	args.GpuUtil = nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.Utilization()
 
 	// Read /proc/1/cmdline to get the process name
 	cmdlineFile, err := os.Open("/proc/1/cmdline")

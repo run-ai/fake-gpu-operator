@@ -31,7 +31,7 @@ func (p *PodEventHandler) handleSharedGpuPodAdd(pod *v1.Pod, clusterTopology *to
 		return err
 	}
 
-	nodeTopology.Gpus[reservationPodGpuIdx].Metrics.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
+	nodeTopology.Gpus[reservationPodGpuIdx].Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
 	return nil
 }
 
@@ -50,7 +50,7 @@ func (p *PodEventHandler) handleSharedGpuPodDelete(pod *v1.Pod, clusterTopology 
 		return err
 	}
 
-	delete(nodeTopology.Gpus[reservationPodGpuIdx].Metrics.PodGpuUsageStatus, pod.UID)
+	delete(nodeTopology.Gpus[reservationPodGpuIdx].Status.PodGpuUsageStatus, pod.UID)
 	return nil
 }
 
@@ -71,7 +71,7 @@ func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Po
 
 	reservationPodGpuIdx := -1
 	for gpuIdx, gpuDetails := range nodeTopology.Gpus {
-		if gpuDetails.Metrics.Metadata.Pod == reservationPodName {
+		if gpuDetails.Status.AllocatedBy.Pod == reservationPodName {
 			reservationPodGpuIdx = gpuIdx
 			break
 		}

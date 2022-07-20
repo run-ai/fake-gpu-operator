@@ -21,16 +21,16 @@ func (p *PodEventHandler) handleDedicatedGpuPodAdd(pod *v1.Pod, clusterTopology 
 			break
 		}
 
-		if gpu.Metrics.Metadata.Pod == "" {
+		if gpu.Status.AllocatedBy.Pod == "" {
 			log.Printf("GPU %s is free, allocating...\n", gpu.ID)
-			gpu.Metrics.Metadata.Namespace = pod.Namespace
-			gpu.Metrics.Metadata.Pod = pod.Name
-			gpu.Metrics.Metadata.Container = pod.Spec.Containers[0].Name
+			gpu.Status.AllocatedBy.Namespace = pod.Namespace
+			gpu.Status.AllocatedBy.Pod = pod.Name
+			gpu.Status.AllocatedBy.Container = pod.Spec.Containers[0].Name
 
 			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx] = gpu
 
 			if pod.Namespace != "runai-reservation" {
-				gpu.Metrics.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
+				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
 			}
 
 			requestedGpusCount--
@@ -42,11 +42,11 @@ func (p *PodEventHandler) handleDedicatedGpuPodAdd(pod *v1.Pod, clusterTopology 
 
 func (p *PodEventHandler) handleDedicatedGpuPodDelete(pod *v1.Pod, clusterTopology *topology.ClusterTopology) {
 	for idx, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
-		isGpuOccupiedByPod := gpu.Metrics.Metadata.Namespace == pod.Namespace &&
-			gpu.Metrics.Metadata.Pod == pod.Name &&
-			gpu.Metrics.Metadata.Container == pod.Spec.Containers[0].Name
+		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
+			gpu.Status.AllocatedBy.Pod == pod.Name &&
+			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
 		if isGpuOccupiedByPod {
-			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx].Metrics = topology.GpuMetrics{}
+			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx].Status = topology.GpuStatus{}
 		}
 	}
 }

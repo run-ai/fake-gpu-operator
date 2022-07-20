@@ -126,15 +126,15 @@ var _ = Describe("StatusUpdater", func() {
 				expectedTopology := createTopology(nodeGpuCount)
 				if caseDetails.podPhase == v1.PodRunning {
 					for i := 0; i < int(caseDetails.podGpuCount); i++ {
-						expectedTopology.Nodes[node].Gpus[i].Metrics.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+						expectedTopology.Nodes[node].Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 							podUID: topology.GpuUsageStatus{
 								Utilization: getWorkloadTypeExpectedUtilization(caseDetails.workloadType),
 								FbUsed:      expectedTopology.Nodes[node].GpuMemory,
 							},
 						}
-						expectedTopology.Nodes[node].Gpus[i].Metrics.Metadata.Pod = podName
-						expectedTopology.Nodes[node].Gpus[i].Metrics.Metadata.Container = containerName
-						expectedTopology.Nodes[node].Gpus[i].Metrics.Metadata.Namespace = podNamespace
+						expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Pod = podName
+						expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Container = containerName
+						expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Namespace = podNamespace
 					}
 				}
 
@@ -157,9 +157,9 @@ var _ = Describe("StatusUpdater", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			expectedTopology := createTopology(nodeGpuCount)
-			expectedTopology.Nodes[node].Gpus[0].Metrics.Metadata.Pod = reservationPodName
-			expectedTopology.Nodes[node].Gpus[0].Metrics.Metadata.Container = reservationPodContainerName
-			expectedTopology.Nodes[node].Gpus[0].Metrics.Metadata.Namespace = reservationPodNs
+			expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Pod = reservationPodName
+			expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
+			expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Namespace = reservationPodNs
 			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
 
 			// Test shared gpu pod handling
@@ -167,7 +167,7 @@ var _ = Describe("StatusUpdater", func() {
 			_, err = kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			expectedTopology.Nodes[node].Gpus[0].Metrics.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+			expectedTopology.Nodes[node].Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 				podUID: topology.GpuUsageStatus{
 					Utilization: topology.Range{
 						Min: 100,
@@ -214,7 +214,7 @@ func createTopology(gpuCount int64) *topology.ClusterTopology {
 	for i := int64(0); i < gpuCount; i++ {
 		gpus[i] = topology.GpuDetails{
 			ID: fmt.Sprintf("gpu-%d", i),
-			Metrics: topology.GpuMetrics{
+			Status: topology.GpuStatus{
 				PodGpuUsageStatus: topology.PodGpuUsageStatusMap{},
 			},
 		}

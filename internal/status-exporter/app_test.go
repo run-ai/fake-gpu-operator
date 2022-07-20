@@ -169,8 +169,8 @@ func getTestCases() map[string]testCase {
 						Gpus: []topology.GpuDetails{
 							{
 								ID: "fake-gpu-id-1",
-								Metrics: topology.GpuMetrics{
-									Metadata: topology.GpuMetricsMetadata{
+								Status: topology.GpuStatus{
+									AllocatedBy: topology.ContainerDetails{
 										Namespace: podNamespace,
 										Pod:       podName,
 										Container: containerName,
@@ -275,8 +275,8 @@ func getTestCases() map[string]testCase {
 						Gpus: []topology.GpuDetails{
 							{
 								ID: "fake-gpu-id-1",
-								Metrics: topology.GpuMetrics{
-									Metadata: topology.GpuMetricsMetadata{
+								Status: topology.GpuStatus{
+									AllocatedBy: topology.ContainerDetails{
 										Namespace: podNamespace,
 										Pod:       podName,
 										Container: containerName,
@@ -294,8 +294,8 @@ func getTestCases() map[string]testCase {
 							},
 							{
 								ID: "fake-gpu-id-2",
-								Metrics: topology.GpuMetrics{
-									Metadata: topology.GpuMetricsMetadata{
+								Status: topology.GpuStatus{
+									AllocatedBy: topology.ContainerDetails{
 										Namespace: podNamespace,
 										Pod:       podName,
 										Container: containerName,
@@ -411,8 +411,8 @@ func createInitialTopology() *topology.ClusterTopology {
 				Gpus: []topology.GpuDetails{
 					{
 						ID: "fake-gpu-id-1",
-						Metrics: topology.GpuMetrics{
-							Metadata: topology.GpuMetricsMetadata{
+						Status: topology.GpuStatus{
+							AllocatedBy: topology.ContainerDetails{
 								Namespace: podNamespace,
 								Pod:       podName,
 								Container: containerName,
