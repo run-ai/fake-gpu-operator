@@ -14,16 +14,16 @@ RUN make build COMPONENT=device-plugin
 FROM common-builder as status-updater-builder
 COPY ./cmd/status-updater/ ./cmd/status-updater/
 COPY ./internal/status-updater/ ./internal/status-updater/
-RUN make build COMPONENT=status-updater
+RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=status-updater
 
 FROM common-builder as status-exporter-builder
 COPY ./cmd/status-exporter/ ./cmd/status-exporter/
 COPY ./internal/status-exporter/ ./internal/status-exporter/
-RUN make build COMPONENT=status-exporter
+RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=status-exporter
 
 FROM common-builder as topology-server-builder
 COPY ./cmd/topology-server/ ./cmd/topology-server/
-RUN make build COMPONENT=topology-server
+RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=topology-server
 
 FROM common-builder as nvidia-smi-builder
 COPY ./cmd/nvidia-smi/ ./cmd/nvidia-smi/

@@ -1,6 +1,10 @@
 package topology
 
-import "fmt"
+import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/types"
+)
 
 // Types
 type ClusterTopology struct {
@@ -17,24 +21,33 @@ type NodeTopology struct {
 }
 
 type GpuDetails struct {
-	ID      string     `yaml:"id"`
-	Metrics GpuMetrics `yaml:"metrics"`
+	ID     string    `yaml:"id"`
+	Status GpuStatus `yaml:"status"`
 }
 
-type GpuMetrics struct {
-	Metadata GpuMetricsMetadata `yaml:"metadata"`
-	Status   GpuStatus          `yaml:"status"`
+type PodGpuUsageStatusMap map[types.UID]GpuUsageStatus
+
+type GpuStatus struct {
+	AllocatedBy ContainerDetails `yaml:"allocated-by"`
+	// Maps PodUID to its GPU usage status
+	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"pod-gpu-usage-status"`
 }
 
-type GpuMetricsMetadata struct {
+type ContainerDetails struct {
 	Namespace string `yaml:"namespace"`
 	Pod       string `yaml:"pod"`
 	Container string `yaml:"container"`
 }
 
-type GpuStatus struct {
-	Utilization int `yaml:"utilization"`
-	FbUsed      int `yaml:"fb-used"`
+type GpuUsageStatus struct {
+	Utilization    Range `yaml:"utilization"`
+	FbUsed         int   `yaml:"fb-used"`
+	IsInferencePod bool  `yaml:"is-inference-pod"`
+}
+
+type Range struct {
+	Min int `yaml:"min"`
+	Max int `yaml:"max"`
 }
 
 type Config struct {

@@ -24,3 +24,9 @@ rules:
       - nodes
     verbs:
       - list
+  - apiGroups:
+      - scheduling.run.ai
+    resources:
+      - podgroups
+    verbs:
+      - get

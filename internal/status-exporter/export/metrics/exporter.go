@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -33,10 +34,20 @@ func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
 func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	go setupServer()
 
+	// Republish the metrics every 10 seconds to refresh utilization ranges
+	// TODO: make this configurable?
+	ticker := time.NewTicker(time.Second * 10)
+	var clusterTopologyCache *topology.ClusterTopology
+
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:
 			e.export(clusterTopology)
+			clusterTopologyCache = clusterTopology
+		case <-ticker.C:
+			if clusterTopologyCache != nil {
+				e.export(clusterTopologyCache)
+			}
 		case <-stopCh:
 			return
 		}
@@ -62,14 +73,17 @@ func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
 			"device":    "nvidia" + strconv.Itoa(gpuIdx),
 			"modelName": node.GpuProduct,
 			"Hostname":  generateFakeHostname(nodeName),
-			"namespace": gpu.Metrics.Metadata.Namespace,
-			"pod":       gpu.Metrics.Metadata.Pod,
-			"container": gpu.Metrics.Metadata.Container,
+			"namespace": gpu.Status.AllocatedBy.Namespace,
+			"pod":       gpu.Status.AllocatedBy.Pod,
+			"container": gpu.Status.AllocatedBy.Container,
 		}
 
-		gpuUtilization.With(labels).Set(float64(gpu.Metrics.Status.Utilization))
-		gpuFbUsed.With(labels).Set(float64(gpu.Metrics.Status.FbUsed))
-		gpuFbFree.With(labels).Set(float64(node.GpuMemory - gpu.Metrics.Status.FbUsed))
+		utilization := gpu.Status.PodGpuUsageStatus.Utilization()
+		fbUsed := gpu.Status.PodGpuUsageStatus.FbUsed(node.GpuMemory)
+
+		gpuUtilization.With(labels).Set(float64(utilization))
+		gpuFbUsed.With(labels).Set(float64(fbUsed))
+		gpuFbFree.With(labels).Set(float64(node.GpuMemory - fbUsed))
 	}
 }
 

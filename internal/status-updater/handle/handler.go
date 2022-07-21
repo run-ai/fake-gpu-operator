@@ -6,13 +6,13 @@ When a pod is removed, we'll unmark the GPU.
 package handle
 
 import (
-	"fmt"
 	"log"
 	"os"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -21,19 +21,21 @@ type Interface interface {
 }
 
 type PodEventHandler struct {
-	podEvents  <-chan *inform.PodEvent
-	kubeclient kubernetes.Interface
+	podEvents     <-chan *inform.PodEvent
+	kubeclient    kubernetes.Interface
+	dynamicClient dynamic.Interface
 }
 
 var _ Interface = &PodEventHandler{}
 
-func NewPodEventHandler(kubeclient kubernetes.Interface, informer inform.Interface) *PodEventHandler {
+func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface, informer inform.Interface) *PodEventHandler {
 	podEvents := make(chan *inform.PodEvent)
 	informer.Subscribe(podEvents)
 
 	p := &PodEventHandler{
-		podEvents:  podEvents,
-		kubeclient: kubeclient,
+		podEvents:     podEvents,
+		kubeclient:    kubeClient,
+		dynamicClient: dynamicClient,
 	}
 
 	err := p.resetTopologyStatus()
@@ -73,13 +75,11 @@ func (p *PodEventHandler) processPodEvents(stopCh <-chan struct{}) {
 				err = p.handleAdd(podEvent, clusterTopology, topologyCm)
 				if err != nil {
 					log.Printf("Error handling pod add: %v\n", err)
-					return
 				}
 			} else if podEvent.EventType == inform.DELETE {
 				err := p.handleDelete(podEvent, clusterTopology, topologyCm)
 				if err != nil {
 					log.Printf("Error handling pod delete: %v\n", err)
-					return
 				}
 			}
 
@@ -91,43 +91,25 @@ func (p *PodEventHandler) processPodEvents(stopCh <-chan struct{}) {
 }
 
 func (p *PodEventHandler) handleAdd(podEvent *inform.PodEvent, clusterTopology *topology.ClusterTopology, topologyCm *v1.ConfigMap) error {
-	requestedGpus := podEvent.Pod.Spec.Containers[0].Resources.Limits.Name("nvidia.com/gpu", "")
-	if requestedGpus == nil {
-		return fmt.Errorf("no GPUs requested in pod %s", podEvent.Pod.Name)
+	err := p.handleDedicatedGpuPodAddition(podEvent.Pod, clusterTopology)
+	if err != nil {
+		return err
 	}
 
-	requestedGpusCount := requestedGpus.Value()
-	log.Printf("Requested GPUs: %d\n", requestedGpusCount)
-	for idx, gpu := range clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].Gpus {
-		if gpu.Metrics.Status.Utilization == 0 {
-			log.Printf("GPU %s is free, allocating...\n", gpu.ID)
-			gpu.Metrics.Status.Utilization = 100
-			gpu.Metrics.Status.FbUsed = clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].GpuMemory
-			gpu.Metrics.Metadata.Namespace = podEvent.Pod.Namespace
-			gpu.Metrics.Metadata.Pod = podEvent.Pod.Name
-			gpu.Metrics.Metadata.Container = podEvent.Pod.Spec.Containers[0].Name
-
-			clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].Gpus[idx] = gpu
-
-			requestedGpusCount--
-		}
-
-		if requestedGpusCount <= 0 {
-			break
-		}
+	err = p.handleSharedGpuPodAddition(podEvent.Pod, clusterTopology)
+	if err != nil {
+		return err
 	}
 
 	return p.updateTopology(clusterTopology, topologyCm)
 }
 
 func (p *PodEventHandler) handleDelete(podEvent *inform.PodEvent, clusterTopology *topology.ClusterTopology, topologyCm *v1.ConfigMap) error {
-	for idx, gpu := range clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].Gpus {
-		isGpuOccupiedByPod := gpu.Metrics.Metadata.Namespace == podEvent.Pod.Namespace &&
-			gpu.Metrics.Metadata.Pod == podEvent.Pod.Name &&
-			gpu.Metrics.Metadata.Container == podEvent.Pod.Spec.Containers[0].Name
-		if isGpuOccupiedByPod {
-			clusterTopology.Nodes[podEvent.Pod.Spec.NodeName].Gpus[idx].Metrics = topology.GpuMetrics{}
-		}
+	p.handleDedicatedGpuPodDeletion(podEvent.Pod, clusterTopology)
+
+	err := p.handleSharedGpuPodDeletion(podEvent.Pod, clusterTopology)
+	if err != nil {
+		return err
 	}
 
 	return p.updateTopology(clusterTopology, topologyCm)

@@ -10,6 +10,7 @@ require (
 	github.com/otiai10/copy v1.7.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/client_model v0.2.0
+	github.com/tidwall/gjson v1.14.1
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
 	google.golang.org/grpc v1.46.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -53,6 +54,8 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect

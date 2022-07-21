@@ -1,6 +1,5 @@
 package inform
 
-// import kubernetes core
 import (
 	v1 "k8s.io/api/core/v1"
 )

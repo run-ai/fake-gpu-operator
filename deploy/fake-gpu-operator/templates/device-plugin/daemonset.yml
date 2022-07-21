@@ -1,12 +1,13 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+{{- if .Values.environment.openshift }}
   annotations:
     openshift.io/scc: hostmount-anyuid
+{{- end }}
   labels:
     app: device-plugin
   name: device-plugin
-
 spec:
   selector:
     matchLabels:
@@ -14,6 +15,8 @@ spec:
       component: device-plugin
   template:
     metadata:
+      annotations:
+        checksum/initialTopology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
       labels:
         app: device-plugin
         component: device-plugin

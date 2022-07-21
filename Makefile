@@ -16,7 +16,7 @@ clean:
 .PHONY: clean
 
 image:
-	docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
+	DOCKER_BUILDKIT=1 docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
 .PHONY: image
 
 images:

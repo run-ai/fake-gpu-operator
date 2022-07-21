@@ -52,9 +52,6 @@ var _ = Describe("StatusExporter", func() {
 		kubeclient kubernetes.Interface
 	)
 
-	// BeforeEach(func() {
-	// 	// Prepare the status exporter
-	// })
 	fakeNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   nodeName,
@@ -66,11 +63,11 @@ var _ = Describe("StatusExporter", func() {
 	setupConfig()
 
 	readyChan := make(chan struct{})
-	go status_exporter.Run(readyChan)
+	app := status_exporter.NewApp()
+	go app.Run(readyChan)
 	// Wait for the status exporter to initialize
 	<-readyChan
 
-	// Create initial topology
 	initialTopology := createInitialTopology()
 	cm, err := topology.ToConfigMap(initialTopology)
 	Expect(err).To(Not(HaveOccurred()))
@@ -169,15 +166,20 @@ func getTestCases() map[string]testCase {
 						Gpus: []topology.GpuDetails{
 							{
 								ID: "fake-gpu-id-1",
-								Metrics: topology.GpuMetrics{
-									Metadata: topology.GpuMetricsMetadata{
+								Status: topology.GpuStatus{
+									AllocatedBy: topology.ContainerDetails{
 										Namespace: podNamespace,
 										Pod:       podName,
 										Container: containerName,
 									},
-									Status: topology.GpuStatus{
-										Utilization: 100,
-										FbUsed:      20000,
+									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+										podName: topology.GpuUsageStatus{
+											Utilization: topology.Range{
+												Min: 80,
+												Max: 80,
+											},
+											FbUsed: 20000,
+										},
 									},
 								},
 							},
@@ -209,7 +211,7 @@ func getTestCases() map[string]testCase {
 								"container": containerName,
 							}),
 							Gauge: &dto.Gauge{
-								Value: createPtr(float64(100)),
+								Value: createPtr(float64(80)),
 							},
 						},
 					},
@@ -270,29 +272,39 @@ func getTestCases() map[string]testCase {
 						Gpus: []topology.GpuDetails{
 							{
 								ID: "fake-gpu-id-1",
-								Metrics: topology.GpuMetrics{
-									Metadata: topology.GpuMetricsMetadata{
+								Status: topology.GpuStatus{
+									AllocatedBy: topology.ContainerDetails{
 										Namespace: podNamespace,
 										Pod:       podName,
 										Container: containerName,
 									},
-									Status: topology.GpuStatus{
-										Utilization: 100,
-										FbUsed:      20000,
+									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+										podName: topology.GpuUsageStatus{
+											Utilization: topology.Range{
+												Min: 100,
+												Max: 100,
+											},
+											FbUsed: 20000,
+										},
 									},
 								},
 							},
 							{
 								ID: "fake-gpu-id-2",
-								Metrics: topology.GpuMetrics{
-									Metadata: topology.GpuMetricsMetadata{
+								Status: topology.GpuStatus{
+									AllocatedBy: topology.ContainerDetails{
 										Namespace: podNamespace,
 										Pod:       podName,
 										Container: containerName,
 									},
-									Status: topology.GpuStatus{
-										Utilization: 100,
-										FbUsed:      20000,
+									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+										podName: topology.GpuUsageStatus{
+											Utilization: topology.Range{
+												Min: 100,
+												Max: 100,
+											},
+											FbUsed: 20000,
+										},
 									},
 								},
 							},
@@ -396,15 +408,20 @@ func createInitialTopology() *topology.ClusterTopology {
 				Gpus: []topology.GpuDetails{
 					{
 						ID: "fake-gpu-id-1",
-						Metrics: topology.GpuMetrics{
-							Metadata: topology.GpuMetricsMetadata{
+						Status: topology.GpuStatus{
+							AllocatedBy: topology.ContainerDetails{
 								Namespace: podNamespace,
 								Pod:       podName,
 								Container: containerName,
 							},
-							Status: topology.GpuStatus{
-								Utilization: 100,
-								FbUsed:      20000,
+							PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+								podName: topology.GpuUsageStatus{
+									Utilization: topology.Range{
+										Min: 100,
+										Max: 100,
+									},
+									FbUsed: 20000,
+								},
 							},
 						},
 					},
