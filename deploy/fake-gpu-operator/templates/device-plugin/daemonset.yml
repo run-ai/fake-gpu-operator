@@ -49,7 +49,6 @@ spec:
       dnsPolicy: ClusterFirst
       nodeSelector:
         nvidia.com/gpu.deploy.device-plugin: "true"
-      priorityClassName: system-node-critical
       restartPolicy: Always
       serviceAccountName: nvidia-device-plugin
       terminationGracePeriodSeconds: 30
