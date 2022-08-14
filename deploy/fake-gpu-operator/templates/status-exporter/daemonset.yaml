@@ -40,7 +40,6 @@ spec:
               name: http
       nodeSelector:
         nvidia.com/gpu.deploy.dcgm-exporter: "true"
-      priorityClassName: system-node-critical
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccount: status-exporter
