@@ -22,7 +22,7 @@ spec:
         - image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag }}"
           imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
           resources:
-            {{- toYaml .Values.statusExporter.resources | nindent 12 }}
+            {{ - toYaml .Values.statusExporter.resources | nindent 12 }}
           name: nvidia-dcgm-exporter
           env:
             - name: NODE_NAME
@@ -38,6 +38,9 @@ spec:
           ports:
             - containerPort: 9400
               name: http
+          volumeMounts:
+            - mountPath: /runai/proc
+              name: runai-proc-directory
       nodeSelector:
         nvidia.com/gpu.deploy.dcgm-exporter: "true"
       restartPolicy: Always
@@ -50,6 +53,11 @@ spec:
           operator: Exists
       imagePullSecrets:
         - name: gcr-secret
+      volumes:
+        - name: runai-proc-directory
+          hostPath:
+            path: /var/lib/runai/proc
+            type: DirectoryOrCreate
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

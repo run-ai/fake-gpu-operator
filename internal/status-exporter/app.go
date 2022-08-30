@@ -8,6 +8,7 @@ import (
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/config"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/fs"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
@@ -48,10 +49,12 @@ func (app *App) Run(readyCh chan<- struct{}) {
 	var watcher watch.Interface = watch.NewKubeWatcher(kubeclient)
 	var metricExporter export.Interface = metrics.NewMetricsExporter(watcher)
 	var labelsExporter export.Interface = labels.NewLabelsExporter(watcher, kubeclient)
+	var fsExporter export.Interface = fs.NewFsExporter(watcher)
 
 	go watcher.Watch(stopper, readyCh)
 	go metricExporter.Run(stopper)
 	go labelsExporter.Run(stopper)
+	go fsExporter.Run(stopper)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
