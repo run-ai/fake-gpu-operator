@@ -46,6 +46,11 @@ func (e *FsExporter) export(clusterTopology *topology.ClusterTopology) {
 	}
 
 	for gpuIdx, gpu := range node.Gpus {
+		// Ignoring pods that are not supposed to be seen by runai-container-toolkit
+		if gpu.Status.AllocatedBy.Namespace != "runai-reservation" {
+			continue
+		}
+
 		for podUuid, gpuUsageStatus := range gpu.Status.PodGpuUsageStatus {
 			log.Printf("Exporting pod %s gpu utilization to filesystem", podUuid)
 			utilization := gpuUsageStatus.Utilization.Random()
