@@ -1,8 +1,6 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  annotations:
-    openshift.io/scc: nvidia-dcgm-exporter
   labels:
     app: nvidia-dcgm-exporter
     component: status-exporter
