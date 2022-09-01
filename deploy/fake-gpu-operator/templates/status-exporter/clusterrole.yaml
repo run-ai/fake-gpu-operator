@@ -27,3 +27,13 @@ rules:
     verbs:
       - get
       - update
+{{- if .Values.environment.openshift }}
+  - apiGroups:
+    - security.openshift.io
+    resourceNames:
+    - hostaccess
+    resources:
+    - securitycontextconstraints
+    verbs:
+    - use
+{{ end }}
