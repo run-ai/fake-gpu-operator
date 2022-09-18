@@ -15,6 +15,11 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+const (
+	gpuUtilizationAnnotationKey = "run.ai/simulated-gpu-utilization"
+	gpuFractionAnnotationKey    = "gpu-fraction"
+)
+
 var defaultGpuUtil = topology.Range{
 	Min: 100,
 	Max: 100,
@@ -22,7 +27,7 @@ var defaultGpuUtil = topology.Range{
 
 func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory int) topology.GpuUsageStatus {
 	gpuFraction := 1.0
-	if podGpuFractionStr, ok := pod.Annotations["gpu-fraction"]; ok {
+	if podGpuFractionStr, ok := pod.Annotations[gpuFractionAnnotationKey]; ok {
 		if parsed, err := strconv.ParseFloat(podGpuFractionStr, 32); err == nil {
 			gpuFraction = parsed
 		} else {
@@ -30,7 +35,7 @@ func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory
 		}
 	}
 
-	podGpuUtilAnnotationStr, podGpuUtilAnnotationExists := pod.Annotations["run.ai/simulated-gpu-utilization"]
+	podGpuUtilAnnotationStr, podGpuUtilAnnotationExists := pod.Annotations[gpuUtilizationAnnotationKey]
 	if podGpuUtilAnnotationExists {
 		gpuUtilization, err := calculateUtilizationFromAnnotation(podGpuUtilAnnotationStr)
 		if err != nil {
