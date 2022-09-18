@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -29,9 +30,24 @@ func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory
 		}
 	}
 
+	podGpuUtilAnnotationStr, podGpuUtilAnnotationExists := pod.Annotations["run.ai/simulated-gpu-utilization"]
+	if podGpuUtilAnnotationExists {
+		gpuUtilization, err := calculateUtilizationFromAnnotation(podGpuUtilAnnotationStr)
+		if err != nil {
+			log.Printf("Error calculating GPU usage for pod %s from annotation: %s\n", pod.Name, err)
+		}
+		if gpuUtilization != nil {
+			return generateGpuUsageStatus(*gpuUtilization, gpuFraction, totalGpuMemory, false)
+		}
+	}
+
+	return calculateGpuUsageFromPodType(dynamicclient, pod, gpuFraction, totalGpuMemory)
+}
+
+func calculateGpuUsageFromPodType(dynamicclient dynamic.Interface, pod *v1.Pod, gpuFraction float64, totalGpuMemory int) topology.GpuUsageStatus {
 	podType, err := getPodType(dynamicclient, pod)
 	if err != nil {
-		log.Printf("Error getting pod type for pod %s: %v\n", pod.Name, err)
+		log.Printf("Error getting pod type for pod %s: %s\n", pod.Name, err)
 	}
 
 	switch podType {
@@ -44,6 +60,29 @@ func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory
 	default:
 		return generateGpuUsageStatus(defaultGpuUtil, gpuFraction, totalGpuMemory, false)
 	}
+}
+
+func calculateUtilizationFromAnnotation(annotationValue string) (*topology.Range, error) {
+	re := regexp.MustCompile(`(\d*)-*(\d*)`)
+	submatches := re.FindSubmatch([]byte(annotationValue))
+	if len(submatches) < 2 {
+		return nil, fmt.Errorf("annotation %s isn't valid", annotationValue)
+	}
+
+	minUtilization, err := strconv.Atoi(string(submatches[1]))
+	if err != nil {
+		return nil, fmt.Errorf("%s failed to parse to int: %s", submatches[1], err)
+	}
+
+	maxUtilization := minUtilization
+	if len(submatches) > 2 && string(submatches[2]) != "" {
+		maxUtilization, err = strconv.Atoi(string(submatches[2]))
+		if err != nil {
+			return nil, fmt.Errorf("%s failed to parse to intt, len %d: %s", submatches[2], len(submatches), err)
+		}
+	}
+
+	return &topology.Range{Min: minUtilization, Max: maxUtilization}, nil
 }
 
 func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
