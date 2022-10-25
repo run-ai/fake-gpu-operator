@@ -6,6 +6,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	v1 "k8s.io/api/core/v1"
@@ -18,6 +19,8 @@ import (
 const (
 	gpuUtilizationAnnotationKey = "run.ai/simulated-gpu-utilization"
 	gpuFractionAnnotationKey    = "gpu-fraction"
+
+	idleGpuPodNamePrefix = "runai-idle-gpu-"
 )
 
 var defaultGpuUtil = topology.Range{
@@ -33,6 +36,10 @@ func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory
 		} else {
 			log.Printf("Error parsing gpu-fraction annotation: %s\n", err)
 		}
+	}
+
+	if isPodNameMarkedAsIdle(pod.Name) {
+		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, false)
 	}
 
 	podGpuUtilAnnotationStr, podGpuUtilAnnotationExists := pod.Annotations[gpuUtilizationAnnotationKey]
@@ -111,6 +118,10 @@ func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
 	}
 
 	return podGroupType, nil
+}
+
+func isPodNameMarkedAsIdle(podName string) bool {
+	return strings.HasPrefix(podName, idleGpuPodNamePrefix)
 }
 
 func generateGpuUsageStatus(gpuUtilization topology.Range, gpuFraction float64, totalGpuMemory int, isInferencePod bool) topology.GpuUsageStatus {
