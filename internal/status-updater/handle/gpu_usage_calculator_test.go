@@ -12,57 +12,70 @@ import (
 )
 
 var _ = Describe("GpuUsageCalculator", func() {
-	When("GPU utilization is specified in an annotation", func() {
-		const (
-			totalGpuMemory = 1000
-		)
+	const (
+		totalGpuMemory = 1000
+	)
 
-		cases := map[string]struct {
-			gpuUtilizationAnnotation string
-			gpuFractionAnnotation    string
-			expected                 topology.GpuUsageStatus
-		}{
-			"static GPU utilization": {
-				gpuUtilizationAnnotation: "15",
-				gpuFractionAnnotation:    "0.5",
-				expected: topology.GpuUsageStatus{
-					Utilization: topology.Range{
-						Min: 15,
-						Max: 15,
-					},
-					FbUsed:         500,
-					IsInferencePod: false,
+	cases := map[string]struct {
+		gpuUtilizationAnnotation string
+		gpuFractionAnnotation    string
+		podName                  string
+		expected                 topology.GpuUsageStatus
+	}{
+		"annotated with static GPU utilization": {
+			gpuUtilizationAnnotation: "15",
+			gpuFractionAnnotation:    "0.5",
+			expected: topology.GpuUsageStatus{
+				Utilization: topology.Range{
+					Min: 15,
+					Max: 15,
 				},
+				FbUsed:         500,
+				IsInferencePod: false,
 			},
-			"range GPU utilization": {
-				gpuUtilizationAnnotation: "15-30",
-				gpuFractionAnnotation:    "1",
-				expected: topology.GpuUsageStatus{
-					Utilization: topology.Range{
-						Min: 15,
-						Max: 30,
-					},
-					FbUsed:         1000,
-					IsInferencePod: false,
+		},
+		"annotated with range GPU utilization": {
+			gpuUtilizationAnnotation: "15-30",
+			gpuFractionAnnotation:    "1",
+			expected: topology.GpuUsageStatus{
+				Utilization: topology.Range{
+					Min: 15,
+					Max: 30,
 				},
+				FbUsed:         1000,
+				IsInferencePod: false,
 			},
-		}
+		},
+		"named as idle": {
+			podName:               idleGpuPodNamePrefix,
+			gpuFractionAnnotation: "1",
+			expected: topology.GpuUsageStatus{
+				Utilization: topology.Range{
+					Min: 0,
+					Max: 0,
+				},
+				FbUsed:         1000,
+				IsInferencePod: false,
+			},
+		},
+	}
 
-		for cName, cInfo := range cases {
-			It(fmt.Sprintf("should calculate GpuUsageStatus correctly in case of a %s", cName), func() {
-				pod := &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							gpuFractionAnnotationKey:    cInfo.gpuFractionAnnotation,
-							gpuUtilizationAnnotationKey: cInfo.gpuUtilizationAnnotation,
-						},
+	for cName, cInfo := range cases {
+		cInfo := cInfo
+		It(fmt.Sprintf("should calculate GpuUsageStatus correctly in case of the pod is %s", cName), func() {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						gpuFractionAnnotationKey:    cInfo.gpuFractionAnnotation,
+						gpuUtilizationAnnotationKey: cInfo.gpuUtilizationAnnotation,
 					},
-				}
+					Name: cInfo.podName,
+				},
+			}
 
-				actual := calculateUsage(nil, pod, totalGpuMemory)
+			actual := calculateUsage(nil, pod, totalGpuMemory)
 
-				Expect(actual).To(Equal(cInfo.expected))
-			})
-		}
-	})
+			Expect(actual).To(Equal(cInfo.expected))
+		})
+	}
 })
