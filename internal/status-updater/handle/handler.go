@@ -8,6 +8,7 @@ package handle
 import (
 	"log"
 	"os"
+	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
@@ -17,7 +18,7 @@ import (
 )
 
 type Interface interface {
-	Run(stopCh <-chan struct{})
+	Run(stopCh <-chan struct{}, wg *sync.WaitGroup)
 }
 
 type PodEventHandler struct {
@@ -49,7 +50,8 @@ func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.I
 	return p
 }
 
-func (p *PodEventHandler) Run(stopCh <-chan struct{}) {
+func (p *PodEventHandler) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	p.processPodEvents(stopCh)
 }
 

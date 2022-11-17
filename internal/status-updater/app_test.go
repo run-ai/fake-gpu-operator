@@ -22,6 +22,7 @@ import (
 	kfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/app"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 )
@@ -50,7 +51,7 @@ var _ = Describe("StatusUpdater", func() {
 	var (
 		kubeclient    kubernetes.Interface
 		dynamicClient dynamic.Interface
-		app           *status_updater.App
+		appRunner     *app.AppRunner
 	)
 
 	BeforeEach(func() {
@@ -87,12 +88,15 @@ var _ = Describe("StatusUpdater", func() {
 		setupFakes(kubeclient, dynamicClient)
 		setupConfig()
 
-		app = status_updater.NewApp()
-		go app.Run()
+		statusUpdaterApp := status_updater.NewStatusUpdaterApp()
+		appRunner := app.NewAppRunner(statusUpdaterApp)
+		go appRunner.RunApp()
 	})
 
 	AfterEach(func() {
-		app.Stop()
+		if appRunner != nil {
+			appRunner.Stop()
+		}
 	})
 
 	When("the status updater is started", func() {

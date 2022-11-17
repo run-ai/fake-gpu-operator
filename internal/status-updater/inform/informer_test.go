@@ -2,6 +2,7 @@ package inform_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -44,7 +45,9 @@ var _ = Describe("Informer", func() {
 			// Somehow the informer may not catch events if it is starting in the same
 			// time as the events submission, so we wait.
 			time.Sleep(50 * time.Millisecond)
-			informer.Run(stopCh)
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			informer.Run(stopCh, wg)
 		}()
 	})
 

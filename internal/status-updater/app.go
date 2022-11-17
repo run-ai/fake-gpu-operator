@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/config"
@@ -23,20 +24,14 @@ var DynamicClientFn = func(c *rest.Config) dynamic.Interface {
 	return dynamic.NewForConfigOrDie(c)
 }
 
-type App struct {
-	stopper chan struct{}
+type StatusUpdaterApp struct {
 }
 
-func NewApp() *App {
-	app := &App{
-		stopper: make(chan struct{}),
-	}
-	return app
+func NewStatusUpdaterApp() *StatusUpdaterApp {
+	return &StatusUpdaterApp{}
 }
 
-func (app *App) Run() {
-	defer app.Stop()
-
+func (app *StatusUpdaterApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
 	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
 	config.ValidateConfig(requiredEnvVars)
 
@@ -50,8 +45,9 @@ func (app *App) Run() {
 	var informer inform.Interface = inform.NewInformer(kubeclient)
 	var handler handle.Interface = handle.NewPodEventHandler(kubeclient, dynamicClient, informer)
 
-	go handler.Run(app.stopper)
-	go informer.Run(app.stopper)
+	wg.Add(2)
+	go handler.Run(stopper, wg)
+	go informer.Run(stopper, wg)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -60,6 +56,6 @@ func (app *App) Run() {
 	log.Printf("Received signal \"%v\"\n", s)
 }
 
-func (app *App) Stop() {
-	close(app.stopper)
+func (app *StatusUpdaterApp) Name() string {
+	return "StatusUpdater"
 }

@@ -3,6 +3,7 @@ package inform
 
 import (
 	"log"
+	"sync"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -13,7 +14,7 @@ import (
 
 type Interface interface {
 	Subscribe(chan<- *PodEvent)
-	Run(stopCh <-chan struct{})
+	Run(stopCh <-chan struct{}, wg *sync.WaitGroup)
 }
 
 type Informer struct {
@@ -82,8 +83,9 @@ func (inf *Informer) Subscribe(subscriber chan<- *PodEvent) {
 	inf.subscribers = append(inf.subscribers, subscriber)
 }
 
-func (inf *Informer) Run(stopCh <-chan struct{}) {
+func (inf *Informer) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 	defer inf.closeSubscribers()
+	defer wg.Done()
 
 	log.Printf("Starting informer\n")
 	inf.podInformer.Run(stopCh)
