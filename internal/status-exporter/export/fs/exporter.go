@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
@@ -27,7 +28,8 @@ func NewFsExporter(watcher watch.Interface) *FsExporter {
 	}
 }
 
-func (e *FsExporter) Run(stopCh <-chan struct{}) {
+func (e *FsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:

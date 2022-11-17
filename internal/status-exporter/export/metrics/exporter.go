@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,7 +32,8 @@ func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
 	}
 }
 
-func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
+func (e *MetricsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	go setupServer()
 
 	// Republish the metrics every 10 seconds to refresh utilization ranges

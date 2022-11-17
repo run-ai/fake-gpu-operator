@@ -1,11 +1,7 @@
 package status_updater
 
 import (
-	"log"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/config"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/handle"
@@ -25,6 +21,8 @@ var DynamicClientFn = func(c *rest.Config) dynamic.Interface {
 }
 
 type StatusUpdaterApp struct {
+	Informer inform.Interface
+	Handler  handle.Interface
 }
 
 func NewStatusUpdaterApp() *StatusUpdaterApp {
@@ -32,6 +30,14 @@ func NewStatusUpdaterApp() *StatusUpdaterApp {
 }
 
 func (app *StatusUpdaterApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
+	app.Init()
+
+	wg.Add(2)
+	go app.Handler.Run(stopper, wg)
+	go app.Informer.Run(stopper, wg)
+}
+
+func (app *StatusUpdaterApp) Init() {
 	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
 	config.ValidateConfig(requiredEnvVars)
 
@@ -42,18 +48,8 @@ func (app *StatusUpdaterApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
 	kubeclient := KubeClientFn(config)
 	dynamicClient := DynamicClientFn(config)
 
-	var informer inform.Interface = inform.NewInformer(kubeclient)
-	var handler handle.Interface = handle.NewPodEventHandler(kubeclient, dynamicClient, informer)
-
-	wg.Add(2)
-	go handler.Run(stopper, wg)
-	go informer.Run(stopper, wg)
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	s := <-sig
-	log.Printf("Received signal \"%v\"\n", s)
+	app.Informer = inform.NewInformer(kubeclient)
+	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer)
 }
 
 func (app *StatusUpdaterApp) Name() string {

@@ -1,10 +1,7 @@
 package status_exporter
 
 import (
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
+	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/config"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
@@ -21,20 +18,28 @@ var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 	return kubernetes.NewForConfigOrDie(c)
 }
 
-type App struct {
-	stopper chan struct{}
+type StatusExporterApp struct {
+	Watcher        watch.Interface
+	MetricExporter export.Interface
+	LabelsExporter export.Interface
+	FsExporter     export.Interface
 }
 
-func NewApp() *App {
-	app := &App{
-		stopper: make(chan struct{}),
-	}
-	return app
+func NewStatusExporterApp() *StatusExporterApp {
+	return &StatusExporterApp{}
 }
 
-func (app *App) Run(readyCh chan<- struct{}) {
-	defer app.Stop()
+func (app *StatusExporterApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
+	app.Init()
 
+	wg.Add(4)
+	go app.Watcher.Watch(stopper, wg)
+	go app.MetricExporter.Run(stopper, wg)
+	go app.LabelsExporter.Run(stopper, wg)
+	go app.FsExporter.Run(stopper, wg)
+}
+
+func (app *StatusExporterApp) Init() {
 	requiredEnvVars := []string{"NODE_NAME", "TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
 	config.ValidateConfig(requiredEnvVars)
 
@@ -44,25 +49,12 @@ func (app *App) Run(readyCh chan<- struct{}) {
 	}
 	kubeclient := KubeClientFn(config)
 
-	// Watch for changes, and export metrics
-	stopper := make(chan struct{})
-	var watcher watch.Interface = watch.NewKubeWatcher(kubeclient)
-	var metricExporter export.Interface = metrics.NewMetricsExporter(watcher)
-	var labelsExporter export.Interface = labels.NewLabelsExporter(watcher, kubeclient)
-	var fsExporter export.Interface = fs.NewFsExporter(watcher)
-
-	go watcher.Watch(stopper, readyCh)
-	go metricExporter.Run(stopper)
-	go labelsExporter.Run(stopper)
-	go fsExporter.Run(stopper)
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	s := <-sig
-	log.Printf("Received signal \"%v\"\n", s)
+	app.Watcher = watch.NewKubeWatcher(kubeclient)
+	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher)
+	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, kubeclient)
+	app.FsExporter = fs.NewFsExporter(app.Watcher)
 }
 
-func (app *App) Stop() {
-	close(app.stopper)
+func (app *StatusExporterApp) Name() string {
+	return "StatusExporter"
 }

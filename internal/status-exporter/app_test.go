@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/app"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_exporter "github.com/run-ai/fake-gpu-operator/internal/status-exporter"
 )
@@ -62,11 +63,11 @@ var _ = Describe("StatusExporter", func() {
 	setupFakes(kubeclient)
 	setupConfig()
 
-	readyChan := make(chan struct{})
-	app := status_exporter.NewApp()
-	go app.Run(readyChan)
+	statusExporterApp := status_exporter.NewStatusExporterApp()
+	appRunner := app.NewAppRunner(statusExporterApp)
+	go appRunner.RunApp()
 	// Wait for the status exporter to initialize
-	<-readyChan
+	// <-readyChan
 
 	initialTopology := createInitialTopology()
 	cm, err := topology.ToConfigMap(initialTopology)

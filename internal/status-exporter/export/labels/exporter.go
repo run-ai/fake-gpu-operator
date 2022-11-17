@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -32,7 +33,8 @@ func NewLabelsExporter(watcher watch.Interface, kubeclient kubernetes.Interface)
 	}
 }
 
-func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
+func (e *LabelsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:

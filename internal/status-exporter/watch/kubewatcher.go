@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -30,17 +31,14 @@ func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
 	w.subscribers = append(w.subscribers, subscriber)
 }
 
-func (w *KubeWatcher) Watch(stopCh <-chan struct{}, readyCh chan<- struct{}) {
+func (w *KubeWatcher) Watch(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	cmWatch, err := w.kubeclient.CoreV1().ConfigMaps(os.Getenv("TOPOLOGY_CM_NAMESPACE")).Watch(context.TODO(), metav1.ListOptions{
 		FieldSelector: "metadata.name=" + os.Getenv("TOPOLOGY_CM_NAME"),
 		Watch:         true,
 	})
 	if err != nil {
 		panic(err)
-	}
-
-	if readyCh != nil {
-		readyCh <- struct{}{}
 	}
 
 	maxInterval, err := time.ParseDuration(os.Getenv("TOPOLOGY_MAX_EXPORT_INTERVAL"))
