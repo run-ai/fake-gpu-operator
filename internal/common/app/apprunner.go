@@ -26,8 +26,8 @@ func NewAppRunner(app App) *AppRunner {
 }
 
 func (appRunner *AppRunner) RunApp() {
-	appRunner.wg.Add(1)
-	go appRunner.App.Start(appRunner.stopper, &appRunner.wg)
+	appRunner.App.Start(appRunner.stopper, &appRunner.wg)
+	log.Printf("%s was Started", appRunner.App.Name())
 
 	signal.Notify(appRunner.stopSignal, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	s := <-appRunner.stopSignal
@@ -35,7 +35,7 @@ func (appRunner *AppRunner) RunApp() {
 
 	close(appRunner.stopper)
 	appRunner.wg.Wait()
-	log.Printf("%s was shutdown", appRunner.App.Name())
+	log.Printf("%s was Stopped", appRunner.App.Name())
 }
 
 func (appRunner *AppRunner) Stop() {

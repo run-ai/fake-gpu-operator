@@ -1,7 +1,12 @@
 package main
 
-import "log"
+import (
+	"github.com/run-ai/fake-gpu-operator/internal/common/app"
+	migfaker "github.com/run-ai/fake-gpu-operator/internal/mig-faker"
+)
 
 func main() {
-	log.Println("Mig faker is running")
+	migFakerApp := migfaker.NewMigFakeApp()
+	appRunner := app.NewAppRunner(migFakerApp)
+	appRunner.RunApp()
 }
