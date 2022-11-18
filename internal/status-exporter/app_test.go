@@ -67,7 +67,7 @@ var _ = Describe("StatusExporter", func() {
 	appRunner := app.NewAppRunner(statusExporterApp)
 	go appRunner.RunApp()
 	// Wait for the status exporter to initialize
-	// <-readyChan
+	time.Sleep(50 * time.Millisecond)
 
 	initialTopology := createInitialTopology()
 	cm, err := topology.ToConfigMap(initialTopology)
