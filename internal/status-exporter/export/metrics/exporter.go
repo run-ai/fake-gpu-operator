@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
+	"github.com/spf13/viper"
 )
 
 type MetricsExporter struct {
@@ -57,7 +57,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 }
 
 func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
 		panic(fmt.Sprintf("node %s not found", nodeName))

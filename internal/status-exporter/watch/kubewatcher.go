@@ -3,11 +3,11 @@ package watch
 import (
 	"context"
 	"log"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -33,18 +33,17 @@ func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
 
 func (w *KubeWatcher) Watch(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
-	cmWatch, err := w.kubeclient.CoreV1().ConfigMaps(os.Getenv("TOPOLOGY_CM_NAMESPACE")).Watch(context.TODO(), metav1.ListOptions{
-		FieldSelector: "metadata.name=" + os.Getenv("TOPOLOGY_CM_NAME"),
+	cmWatch, err := w.kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Watch(context.TODO(), metav1.ListOptions{
+		FieldSelector: "metadata.name=" + viper.GetString("TOPOLOGY_CM_NAME"),
 		Watch:         true,
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	maxInterval, err := time.ParseDuration(os.Getenv("TOPOLOGY_MAX_EXPORT_INTERVAL"))
-	if err != nil {
-		maxInterval = defaultMaxExportInterval
-	}
+	viper.SetDefault("TOPOLOGY_MAX_EXPORT_INTERVAL", defaultMaxExportInterval)
+	maxInterval := viper.GetDuration("TOPOLOGY_MAX_EXPORT_INTERVAL")
 	ticker := time.NewTicker(maxInterval)
 
 	for {

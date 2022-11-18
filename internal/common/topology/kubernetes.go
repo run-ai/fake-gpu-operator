@@ -2,8 +2,8 @@ package topology
 
 import (
 	"context"
-	"os"
 
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +11,9 @@ import (
 )
 
 func GetFromKube(kubeclient kubernetes.Interface) (*ClusterTopology, error) {
-	topologyCm, err := kubeclient.CoreV1().ConfigMaps(os.Getenv("TOPOLOGY_CM_NAMESPACE")).Get(context.TODO(), os.Getenv("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
+	topologyCm, err := kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
+		context.TODO(), viper.GetString("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
 	if err != nil {
 		panic(err)
 	}
@@ -32,8 +34,8 @@ func FromConfigMap(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 func ToConfigMap(clusterTopology *ClusterTopology) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      os.Getenv("TOPOLOGY_CM_NAME"),
-			Namespace: os.Getenv("TOPOLOGY_CM_NAMESPACE"),
+			Name:      viper.GetString("TOPOLOGY_CM_NAME"),
+			Namespace: viper.GetString("TOPOLOGY_CM_NAMESPACE"),
 		},
 		Data: make(map[string]string),
 	}

@@ -12,6 +12,7 @@ import (
 type FakeApp struct {
 	name    bool
 	stopped bool
+	config  bool
 }
 
 func (fa *FakeApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
@@ -22,6 +23,11 @@ func (fa *FakeApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
 func (fa *FakeApp) Name() string {
 	fa.name = true
 	return "FakeApp"
+}
+
+func (fa *FakeApp) GetConfig() interface{} {
+	fa.config = true
+	return nil
 }
 
 func TestRunnerStopsOnSignal(t *testing.T) {
@@ -35,4 +41,5 @@ func TestRunnerStopsOnSignal(t *testing.T) {
 
 	assert.True(t, fa.name)
 	assert.True(t, fa.stopped)
+	assert.True(t, fa.config)
 }

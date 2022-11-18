@@ -11,6 +11,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
+	"github.com/spf13/viper"
 )
 
 type FsExporter struct {
@@ -41,7 +42,7 @@ func (e *FsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 }
 
 func (e *FsExporter) export(clusterTopology *topology.ClusterTopology) {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
 		panic(fmt.Sprintf("node %s not found", nodeName))

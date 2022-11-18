@@ -3,7 +3,6 @@ package status_exporter
 import (
 	"sync"
 
-	"github.com/run-ai/fake-gpu-operator/internal/common/config"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/fs"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
@@ -16,6 +15,13 @@ import (
 var InClusterConfigFn = rest.InClusterConfig
 var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 	return kubernetes.NewForConfigOrDie(c)
+}
+
+type StatusExporterAppConfig struct {
+	NodeName                  string `mapstructure:"NODE_NAME" validator:"required"`
+	TopologyCmName            string `mapstructure:"TOPOLOGY_CM_NAME" validator:"required"`
+	TopologyCmNamespace       string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validator:"required"`
+	TopologyMaxExportInterval string `mapstructure:"TOPOLOGY_MAX_EXPORT_INTERVAL"`
 }
 
 type StatusExporterApp struct {
@@ -40,9 +46,6 @@ func (app *StatusExporterApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
 }
 
 func (app *StatusExporterApp) Init() {
-	requiredEnvVars := []string{"NODE_NAME", "TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
-	config.ValidateConfig(requiredEnvVars)
-
 	config, err := InClusterConfigFn()
 	if err != nil {
 		panic(err.Error())
@@ -57,4 +60,9 @@ func (app *StatusExporterApp) Init() {
 
 func (app *StatusExporterApp) Name() string {
 	return "StatusExporter"
+}
+
+func (app *StatusExporterApp) GetConfig() interface{} {
+	var config StatusExporterAppConfig
+	return config
 }
