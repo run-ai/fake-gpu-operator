@@ -84,7 +84,7 @@ func BindStruct(input interface{}) error {
 		return err
 	}
 
-	for key, _ := range envKeysMap {
+	for key := range envKeysMap {
 		if err := viper.BindEnv(key); err != nil {
 			return err
 		}

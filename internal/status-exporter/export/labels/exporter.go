@@ -1,29 +1,25 @@
 package labels
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
 	"github.com/spf13/viper"
-	"k8s.io/client-go/kubernetes"
 )
 
 type LabelsExporter struct {
 	topologyChan <-chan *topology.ClusterTopology
-	kubeclient   kubernetes.Interface
+	kubeclient   kubeclient.KubeClientInterface
 }
 
 var _ export.Interface = &LabelsExporter{}
 
-func NewLabelsExporter(watcher watch.Interface, kubeclient kubernetes.Interface) *LabelsExporter {
+func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface) *LabelsExporter {
 	topologyChan := make(chan *topology.ClusterTopology)
 	watcher.Subscribe(topologyChan)
 
@@ -60,23 +56,8 @@ func (e *LabelsExporter) export(clusterTopology *topology.ClusterTopology) {
 		"feature.node.kubernetes.io/pci-10de.present": "true",
 	}
 
-	err := e.labelNode(nodeName, labels)
+	err := e.kubeclient.SetNodeLabels(labels)
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (e *LabelsExporter) labelNode(nodeName string, labels map[string]string) error {
-	node, err := e.kubeclient.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	for k, v := range labels {
-		node.Labels[k] = v
-	}
-
-	log.Printf("labelling node %s with %v\n", nodeName, labels)
-	_, err = e.kubeclient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
-	return err
 }

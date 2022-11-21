@@ -3,6 +3,7 @@ package status_exporter
 import (
 	"sync"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/fs"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
@@ -44,11 +45,11 @@ func (app *StatusExporterApp) Init() {
 	if err != nil {
 		panic(err.Error())
 	}
-	kubeclient := KubeClientFn(config)
+	clientSet := KubeClientFn(config)
 
-	app.Watcher = watch.NewKubeWatcher(kubeclient)
+	app.Watcher = watch.NewKubeWatcher(clientSet)
 	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher)
-	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, kubeclient)
+	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, kubeclient.NewKubeClient(clientSet))
 	app.FsExporter = fs.NewFsExporter(app.Watcher)
 }
 

@@ -15,10 +15,10 @@ type KubeClientInterface interface {
 }
 
 type KubeClient struct {
-	ClientSet *kubernetes.Clientset
+	ClientSet kubernetes.Interface
 }
 
-func NewKubeClient(client *kubernetes.Clientset) *KubeClient {
+func NewKubeClient(client kubernetes.Interface) *KubeClient {
 	return &KubeClient{
 		ClientSet: client,
 	}
