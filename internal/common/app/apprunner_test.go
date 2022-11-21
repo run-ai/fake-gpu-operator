@@ -13,6 +13,7 @@ type FakeApp struct {
 	name    bool
 	stopped bool
 	config  bool
+	init    bool
 }
 
 func (fa *FakeApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
@@ -30,6 +31,10 @@ func (fa *FakeApp) GetConfig() interface{} {
 	return nil
 }
 
+func (fa *FakeApp) Init() {
+	fa.init = true
+}
+
 func TestRunnerStopsOnSignal(t *testing.T) {
 	fa := &FakeApp{}
 	runner := app.NewAppRunner(fa)
@@ -42,4 +47,5 @@ func TestRunnerStopsOnSignal(t *testing.T) {
 	assert.True(t, fa.name)
 	assert.True(t, fa.stopped)
 	assert.True(t, fa.config)
+	assert.True(t, fa.init)
 }

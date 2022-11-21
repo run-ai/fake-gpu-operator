@@ -30,8 +30,15 @@ func NewAppRunner(app App) *AppRunner {
 }
 
 func (appRunner *AppRunner) RunApp() {
-	appRunner.loadConfig()
-	appRunner.App.Start(appRunner.stopper, &appRunner.wg)
+	appRunner.LoadConfig()
+	appRunner.App.Init()
+
+	appRunner.wg.Add(1)
+	go func() {
+		defer appRunner.wg.Done()
+		appRunner.App.Start(appRunner.stopper, &appRunner.wg)
+	}()
+
 	log.Printf("%s was Started", appRunner.App.Name())
 
 	signal.Notify(appRunner.stopSignal, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -47,7 +54,7 @@ func (appRunner *AppRunner) Stop() {
 	appRunner.stopSignal <- os.Kill
 }
 
-func (appRunner *AppRunner) loadConfig() {
+func (appRunner *AppRunner) LoadConfig() {
 	config := appRunner.App.GetConfig()
 	if config == nil {
 		return

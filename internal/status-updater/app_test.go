@@ -88,8 +88,7 @@ var _ = Describe("StatusUpdater", func() {
 		setupFakes(kubeclient, dynamicClient)
 		setupConfig()
 
-		statusUpdaterApp := status_updater.NewStatusUpdaterApp()
-		appRunner := app.NewAppRunner(statusUpdaterApp)
+		appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})
 		go appRunner.RunApp()
 	})
 

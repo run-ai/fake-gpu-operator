@@ -2,11 +2,10 @@ package main
 
 import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
-	migfaker "github.com/run-ai/fake-gpu-operator/internal/mig-faker"
+	"github.com/run-ai/fake-gpu-operator/internal/migfaker"
 )
 
 func main() {
-	migFakerApp := migfaker.NewMigFakeApp()
-	appRunner := app.NewAppRunner(migFakerApp)
+	appRunner := app.NewAppRunner(&migfaker.MigFakeApp{})
 	appRunner.RunApp()
 }

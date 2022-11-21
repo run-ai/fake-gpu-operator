@@ -31,18 +31,12 @@ type StatusExporterApp struct {
 	FsExporter     export.Interface
 }
 
-func NewStatusExporterApp() *StatusExporterApp {
-	return &StatusExporterApp{}
-}
-
-func (app *StatusExporterApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
-	app.Init()
-
+func (app *StatusExporterApp) Start(stop chan struct{}, wg *sync.WaitGroup) {
 	wg.Add(4)
-	go app.Watcher.Watch(stopper, wg)
-	go app.MetricExporter.Run(stopper, wg)
-	go app.LabelsExporter.Run(stopper, wg)
-	go app.FsExporter.Run(stopper, wg)
+	go app.Watcher.Watch(stop, wg)
+	go app.MetricExporter.Run(stop, wg)
+	go app.LabelsExporter.Run(stop, wg)
+	go app.FsExporter.Run(stop, wg)
 }
 
 func (app *StatusExporterApp) Init() {

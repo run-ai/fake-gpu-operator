@@ -63,8 +63,7 @@ var _ = Describe("StatusExporter", func() {
 	setupFakes(kubeclient)
 	setupConfig()
 
-	statusExporterApp := status_exporter.NewStatusExporterApp()
-	appRunner := app.NewAppRunner(statusExporterApp)
+	appRunner := app.NewAppRunner(&status_exporter.StatusExporterApp{})
 	go appRunner.RunApp()
 	// Wait for the status exporter to initialize
 	time.Sleep(50 * time.Millisecond)

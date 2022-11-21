@@ -6,7 +6,6 @@ import (
 )
 
 func main() {
-	statusUpdaterApp := status_updater.NewStatusUpdaterApp()
-	appRunner := app.NewAppRunner(statusUpdaterApp)
+	appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})
 	appRunner.RunApp()
 }

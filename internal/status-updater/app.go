@@ -29,25 +29,19 @@ type StatusUpdaterApp struct {
 	Handler  handle.Interface
 }
 
-func NewStatusUpdaterApp() *StatusUpdaterApp {
-	return &StatusUpdaterApp{}
-}
-
-func (app *StatusUpdaterApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
-	app.Init()
-
+func (app *StatusUpdaterApp) Start(stop chan struct{}, wg *sync.WaitGroup) {
 	wg.Add(2)
-	go app.Handler.Run(stopper, wg)
-	go app.Informer.Run(stopper, wg)
+	go app.Handler.Run(stop, wg)
+	go app.Informer.Run(stop, wg)
 }
 
 func (app *StatusUpdaterApp) Init() {
-	config, err := InClusterConfigFn()
+	clusterConfig, err := InClusterConfigFn()
 	if err != nil {
 		panic(err.Error())
 	}
-	kubeclient := KubeClientFn(config)
-	dynamicClient := DynamicClientFn(config)
+	kubeclient := KubeClientFn(clusterConfig)
+	dynamicClient := DynamicClientFn(clusterConfig)
 
 	app.Informer = inform.NewInformer(kubeclient)
 	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer)
