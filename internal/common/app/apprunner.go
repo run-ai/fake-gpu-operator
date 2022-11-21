@@ -16,7 +16,7 @@ type AppRunner struct {
 	App        App
 	stopSignal chan os.Signal
 	stopper    chan struct{}
-	wg         sync.WaitGroup
+	Wg         sync.WaitGroup
 }
 
 func NewAppRunner(app App) *AppRunner {
@@ -25,7 +25,7 @@ func NewAppRunner(app App) *AppRunner {
 		App:        app,
 		stopSignal: stop,
 		stopper:    make(chan struct{}, 1),
-		wg:         sync.WaitGroup{},
+		Wg:         sync.WaitGroup{},
 	}
 }
 
@@ -33,10 +33,10 @@ func (appRunner *AppRunner) RunApp() {
 	appRunner.LoadConfig()
 	appRunner.App.Init()
 
-	appRunner.wg.Add(1)
+	appRunner.Wg.Add(1)
 	go func() {
-		defer appRunner.wg.Done()
-		appRunner.App.Start(appRunner.stopper, &appRunner.wg)
+		defer appRunner.Wg.Done()
+		appRunner.App.Start(appRunner.stopper, &appRunner.Wg)
 	}()
 
 	log.Printf("%s was Started", appRunner.App.Name())
@@ -46,7 +46,7 @@ func (appRunner *AppRunner) RunApp() {
 	log.Printf("Received signal \"%v\"\n shuting down", s)
 
 	close(appRunner.stopper)
-	appRunner.wg.Wait()
+	appRunner.Wg.Wait()
 	log.Printf("%s was Stopped", appRunner.App.Name())
 }
 

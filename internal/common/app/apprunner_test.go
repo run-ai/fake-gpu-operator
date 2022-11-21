@@ -36,6 +36,25 @@ func (fa *FakeApp) Init() {
 }
 
 func TestRunnerStopsOnSignal(t *testing.T) {
+	runner := app.NewAppRunner(&FakeApp{})
+	wait := make(chan struct{})
+	go func() {
+		runner.RunApp()
+		close(wait)
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+	runner.Stop()
+
+	select {
+	case <-wait:
+		return
+	case <-time.After(100 * time.Millisecond):
+		t.Errorf("app runner failed to close")
+	}
+}
+
+func TestAllAppFunctionsCall(t *testing.T) {
 	fa := &FakeApp{}
 	runner := app.NewAppRunner(fa)
 	go runner.RunApp()
