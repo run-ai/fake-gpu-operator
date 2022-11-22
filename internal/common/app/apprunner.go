@@ -52,6 +52,7 @@ func (appRunner *AppRunner) RunApp() {
 
 func (appRunner *AppRunner) Stop() {
 	appRunner.stopSignal <- os.Kill
+	appRunner.Wg.Wait()
 }
 
 func (appRunner *AppRunner) LoadConfig() {

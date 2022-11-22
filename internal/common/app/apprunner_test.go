@@ -57,12 +57,15 @@ func TestRunnerStopsOnSignal(t *testing.T) {
 func TestAllAppFunctionsCall(t *testing.T) {
 	fa := &FakeApp{}
 	runner := app.NewAppRunner(fa)
-	go runner.RunApp()
+	wait := make(chan struct{})
+	go func() {
+		runner.RunApp()
+		close(wait)
+	}()
 
 	time.Sleep(10 * time.Millisecond)
 	runner.Stop()
-	time.Sleep(10 * time.Millisecond)
-
+	<-wait
 	assert.True(t, fa.name)
 	assert.True(t, fa.stopped)
 	assert.True(t, fa.config)

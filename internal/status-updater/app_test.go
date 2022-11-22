@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -90,6 +91,7 @@ var _ = Describe("StatusUpdater", func() {
 
 		appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})
 		go appRunner.RunApp()
+		time.Sleep(100 * time.Millisecond)
 	})
 
 	AfterEach(func() {

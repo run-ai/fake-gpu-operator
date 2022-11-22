@@ -31,13 +31,19 @@ func (app *MigFakeApp) Start(stop chan struct{}, wg *sync.WaitGroup) {
 	ContinuouslySyncMigConfigChanges(app.Clientset, app.SyncableMigConfig, stop)
 	app.MigFaker.FakeNodeLabels()
 	for {
-		log.Printf("Waiting for change to '%s' annotation", MigConfigAnnotation)
-		value := app.SyncableMigConfig.Get()
-		log.Printf("Updating to MIG config: %s", value)
-		var migConfig AnnotationMigConfig
-		yaml.Unmarshal([]byte(value), &migConfig)
-		app.MigFaker.FakeMapping(&migConfig.MigConfigs)
-		log.Printf("Successfuly updated MIG config")
+		select {
+		case <-stop:
+			return
+		default:
+			log.Printf("Waiting for change to '%s' annotation", MigConfigAnnotation)
+			value := app.SyncableMigConfig.Get()
+			log.Printf("Updating to MIG config: %s", value)
+			var migConfig AnnotationMigConfig
+			yaml.Unmarshal([]byte(value), &migConfig)
+			app.MigFaker.FakeMapping(&migConfig.MigConfigs)
+			log.Printf("Successfuly updated MIG config")
+
+		}
 	}
 }
 
