@@ -27,15 +27,16 @@ type StatusUpdaterAppConfiguration struct {
 type StatusUpdaterApp struct {
 	Informer inform.Interface
 	Handler  handle.Interface
+	stopCh   chan struct{}
 }
 
-func (app *StatusUpdaterApp) Start(stop chan struct{}, wg *sync.WaitGroup) {
+func (app *StatusUpdaterApp) Start(wg *sync.WaitGroup) {
 	wg.Add(2)
-	go app.Handler.Run(stop, wg)
-	go app.Informer.Run(stop, wg)
+	go app.Handler.Run(app.stopCh, wg)
+	go app.Informer.Run(app.stopCh, wg)
 }
 
-func (app *StatusUpdaterApp) Init() {
+func (app *StatusUpdaterApp) Init(stop chan struct{}) {
 	clusterConfig, err := InClusterConfigFn()
 	if err != nil {
 		panic(err.Error())

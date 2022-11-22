@@ -4,22 +4,21 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 func main() {
-	conf, err := rest.InClusterConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	kubeclient := kubernetes.NewForConfigOrDie(conf)
+	kubeclient := kubeclient.NewKubeClient(nil, nil)
 
 	http.HandleFunc("/topology", func(w http.ResponseWriter, r *http.Request) {
-		clusterTopology, err := topology.GetFromKube(kubeclient)
+		cm, ok := kubeclient.GetConfigMap(os.Getenv("TOPOLOGY_CM_NAMESPACE"), os.Getenv("TOPOLOGY_CM_NAME"))
+		if !ok {
+			panic("Can't get topology")
+		}
+		clusterTopology, err := topology.FromConfigMap(cm)
 		if err != nil {
 			panic(err)
 		}

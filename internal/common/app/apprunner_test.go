@@ -14,10 +14,11 @@ type FakeApp struct {
 	stopped bool
 	config  bool
 	init    bool
+	stopCh  chan struct{}
 }
 
-func (fa *FakeApp) Start(stopper chan struct{}, wg *sync.WaitGroup) {
-	<-stopper
+func (fa *FakeApp) Start(wg *sync.WaitGroup) {
+	<-fa.stopCh
 	fa.stopped = true
 }
 
@@ -31,7 +32,8 @@ func (fa *FakeApp) GetConfig() interface{} {
 	return nil
 }
 
-func (fa *FakeApp) Init() {
+func (fa *FakeApp) Init(stop chan struct{}) {
+	fa.stopCh = stop
 	fa.init = true
 }
 

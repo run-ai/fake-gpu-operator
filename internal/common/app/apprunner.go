@@ -31,12 +31,12 @@ func NewAppRunner(app App) *AppRunner {
 
 func (appRunner *AppRunner) RunApp() {
 	appRunner.LoadConfig()
-	appRunner.App.Init()
+	appRunner.App.Init(appRunner.stopper)
 
 	appRunner.Wg.Add(1)
 	go func() {
 		defer appRunner.Wg.Done()
-		appRunner.App.Start(appRunner.stopper, &appRunner.Wg)
+		appRunner.App.Start(&appRunner.Wg)
 	}()
 
 	log.Printf("%s was Started", appRunner.App.Name())

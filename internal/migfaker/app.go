@@ -7,7 +7,6 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -23,16 +22,17 @@ type MigFakeAppConfig struct {
 type MigFakeApp struct {
 	Config            MigFakeAppConfig
 	SyncableMigConfig *SyncableMigConfig
-	Clientset         *kubernetes.Clientset
+	KubeClient        *kubeclient.KubeClient
 	MigFaker          *MigFaker
+	stopCh            chan struct{}
 }
 
-func (app *MigFakeApp) Start(stop chan struct{}, wg *sync.WaitGroup) {
-	ContinuouslySyncMigConfigChanges(app.Clientset, app.SyncableMigConfig, stop)
+func (app *MigFakeApp) Start(wg *sync.WaitGroup) {
+	ContinuouslySyncMigConfigChanges(app.KubeClient.ClientSet, app.SyncableMigConfig, app.stopCh)
 	app.MigFaker.FakeNodeLabels()
 	for {
 		select {
-		case <-stop:
+		case <-app.stopCh:
 			return
 		default:
 			log.Printf("Waiting for change to '%s' annotation", MigConfigAnnotation)
@@ -47,22 +47,20 @@ func (app *MigFakeApp) Start(stop chan struct{}, wg *sync.WaitGroup) {
 	}
 }
 
-func (app *MigFakeApp) Init() {
-	viper.Unmarshal(&app.Config)
+func (app *MigFakeApp) Init(stop chan struct{}) {
+	app.stopCh = stop
 
+	viper.Unmarshal(&app.Config)
 	config, err := clientcmd.BuildConfigFromFlags("", app.Config.KubeConfig)
 	if err != nil {
 		log.Fatalf("error building kubernetes clientcmd config: %s", err)
 	}
 
-	app.Clientset, err = kubernetes.NewForConfig(config)
-	if err != nil {
-		log.Fatalf("error building kubernetes clientset from config: %s", err)
-	}
+	app.KubeClient = kubeclient.NewKubeClient(config, stop)
 
 	app.SyncableMigConfig = NewSyncableMigConfig()
 
-	app.MigFaker = NewMigFaker(kubeclient.NewKubeClient(app.Clientset))
+	app.MigFaker = NewMigFaker(app.KubeClient)
 }
 
 func (app *MigFakeApp) Name() string {

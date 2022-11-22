@@ -1,27 +1,24 @@
 package watch
 
 import (
-	"context"
 	"log"
 	"sync"
 	"time"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/spf13/viper"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 const defaultMaxExportInterval = 10 * time.Second
 
 // type kubewatcher
 type KubeWatcher struct {
-	kubeclient  kubernetes.Interface
+	kubeclient  kubeclient.KubeClientInterface
 	subscribers []chan<- *topology.ClusterTopology
 }
 
-func NewKubeWatcher(kubeclient kubernetes.Interface) *KubeWatcher {
+func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface) *KubeWatcher {
 	return &KubeWatcher{
 		kubeclient: kubeclient,
 	}
@@ -33,11 +30,7 @@ func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
 
 func (w *KubeWatcher) Watch(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
-	cmWatch, err := w.kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Watch(context.TODO(), metav1.ListOptions{
-		FieldSelector: "metadata.name=" + viper.GetString("TOPOLOGY_CM_NAME"),
-		Watch:         true,
-	})
+	cmChan, err := w.kubeclient.WatchConfigMap(viper.GetString("TOPOLOGY_CM_NAMESPACE"), viper.GetString("TOPOLOGY_CM_NAME"))
 	if err != nil {
 		panic(err)
 	}
@@ -48,26 +41,25 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}, wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case e := <-cmWatch.ResultChan():
-			if e.Type == "ADDED" || e.Type == "MODIFIED" {
-				if cm, ok := e.Object.(*corev1.ConfigMap); ok {
-					ticker.Reset(maxInterval)
-					log.Printf("Got topology update, publishing...\n")
-					clusterTopology, err := topology.FromConfigMap(cm)
-					if err != nil {
-						panic(err)
-					}
-					w.publishTopology(clusterTopology)
-				}
-			}
-
-		case <-ticker.C:
-			log.Printf("Topology update not received within interval, publishing...\n")
-			clusterTopology, err := topology.GetFromKube(w.kubeclient)
+		case cm := <-cmChan:
+			ticker.Reset(maxInterval)
+			log.Printf("Got topology update, publishing...\n")
+			clusterTopology, err := topology.FromConfigMap(cm)
 			if err != nil {
 				panic(err)
 			}
+			w.publishTopology(clusterTopology)
 
+		case <-ticker.C:
+			log.Printf("Topology update not received within interval, publishing...\n")
+			cm, ok := w.kubeclient.GetConfigMap(viper.GetString("TOPOLOGY_CM_NAMESPACE"), viper.GetString("TOPOLOGY_CM_NAME"))
+			if !ok {
+				break
+			}
+			clusterTopology, err := topology.FromConfigMap(cm)
+			if err != nil {
+				panic(err)
+			}
 			w.publishTopology(clusterTopology)
 
 		case <-stopCh:

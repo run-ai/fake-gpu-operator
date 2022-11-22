@@ -46,7 +46,7 @@ func (m *SyncableMigConfig) Get() string {
 	return m.lastRead
 }
 
-func ContinuouslySyncMigConfigChanges(clientset *kubernetes.Clientset, migConfig *SyncableMigConfig, stop chan struct{}) {
+func ContinuouslySyncMigConfigChanges(clientset kubernetes.Interface, migConfig *SyncableMigConfig, stop chan struct{}) {
 	listWatch := cache.NewListWatchFromClient(
 		clientset.CoreV1().RESTClient(),
 		ResourceNodes,
