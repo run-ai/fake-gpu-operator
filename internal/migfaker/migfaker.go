@@ -10,8 +10,6 @@ import (
 )
 
 var fakeLables = map[string]string{
-	"node-role.kubernetes.io/runai-dynamic-mig":   "true",
-	"node-role.kubernetes.io/runai-mig-enabled":   "true",
 	"feature.node.kubernetes.io/pci-10de.present": "true",
 }
 
@@ -54,9 +52,9 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) {
 	}
 }
 
-func (*MigFaker) copyMigDevices(device SelectedDevices) map[string]string {
+func (*MigFaker) copyMigDevices(devices SelectedDevices) map[string]string {
 	migDevices := map[string]string{}
-	for key, val := range device.MigDevices {
+	for key, val := range devices.MigDevices {
 		migDevices[key] = val
 	}
 	return migDevices

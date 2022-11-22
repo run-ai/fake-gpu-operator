@@ -48,7 +48,6 @@ func TestExport(t *testing.T) {
 		assert.Equal(t, labels["nvidia.com/gpu.product"], myNode.GpuProduct)
 		assert.Equal(t, labels["nvidia.com/mig.strategy"], topology.MigStrategy)
 		assert.Equal(t, labels["nvidia.com/gpu.count"], strconv.Itoa(len(myNode.Gpus)))
-		assert.Equal(t, labels["nvidia.com/gpu.count"], strconv.Itoa(len(myNode.Gpus)))
 		wg.Done()
 	}
 
