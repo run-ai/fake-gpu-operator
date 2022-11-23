@@ -59,5 +59,5 @@ image-test:
 .PHONY: image-test
 
 test-all:
-	 go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
+	 go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --trace  --json-report=report.json
 .PHONY: test-all
