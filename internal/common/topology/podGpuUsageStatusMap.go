@@ -2,7 +2,7 @@ package topology
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -45,7 +45,7 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
 		return 0

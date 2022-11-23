@@ -21,7 +21,7 @@ var DynamicClientFn = func(c *rest.Config) dynamic.Interface {
 
 type StatusUpdaterAppConfiguration struct {
 	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
-	topologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
+	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
 }
 
 type StatusUpdaterApp struct {

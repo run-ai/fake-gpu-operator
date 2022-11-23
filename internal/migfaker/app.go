@@ -29,7 +29,10 @@ type MigFakeApp struct {
 
 func (app *MigFakeApp) Start(wg *sync.WaitGroup) {
 	ContinuouslySyncMigConfigChanges(app.KubeClient.ClientSet, app.SyncableMigConfig, app.stopCh)
-	app.MigFaker.FakeNodeLabels()
+	err := app.MigFaker.FakeNodeLabels()
+	if err != nil {
+		log.Fatalf("Error faking node labels: %e", err)
+	}
 	for {
 		select {
 		case <-app.stopCh:
@@ -39,7 +42,11 @@ func (app *MigFakeApp) Start(wg *sync.WaitGroup) {
 			value := app.SyncableMigConfig.Get()
 			log.Printf("Updating to MIG config: %s", value)
 			var migConfig AnnotationMigConfig
-			yaml.Unmarshal([]byte(value), &migConfig)
+			err := yaml.Unmarshal([]byte(value), &migConfig)
+			if err != nil {
+				log.Printf("failed to unmarshal mig config: %e", err)
+				break
+			}
 			app.MigFaker.FakeMapping(&migConfig.MigConfigs)
 			log.Printf("Successfuly updated MIG config")
 
@@ -50,7 +57,10 @@ func (app *MigFakeApp) Start(wg *sync.WaitGroup) {
 func (app *MigFakeApp) Init(stop chan struct{}) {
 	app.stopCh = stop
 
-	viper.Unmarshal(&app.Config)
+	err := viper.Unmarshal(&app.Config)
+	if err != nil {
+		log.Fatalf("failed to unmarshal configuration: %e", err)
+	}
 	config, err := clientcmd.BuildConfigFromFlags("", app.Config.KubeConfig)
 	if err != nil {
 		log.Fatalf("error building kubernetes clientcmd config: %s", err)
