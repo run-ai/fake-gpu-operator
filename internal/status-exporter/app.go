@@ -25,20 +25,22 @@ type StatusExporterApp struct {
 	FsExporter     export.Interface
 	Kubeclient     *kubeclient.KubeClient
 	stopCh         chan struct{}
+	wg             *sync.WaitGroup
 }
 
-func (app *StatusExporterApp) Start(wg *sync.WaitGroup) {
-	wg.Add(4)
-	go app.Watcher.Watch(app.stopCh, wg)
-	go app.MetricExporter.Run(app.stopCh, wg)
-	go app.LabelsExporter.Run(app.stopCh, wg)
-	go app.FsExporter.Run(app.stopCh, wg)
+func (app *StatusExporterApp) Start() {
+	app.wg.Add(4)
+	go app.Watcher.Watch(app.stopCh, app.wg)
+	go app.MetricExporter.Run(app.stopCh, app.wg)
+	go app.LabelsExporter.Run(app.stopCh, app.wg)
+	go app.FsExporter.Run(app.stopCh, app.wg)
 }
 
-func (app *StatusExporterApp) Init(stop chan struct{}) {
+func (app *StatusExporterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
 	if app.Kubeclient == nil {
 		app.Kubeclient = kubeclient.NewKubeClient(nil, stop)
 	}
+	app.wg = wg
 
 	app.Watcher = watch.NewKubeWatcher(app.Kubeclient)
 	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher)

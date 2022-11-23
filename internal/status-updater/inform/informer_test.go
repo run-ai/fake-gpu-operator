@@ -37,7 +37,9 @@ var _ = Describe("Informer", func() {
 
 	BeforeEach(func() {
 		kubeclient = fake.NewSimpleClientset()
-		informer = inform.NewInformer(kubeclient)
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		informer = inform.NewInformer(kubeclient, wg)
 		ch = make(chan *inform.PodEvent)
 		informer.Subscribe(ch)
 		stopCh = make(chan struct{})
@@ -45,9 +47,7 @@ var _ = Describe("Informer", func() {
 			// Somehow the informer may not catch events if it is starting in the same
 			// time as the events submission, so we wait.
 			time.Sleep(50 * time.Millisecond)
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
-			informer.Run(stopCh, wg)
+			informer.Run(stopCh)
 		}()
 	})
 

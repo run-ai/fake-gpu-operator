@@ -17,7 +17,7 @@ type FakeApp struct {
 	stopCh  chan struct{}
 }
 
-func (fa *FakeApp) Start(wg *sync.WaitGroup) {
+func (fa *FakeApp) Start() {
 	<-fa.stopCh
 	fa.stopped = true
 }
@@ -32,7 +32,7 @@ func (fa *FakeApp) GetConfig() interface{} {
 	return nil
 }
 
-func (fa *FakeApp) Init(stop chan struct{}) {
+func (fa *FakeApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
 	fa.stopCh = stop
 	fa.init = true
 }

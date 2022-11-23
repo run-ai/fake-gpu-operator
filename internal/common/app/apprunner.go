@@ -22,8 +22,9 @@ type AppRunner struct {
 func NewAppRunner(app App) *AppRunner {
 	stop := make(chan os.Signal, 1)
 	stopCh := make(chan struct{}, 1)
+	wg := &sync.WaitGroup{}
 	LoadConfig(app)
-	app.Init(stopCh)
+	app.Init(stopCh, wg)
 	return &AppRunner{
 		App:        app,
 		stopSignal: stop,
@@ -36,7 +37,7 @@ func (appRunner *AppRunner) RunApp() {
 	appRunner.Wg.Add(1)
 	go func() {
 		defer appRunner.Wg.Done()
-		appRunner.App.Start(&appRunner.Wg)
+		appRunner.App.Start()
 	}()
 
 	log.Printf("%s was Started", appRunner.App.Name())

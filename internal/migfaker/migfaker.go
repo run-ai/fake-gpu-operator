@@ -14,6 +14,8 @@ var fakeLables = map[string]string{
 	"feature.node.kubernetes.io/pci-10de.present": "true",
 }
 
+var GenerateUuid = uuid.New
+
 type MigFaker struct {
 	kubeclient kubeclient.KubeClientInterface
 }
@@ -59,7 +61,7 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 func (*MigFaker) copyMigDevices(devices SelectedDevices) map[string]string {
 	migDevices := map[string]string{}
 	for key, _ := range devices.MigDevices {
-		migDevices[key] = fmt.Sprintf("MIG-%s", uuid.New())
+		migDevices[key] = fmt.Sprintf("MIG-%s", GenerateUuid())
 	}
 	return migDevices
 }

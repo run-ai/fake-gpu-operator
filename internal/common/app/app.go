@@ -3,8 +3,8 @@ package app
 import "sync"
 
 type App interface {
-	Start(wg *sync.WaitGroup)
+	Start()
 	GetConfig() interface{}
 	Name() string
-	Init(stop chan struct{})
+	Init(stop chan struct{}, wg *sync.WaitGroup)
 }

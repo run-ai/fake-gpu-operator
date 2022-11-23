@@ -25,9 +25,10 @@ type MigFakeApp struct {
 	KubeClient        *kubeclient.KubeClient
 	MigFaker          *MigFaker
 	stopCh            chan struct{}
+	wg                *sync.WaitGroup
 }
 
-func (app *MigFakeApp) Start(wg *sync.WaitGroup) {
+func (app *MigFakeApp) Start() {
 	ContinuouslySyncMigConfigChanges(app.KubeClient.ClientSet, app.SyncableMigConfig, app.stopCh)
 	err := app.MigFaker.FakeNodeLabels()
 	if err != nil {
@@ -57,9 +58,9 @@ func (app *MigFakeApp) Start(wg *sync.WaitGroup) {
 	}
 }
 
-func (app *MigFakeApp) Init(stop chan struct{}) {
+func (app *MigFakeApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
 	app.stopCh = stop
-
+	app.wg = wg
 	err := viper.Unmarshal(&app.Config)
 	if err != nil {
 		log.Fatalf("failed to unmarshal configuration: %e", err)

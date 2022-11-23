@@ -28,23 +28,27 @@ type StatusUpdaterApp struct {
 	Informer inform.Interface
 	Handler  handle.Interface
 	stopCh   chan struct{}
+	wg       *sync.WaitGroup
 }
 
-func (app *StatusUpdaterApp) Start(wg *sync.WaitGroup) {
-	wg.Add(2)
-	go app.Handler.Run(app.stopCh, wg)
-	go app.Informer.Run(app.stopCh, wg)
+func (app *StatusUpdaterApp) Start() {
+	app.wg.Add(2)
+	go app.Handler.Run(app.stopCh, app.wg)
+	go app.Informer.Run(app.stopCh)
 }
 
-func (app *StatusUpdaterApp) Init(stop chan struct{}) {
+func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
 	clusterConfig, err := InClusterConfigFn()
 	if err != nil {
 		panic(err.Error())
 	}
+
+	app.wg = wg
+
 	kubeclient := KubeClientFn(clusterConfig)
 	dynamicClient := DynamicClientFn(clusterConfig)
 
-	app.Informer = inform.NewInformer(kubeclient)
+	app.Informer = inform.NewInformer(kubeclient, app.wg)
 	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer)
 }
 

@@ -14,22 +14,24 @@ import (
 
 type Interface interface {
 	Subscribe(chan<- *PodEvent)
-	Run(stopCh <-chan struct{}, wg *sync.WaitGroup)
+	Run(stopCh <-chan struct{})
 }
 
 type Informer struct {
 	kubeclient  kubernetes.Interface
 	subscribers []chan<- *PodEvent
 	podInformer cache.SharedIndexInformer
+	wg          *sync.WaitGroup
 }
 
 var _ Interface = &Informer{}
 
-func NewInformer(kubeclient kubernetes.Interface) *Informer {
+func NewInformer(kubeclient kubernetes.Interface, waitGroup *sync.WaitGroup) *Informer {
 	w := &Informer{
 		kubeclient:  kubeclient,
 		subscribers: make([]chan<- *PodEvent, 0),
 		podInformer: informers.NewSharedInformerFactory(kubeclient, 0).Core().V1().Pods().Informer(),
+		wg:          waitGroup,
 	}
 
 	w.podInformer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -83,9 +85,9 @@ func (inf *Informer) Subscribe(subscriber chan<- *PodEvent) {
 	inf.subscribers = append(inf.subscribers, subscriber)
 }
 
-func (inf *Informer) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+func (inf *Informer) Run(stopCh <-chan struct{}) {
 	defer inf.closeSubscribers()
-	defer wg.Done()
+	defer inf.wg.Done()
 
 	log.Printf("Starting informer\n")
 	inf.podInformer.Run(stopCh)
