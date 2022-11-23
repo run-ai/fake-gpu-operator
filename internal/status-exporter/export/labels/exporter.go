@@ -15,22 +15,24 @@ import (
 type LabelsExporter struct {
 	topologyChan <-chan *topology.ClusterTopology
 	kubeclient   kubeclient.KubeClientInterface
+	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &LabelsExporter{}
 
-func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface) *LabelsExporter {
+func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface, wg *sync.WaitGroup) *LabelsExporter {
 	topologyChan := make(chan *topology.ClusterTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &LabelsExporter{
 		topologyChan: topologyChan,
 		kubeclient:   kubeclient,
+		wg:           wg,
 	}
 }
 
-func (e *LabelsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
+	defer e.wg.Done()
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:

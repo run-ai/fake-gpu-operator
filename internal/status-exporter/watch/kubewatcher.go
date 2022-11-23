@@ -16,11 +16,13 @@ const defaultMaxExportInterval = 10 * time.Second
 type KubeWatcher struct {
 	kubeclient  kubeclient.KubeClientInterface
 	subscribers []chan<- *topology.ClusterTopology
+	wg          *sync.WaitGroup
 }
 
-func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface) *KubeWatcher {
+func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface, wg *sync.WaitGroup) *KubeWatcher {
 	return &KubeWatcher{
 		kubeclient: kubeclient,
+		wg:         wg,
 	}
 }
 
@@ -28,8 +30,8 @@ func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
 	w.subscribers = append(w.subscribers, subscriber)
 }
 
-func (w *KubeWatcher) Watch(stopCh <-chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
+	defer w.wg.Done()
 	cmChan, err := w.kubeclient.WatchConfigMap(viper.GetString("TOPOLOGY_CM_NAMESPACE"), viper.GetString("TOPOLOGY_CM_NAME"))
 	if err != nil {
 		panic(err)

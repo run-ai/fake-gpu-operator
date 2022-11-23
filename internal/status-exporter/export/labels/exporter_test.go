@@ -19,7 +19,7 @@ type FakeWatcher struct {
 func (watcher *FakeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
 	watcher.topologyChan = subscriber
 }
-func (watcher *FakeWatcher) Watch(stopCh <-chan struct{}, wg *sync.WaitGroup) {}
+func (watcher *FakeWatcher) Watch(stopCh <-chan struct{}) {}
 
 func TestExport(t *testing.T) {
 	viper.SetDefault("NODE_NAME", "my_node")
@@ -52,10 +52,10 @@ func TestExport(t *testing.T) {
 	}
 
 	fakeWatcher := &FakeWatcher{}
-	lablesExporter := labels.NewLabelsExporter(fakeWatcher, kubeClientMock)
 	wg.Add(1)
+	lablesExporter := labels.NewLabelsExporter(fakeWatcher, kubeClientMock, wg)
 	stop := make(chan struct{})
-	go lablesExporter.Run(stop, wg)
+	go lablesExporter.Run(stop)
 	fakeWatcher.topologyChan <- topology
 	stop <- struct{}{}
 	wg.Wait()

@@ -30,10 +30,10 @@ type StatusExporterApp struct {
 
 func (app *StatusExporterApp) Start() {
 	app.wg.Add(4)
-	go app.Watcher.Watch(app.stopCh, app.wg)
-	go app.MetricExporter.Run(app.stopCh, app.wg)
-	go app.LabelsExporter.Run(app.stopCh, app.wg)
-	go app.FsExporter.Run(app.stopCh, app.wg)
+	go app.Watcher.Watch(app.stopCh)
+	go app.MetricExporter.Run(app.stopCh)
+	go app.LabelsExporter.Run(app.stopCh)
+	go app.FsExporter.Run(app.stopCh)
 }
 
 func (app *StatusExporterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
@@ -42,10 +42,10 @@ func (app *StatusExporterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
 	}
 	app.wg = wg
 
-	app.Watcher = watch.NewKubeWatcher(app.Kubeclient)
-	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher)
-	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, app.Kubeclient)
-	app.FsExporter = fs.NewFsExporter(app.Watcher)
+	app.Watcher = watch.NewKubeWatcher(app.Kubeclient, app.wg)
+	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher, app.wg)
+	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, app.Kubeclient, app.wg)
+	app.FsExporter = fs.NewFsExporter(app.Watcher, app.wg)
 }
 
 func (app *StatusExporterApp) Name() string {

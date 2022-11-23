@@ -16,21 +16,23 @@ import (
 
 type FsExporter struct {
 	topologyChan <-chan *topology.ClusterTopology
+	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &FsExporter{}
 
-func NewFsExporter(watcher watch.Interface) *FsExporter {
+func NewFsExporter(watcher watch.Interface, wg *sync.WaitGroup) *FsExporter {
 	topologyChan := make(chan *topology.ClusterTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &FsExporter{
 		topologyChan: topologyChan,
+		wg:           wg,
 	}
 }
 
-func (e *FsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (e *FsExporter) Run(stopCh <-chan struct{}) {
+	defer e.wg.Done()
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:

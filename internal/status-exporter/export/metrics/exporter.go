@@ -19,21 +19,23 @@ import (
 
 type MetricsExporter struct {
 	topologyChan <-chan *topology.ClusterTopology
+	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &MetricsExporter{}
 
-func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
+func NewMetricsExporter(watcher watch.Interface, wg *sync.WaitGroup) *MetricsExporter {
 	topologyChan := make(chan *topology.ClusterTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &MetricsExporter{
 		topologyChan: topologyChan,
+		wg:           wg,
 	}
 }
 
-func (e *MetricsExporter) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
+	defer e.wg.Done()
 	go setupServer()
 
 	// Republish the metrics every 10 seconds to refresh utilization ranges

@@ -18,18 +18,19 @@ import (
 )
 
 type Interface interface {
-	Run(stopCh <-chan struct{}, wg *sync.WaitGroup)
+	Run(stopCh <-chan struct{})
 }
 
 type PodEventHandler struct {
 	podEvents     <-chan *inform.PodEvent
 	kubeclient    kubernetes.Interface
 	dynamicClient dynamic.Interface
+	wg            *sync.WaitGroup
 }
 
 var _ Interface = &PodEventHandler{}
 
-func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface, informer inform.Interface) *PodEventHandler {
+func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface, informer inform.Interface, wg *sync.WaitGroup) *PodEventHandler {
 	podEvents := make(chan *inform.PodEvent)
 	informer.Subscribe(podEvents)
 
@@ -37,6 +38,7 @@ func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.I
 		podEvents:     podEvents,
 		kubeclient:    kubeClient,
 		dynamicClient: dynamicClient,
+		wg:            wg,
 	}
 
 	err := p.resetTopologyStatus()
@@ -50,8 +52,8 @@ func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.I
 	return p
 }
 
-func (p *PodEventHandler) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (p *PodEventHandler) Run(stopCh <-chan struct{}) {
+	defer p.wg.Done()
 	p.processPodEvents(stopCh)
 }
 

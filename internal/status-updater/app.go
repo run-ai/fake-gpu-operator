@@ -33,7 +33,7 @@ type StatusUpdaterApp struct {
 
 func (app *StatusUpdaterApp) Start() {
 	app.wg.Add(2)
-	go app.Handler.Run(app.stopCh, app.wg)
+	go app.Handler.Run(app.stopCh)
 	go app.Informer.Run(app.stopCh)
 }
 
@@ -49,7 +49,7 @@ func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
 	dynamicClient := DynamicClientFn(clusterConfig)
 
 	app.Informer = inform.NewInformer(kubeclient, app.wg)
-	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer)
+	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer, app.wg)
 }
 
 func (app *StatusUpdaterApp) Name() string {
