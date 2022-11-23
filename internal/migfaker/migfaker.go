@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 )
 
@@ -57,8 +58,8 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 
 func (*MigFaker) copyMigDevices(devices SelectedDevices) map[string]string {
 	migDevices := map[string]string{}
-	for key, val := range devices.MigDevices {
-		migDevices[key] = val
+	for key, _ := range devices.MigDevices {
+		migDevices[key] = fmt.Sprintf("MIG-%s", uuid.New())
 	}
 	return migDevices
 }

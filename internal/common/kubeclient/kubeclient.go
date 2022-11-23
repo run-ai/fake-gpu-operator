@@ -73,8 +73,8 @@ func (client *KubeClient) SetNodeAnnotations(annotations map[string]string) erro
 
 func (client *KubeClient) GetConfigMap(namespace string, configmapName string) (*corev1.ConfigMap, bool) {
 	cm, err := client.ClientSet.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
-		context.TODO(), viper.GetString("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
+		namespace).Get(
+		context.TODO(), configmapName, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("Error getting configmap: %s", configmapName)
 		return cm, false
