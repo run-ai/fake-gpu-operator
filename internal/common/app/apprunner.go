@@ -21,18 +21,18 @@ type AppRunner struct {
 
 func NewAppRunner(app App) *AppRunner {
 	stop := make(chan os.Signal, 1)
+	stopCh := make(chan struct{}, 1)
+	LoadConfig(app)
+	app.Init(stopCh)
 	return &AppRunner{
 		App:        app,
 		stopSignal: stop,
-		stopper:    make(chan struct{}, 1),
+		stopper:    stopCh,
 		Wg:         sync.WaitGroup{},
 	}
 }
 
 func (appRunner *AppRunner) RunApp() {
-	appRunner.LoadConfig()
-	appRunner.App.Init(appRunner.stopper)
-
 	appRunner.Wg.Add(1)
 	go func() {
 		defer appRunner.Wg.Done()
@@ -55,8 +55,8 @@ func (appRunner *AppRunner) Stop() {
 	appRunner.Wg.Wait()
 }
 
-func (appRunner *AppRunner) LoadConfig() {
-	config := appRunner.App.GetConfig()
+func LoadConfig(app App) {
+	config := app.GetConfig()
 	if config == nil {
 		return
 	}

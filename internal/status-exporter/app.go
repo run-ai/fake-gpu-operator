@@ -30,6 +30,7 @@ type StatusExporterApp struct {
 	MetricExporter export.Interface
 	LabelsExporter export.Interface
 	FsExporter     export.Interface
+	Kubeclient     *kubeclient.KubeClient
 	stopCh         chan struct{}
 }
 
@@ -42,11 +43,13 @@ func (app *StatusExporterApp) Start(wg *sync.WaitGroup) {
 }
 
 func (app *StatusExporterApp) Init(stop chan struct{}) {
-	kubeclient := kubeclient.NewKubeClient(nil, stop)
+	if app.Kubeclient == nil {
+		app.Kubeclient = kubeclient.NewKubeClient(nil, stop)
+	}
 
-	app.Watcher = watch.NewKubeWatcher(kubeclient)
+	app.Watcher = watch.NewKubeWatcher(app.Kubeclient)
 	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher)
-	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, kubeclient)
+	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, app.Kubeclient)
 	app.FsExporter = fs.NewFsExporter(app.Watcher)
 }
 

@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
+	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_exporter "github.com/run-ai/fake-gpu-operator/internal/status-exporter"
 )
@@ -50,7 +51,7 @@ func TestStatusExporter(t *testing.T) {
 // - node metrics
 var _ = Describe("StatusExporter", func() {
 	var (
-		kubeclient kubernetes.Interface
+		clientset kubernetes.Interface
 	)
 
 	fakeNode := &corev1.Node{
@@ -59,11 +60,16 @@ var _ = Describe("StatusExporter", func() {
 			Labels: map[string]string{},
 		},
 	}
-	kubeclient = fake.NewSimpleClientset(fakeNode)
-	setupFakes(kubeclient)
+	clientset = fake.NewSimpleClientset(fakeNode)
+	setupFakes(clientset)
 	setupConfig()
 
-	appRunner := app.NewAppRunner(&status_exporter.StatusExporterApp{})
+	exporter := &status_exporter.StatusExporterApp{
+		Kubeclient: &kubeclient.KubeClient{
+			ClientSet: clientset,
+		},
+	}
+	appRunner := app.NewAppRunner(exporter)
 	go appRunner.RunApp()
 	// Wait for the status exporter to initialize
 	time.Sleep(1000 * time.Millisecond)
@@ -71,7 +77,7 @@ var _ = Describe("StatusExporter", func() {
 	initialTopology := createInitialTopology()
 	cm, err := topology.ToConfigMap(initialTopology)
 	Expect(err).To(Not(HaveOccurred()))
-	_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
+	_, err = clientset.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 	Expect(err).To(Not(HaveOccurred()))
 
 	cases := getTestCases()
@@ -84,10 +90,10 @@ var _ = Describe("StatusExporter", func() {
 			cm, err := topology.ToConfigMap(caseDetails.clusterTopology)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
+			_, err = clientset.CoreV1().ConfigMaps(topologyCmNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(getNodeLabelsFromKube(kubeclient)).WithTimeout(19 * time.Second).Should(Equal(caseDetails.expectedLabels))
+			Eventually(getNodeLabelsFromKube(clientset)).WithTimeout(19 * time.Second).Should(Equal(caseDetails.expectedLabels))
 			Eventually(getNodeMetrics()).Should(ContainElements(caseDetails.expectedMetrics))
 		})
 	}
