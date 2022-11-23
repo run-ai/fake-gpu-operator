@@ -9,14 +9,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
-
-var InClusterConfigFn = rest.InClusterConfig
-var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
-	return kubernetes.NewForConfigOrDie(c)
-}
 
 type StatusExporterAppConfig struct {
 	NodeName                  string `mapstructure:"NODE_NAME" validator:"required"`

@@ -27,7 +27,7 @@ func (faker *MigFaker) FakeNodeLabels() error {
 	return faker.kubeclient.SetNodeLabels(fakeLables)
 }
 
-func (faker *MigFaker) FakeMapping(config *MigConfigs) {
+func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 	mappings := map[string]map[string]string{}
 	for id, selectedDevice := range config.SelectedDevices {
 		mappings[fmt.Sprint(id)] = faker.copyMigDevices(selectedDevice)
@@ -45,11 +45,14 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) {
 	err := faker.kubeclient.SetNodeLabels(labels)
 	if err != nil {
 		log.Printf("error on setting node labels: %e", err)
+		return err
 	}
 	err = faker.kubeclient.SetNodeAnnotations(annotations)
 	if err != nil {
 		log.Printf("error on setting node annotations: %e", err)
+		return err
 	}
+	return nil
 }
 
 func (*MigFaker) copyMigDevices(devices SelectedDevices) map[string]string {

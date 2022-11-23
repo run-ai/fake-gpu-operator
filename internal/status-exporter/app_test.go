@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
@@ -61,7 +60,6 @@ var _ = Describe("StatusExporter", func() {
 		},
 	}
 	clientset = fake.NewSimpleClientset(fakeNode)
-	setupFakes(clientset)
 	setupConfig()
 
 	exporter := &status_exporter.StatusExporterApp{
@@ -98,15 +96,6 @@ var _ = Describe("StatusExporter", func() {
 		})
 	}
 })
-
-func setupFakes(kubeclient kubernetes.Interface) {
-	status_exporter.InClusterConfigFn = func() (*rest.Config, error) {
-		return nil, nil
-	}
-	status_exporter.KubeClientFn = func(c *rest.Config) kubernetes.Interface {
-		return kubeclient
-	}
-}
 
 func setupConfig() {
 	setupEnvs()

@@ -47,7 +47,10 @@ func (app *MigFakeApp) Start(wg *sync.WaitGroup) {
 				log.Printf("failed to unmarshal mig config: %e", err)
 				break
 			}
-			app.MigFaker.FakeMapping(&migConfig.MigConfigs)
+			err = app.MigFaker.FakeMapping(&migConfig.MigConfigs)
+			if err != nil {
+				log.Printf("Failed faking mig: %e", err)
+			}
 			log.Printf("Successfuly updated MIG config")
 
 		}
