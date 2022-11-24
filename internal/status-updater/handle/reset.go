@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/util"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *PodEventHandler) resetTopologyStatus() error {
@@ -92,7 +92,7 @@ func generateGpuDetails(gpuCount int, nodeName string) []topology.GpuDetails {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for idx := range gpus {
 		gpus[idx] = topology.GpuDetails{
-			ID: fmt.Sprintf("gpu-%s-%d", nodeName, idx),
+			ID: fmt.Sprintf("GPU-%s", util.StringToUUID(fmt.Sprintf("%s-%d", nodeName, idx))),
 		}
 	}
 
