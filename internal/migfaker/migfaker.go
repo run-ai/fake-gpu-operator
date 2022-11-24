@@ -12,6 +12,8 @@ import (
 
 var fakeLables = map[string]string{
 	"feature.node.kubernetes.io/pci-10de.present": "true",
+	"node-role.kubernetes.io/runai-dynamic-mig":   "true",
+	"node-role.kubernetes.io/runai-mig-enabled":   "true",
 }
 
 var GenerateUuid = uuid.New
@@ -39,7 +41,7 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 	smappings, _ := json.Marshal(mappings)
 
 	labels := map[string]string{
-		"nvidia.com/mig.config.state": "true",
+		"nvidia.com/mig.config.state": "success",
 	}
 	annotations := map[string]string{
 		"run.ai/mig-mapping": base64.StdEncoding.EncodeToString(smappings),

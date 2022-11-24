@@ -28,7 +28,7 @@ func TestFakeMapping(t *testing.T) {
 	migfaker.GenerateUuid = func() uuid.UUID { return uid }
 	kubeClientMock := &kubeclient.KubeClientMock{}
 	kubeClientMock.ActualSetNodeLabels = func(labels map[string]string) {
-		assert.Equal(t, labels["nvidia.com/mig.config.state"], "true")
+		assert.Equal(t, labels["nvidia.com/mig.config.state"], "success")
 	}
 
 	kubeClientMock.ActualSetNodeAnnotations = func(labels map[string]string) {

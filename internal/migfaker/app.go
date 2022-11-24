@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	MigConfigAnnotation = "nvidia.com/mig.config"
+	MigConfigAnnotation = "run.ai/mig.config"
 )
 
 type MigFakeAppConfig struct {
