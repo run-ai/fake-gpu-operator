@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
-	"github.com/run-ai/fake-gpu-operator/internal/util"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -227,7 +227,7 @@ func createTopology(gpuCount int64, node string) *topology.ClusterTopology {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for i := int64(0); i < gpuCount; i++ {
 		gpus[i] = topology.GpuDetails{
-			ID: fmt.Sprintf("GPU-%s", util.StringToUUID(fmt.Sprintf("%s-%d", node, i))),
+			ID: fmt.Sprintf("GPU-%s", uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s-%d", node, i)))),
 			Status: topology.GpuStatus{
 				PodGpuUsageStatus: topology.PodGpuUsageStatusMap{},
 			},
