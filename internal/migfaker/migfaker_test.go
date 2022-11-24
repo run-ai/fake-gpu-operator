@@ -38,5 +38,8 @@ func TestFakeMapping(t *testing.T) {
 	}
 
 	migFaker := migfaker.NewMigFaker(kubeClientMock)
-	migFaker.FakeMapping(migConfig)
+	err := migFaker.FakeMapping(migConfig)
+	if err != nil {
+		t.Errorf("Failed to fake mapping %s", err)
+	}
 }
