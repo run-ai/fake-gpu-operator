@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"github.com/google/uuid"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *PodEventHandler) resetTopologyStatus() error {
@@ -28,7 +28,7 @@ func (p *PodEventHandler) resetTopologyStatus() error {
 	for nodeName, node := range clusterTopology.Nodes {
 		if node.GpuCount != 0 && len(node.Gpus) != node.GpuCount {
 			log.Printf("Node %s has %d GPUs, but %d GPUs are requested. Generating GPUs...\n", nodeName, len(node.Gpus), node.GpuCount)
-			node.Gpus = generateGpuDetails(node.GpuCount)
+			node.Gpus = generateGpuDetails(node.GpuCount, nodeName)
 			clusterTopology.Nodes[nodeName] = node
 		}
 
@@ -88,11 +88,11 @@ func (p *PodEventHandler) validateAutoConfigNodesSettings(settings *topology.Nod
 	return nil
 }
 
-func generateGpuDetails(gpuCount int) []topology.GpuDetails {
+func generateGpuDetails(gpuCount int, nodeName string) []topology.GpuDetails {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for idx := range gpus {
 		gpus[idx] = topology.GpuDetails{
-			ID: fmt.Sprintf("gpu-%d", idx),
+			ID: fmt.Sprintf("GPU-%s", uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s-%d", nodeName, idx)))),
 		}
 	}
 
