@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -24,8 +27,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 )
 
 const (
@@ -102,7 +103,7 @@ var _ = Describe("StatusUpdater", func() {
 
 	When("the status updater is started", func() {
 		It("should reset the cluster topology", func() {
-			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount)))
+			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount, node)))
 		})
 	})
 
@@ -138,7 +139,7 @@ var _ = Describe("StatusUpdater", func() {
 				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
-				expectedTopology := createTopology(nodeGpuCount)
+				expectedTopology := createTopology(nodeGpuCount, node)
 				if caseDetails.podPhase == v1.PodRunning {
 					for i := 0; i < int(caseDetails.podGpuCount); i++ {
 						expectedTopology.Nodes[node].Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
@@ -158,7 +159,7 @@ var _ = Describe("StatusUpdater", func() {
 
 				err = kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount)))
+				Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount, node)))
 			})
 		}
 	})
@@ -170,7 +171,7 @@ var _ = Describe("StatusUpdater", func() {
 			_, err := kubeclient.CoreV1().Pods(reservationPodNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			expectedTopology := createTopology(nodeGpuCount)
+			expectedTopology := createTopology(nodeGpuCount, node)
 			expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Pod = reservationPodName
 			expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
 			expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Namespace = reservationPodNs
@@ -228,11 +229,11 @@ func setupEnvs() {
 	os.Setenv("TOPOLOGY_CM_NAMESPACE", "fake-cm-namespace")
 }
 
-func createTopology(gpuCount int64) *topology.ClusterTopology {
+func createTopology(gpuCount int64, node string) *topology.ClusterTopology {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for i := int64(0); i < gpuCount; i++ {
 		gpus[i] = topology.GpuDetails{
-			ID: fmt.Sprintf("gpu-%d", i),
+			ID: fmt.Sprintf("GPU-%s", uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s-%d", node, i)))),
 			Status: topology.GpuStatus{
 				PodGpuUsageStatus: topology.PodGpuUsageStatusMap{},
 			},
