@@ -3,7 +3,7 @@ COMPONENT="$1"
 
 DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
 DOCKER_REPO_FULL=${DOCKER_REPO_BASE}/${COMPONENT}
-DOCKER_TAG=0.0.2
+DOCKER_TAG=snir
 DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
@@ -24,6 +24,7 @@ images:
 	make image COMPONENT=status-updater
 	make image COMPONENT=status-exporter
 	make image COMPONENT=topology-server
+	make image COMPONENT=mig-faker
 .PHONY: images
 
 push:
@@ -35,6 +36,7 @@ push-all:
 	make push COMPONENT=status-updater
 	make push COMPONENT=status-exporter
 	make push COMPONENT=topology-server
+	make push COMPONENT=mig-faker
 .PHONY: push-all
 
 restart: 
@@ -49,6 +51,7 @@ deploy-all:
 	make image push COMPONENT=status-updater
 	make image push COMPONENT=status-exporter
 	make image push COMPONENT=topology-server
+	make image push COMPONENT=mig-faker
 .PHONY: deploy-all
 
 image-test:
