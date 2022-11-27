@@ -24,8 +24,6 @@ rules:
 {{- if .Values.environment.openshift }}
   - apiGroups:
     - security.openshift.io
-    resourceNames:
-    - hostaccess
     resources:
     - securitycontextconstraints
     verbs:
