@@ -1,10 +1,6 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-{{- if .Values.environment.openshift }}
-  annotations:
-    openshift.io/scc: hostmount-anyuid
-{{- end }}
   labels:
     app: mig-faker
   name: mig-faker
@@ -41,8 +37,6 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           name: mig-faker
-          securityContext:
-            privileged: true
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
       dnsPolicy: ClusterFirst

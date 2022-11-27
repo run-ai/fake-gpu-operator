@@ -1,9 +1,9 @@
 BUILD_DIR=./bin
 COMPONENT="$1"
 
-DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
+DOCKER_REPO_BASE=gcr.io/run-ai-staging/fake-gpu-operator
 DOCKER_REPO_FULL=${DOCKER_REPO_BASE}/${COMPONENT}
-DOCKER_TAG=0.0.2
+DOCKER_TAG=0.0.16
 DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
