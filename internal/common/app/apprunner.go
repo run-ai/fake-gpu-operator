@@ -35,6 +35,7 @@ func NewAppRunner(app App) *AppRunner {
 
 func (appRunner *AppRunner) RunApp() {
 	appRunner.Wg.Add(1)
+	print("added")
 	go func() {
 		defer appRunner.Wg.Done()
 		appRunner.App.Start()
@@ -53,7 +54,6 @@ func (appRunner *AppRunner) RunApp() {
 
 func (appRunner *AppRunner) Stop() {
 	appRunner.stopSignal <- os.Kill
-	appRunner.Wg.Wait()
 }
 
 func LoadConfig(app App) {

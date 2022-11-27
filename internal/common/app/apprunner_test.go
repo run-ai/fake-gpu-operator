@@ -67,6 +67,7 @@ func TestAllAppFunctionsCall(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 	runner.Stop()
+
 	<-wait
 	assert.True(t, fa.name)
 	assert.True(t, fa.stopped)
