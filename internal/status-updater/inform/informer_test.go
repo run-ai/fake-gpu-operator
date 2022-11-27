@@ -2,6 +2,7 @@ package inform_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -36,7 +37,9 @@ var _ = Describe("Informer", func() {
 
 	BeforeEach(func() {
 		kubeclient = fake.NewSimpleClientset()
-		informer = inform.NewInformer(kubeclient)
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		informer = inform.NewInformer(kubeclient, wg)
 		ch = make(chan *inform.PodEvent)
 		informer.Subscribe(ch)
 		stopCh = make(chan struct{})

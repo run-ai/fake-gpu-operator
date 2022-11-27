@@ -24,6 +24,7 @@ images:
 	make image COMPONENT=status-updater
 	make image COMPONENT=status-exporter
 	make image COMPONENT=topology-server
+	make image COMPONENT=mig-faker
 .PHONY: images
 
 push:
@@ -35,6 +36,7 @@ push-all:
 	make push COMPONENT=status-updater
 	make push COMPONENT=status-exporter
 	make push COMPONENT=topology-server
+	make push COMPONENT=mig-faker
 .PHONY: push-all
 
 restart: 
@@ -49,6 +51,7 @@ deploy-all:
 	make image push COMPONENT=status-updater
 	make image push COMPONENT=status-exporter
 	make image push COMPONENT=topology-server
+	make image push COMPONENT=mig-faker
 .PHONY: deploy-all
 
 image-test:

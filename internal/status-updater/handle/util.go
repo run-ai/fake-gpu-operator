@@ -4,16 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *PodEventHandler) getTopology() (*v1.ConfigMap, *topology.ClusterTopology, error) {
-	cm, err := p.kubeclient.CoreV1().ConfigMaps(os.Getenv("TOPOLOGY_CM_NAMESPACE")).Get(context.TODO(), os.Getenv("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
+	cm, err := p.kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
+		context.TODO(), viper.GetString("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting topology configmap: %v", err)
 	}
@@ -35,7 +37,8 @@ func (p *PodEventHandler) updateTopology(newTopology *topology.ClusterTopology, 
 
 	cm.Data[topology.CmTopologyKey] = string(newTopologyYaml)
 
-	_, err = p.kubeclient.CoreV1().ConfigMaps(os.Getenv("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	_, err = p.kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), cm, metav1.UpdateOptions{})
 	if err != nil {
 		log.Printf("error updating topology configmap: %s\n", err)
 	}

@@ -8,6 +8,7 @@ package handle
 import (
 	"log"
 	"os"
+	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
@@ -24,11 +25,12 @@ type PodEventHandler struct {
 	podEvents     <-chan *inform.PodEvent
 	kubeclient    kubernetes.Interface
 	dynamicClient dynamic.Interface
+	wg            *sync.WaitGroup
 }
 
 var _ Interface = &PodEventHandler{}
 
-func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface, informer inform.Interface) *PodEventHandler {
+func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface, informer inform.Interface, wg *sync.WaitGroup) *PodEventHandler {
 	podEvents := make(chan *inform.PodEvent)
 	informer.Subscribe(podEvents)
 
@@ -36,6 +38,7 @@ func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.I
 		podEvents:     podEvents,
 		kubeclient:    kubeClient,
 		dynamicClient: dynamicClient,
+		wg:            wg,
 	}
 
 	err := p.resetTopologyStatus()
@@ -50,6 +53,7 @@ func NewPodEventHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.I
 }
 
 func (p *PodEventHandler) Run(stopCh <-chan struct{}) {
+	defer p.wg.Done()
 	p.processPodEvents(stopCh)
 }
 

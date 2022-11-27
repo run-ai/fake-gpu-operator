@@ -54,6 +54,12 @@ statusExporter:
       memory: "200Mi"
   topologyMaxExportInterval: 10s
 
+migFaker:
+  image:
+    pullPolicy: Always
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/mig-faker
+    tag: 0.0.1
+
 initialTopology:
   config:
     node-autofill:

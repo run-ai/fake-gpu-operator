@@ -3,6 +3,7 @@ package inform
 
 import (
 	"log"
+	"sync"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -20,15 +21,17 @@ type Informer struct {
 	kubeclient  kubernetes.Interface
 	subscribers []chan<- *PodEvent
 	podInformer cache.SharedIndexInformer
+	wg          *sync.WaitGroup
 }
 
 var _ Interface = &Informer{}
 
-func NewInformer(kubeclient kubernetes.Interface) *Informer {
+func NewInformer(kubeclient kubernetes.Interface, waitGroup *sync.WaitGroup) *Informer {
 	w := &Informer{
 		kubeclient:  kubeclient,
 		subscribers: make([]chan<- *PodEvent, 0),
 		podInformer: informers.NewSharedInformerFactory(kubeclient, 0).Core().V1().Pods().Informer(),
+		wg:          waitGroup,
 	}
 
 	w.podInformer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -84,6 +87,7 @@ func (inf *Informer) Subscribe(subscriber chan<- *PodEvent) {
 
 func (inf *Informer) Run(stopCh <-chan struct{}) {
 	defer inf.closeSubscribers()
+	defer inf.wg.Done()
 
 	log.Printf("Starting informer\n")
 	inf.podInformer.Run(stopCh)

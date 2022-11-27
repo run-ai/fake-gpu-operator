@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -14,24 +14,28 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
+	"github.com/spf13/viper"
 )
 
 type MetricsExporter struct {
 	topologyChan <-chan *topology.ClusterTopology
+	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &MetricsExporter{}
 
-func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
+func NewMetricsExporter(watcher watch.Interface, wg *sync.WaitGroup) *MetricsExporter {
 	topologyChan := make(chan *topology.ClusterTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &MetricsExporter{
 		topologyChan: topologyChan,
+		wg:           wg,
 	}
 }
 
 func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
+	defer e.wg.Done()
 	go setupServer()
 
 	// Republish the metrics every 10 seconds to refresh utilization ranges
@@ -55,7 +59,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 }
 
 func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
 		panic(fmt.Sprintf("node %s not found", nodeName))

@@ -29,6 +29,11 @@ FROM common-builder as nvidia-smi-builder
 COPY ./cmd/nvidia-smi/ ./cmd/nvidia-smi/
 RUN make build COMPONENT=nvidia-smi
 
+FROM common-builder as mig-faker-builder
+COPY ./cmd/mig-faker/ ./cmd/mig-faker/
+COPY ./internal/ ./internal/
+RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=mig-faker
+
 FROM ubuntu as device-plugin
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
 COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
@@ -45,3 +50,7 @@ ENTRYPOINT ["/bin/status-exporter"]
 FROM ubuntu as topology-server
 COPY --from=topology-server-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/topology-server /bin/
 ENTRYPOINT ["/bin/topology-server"]
+
+FROM ubuntu as mig-faker
+COPY --from=mig-faker-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/mig-faker /bin/
+ENTRYPOINT ["/bin/mig-faker"]

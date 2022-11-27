@@ -1,12 +1,8 @@
 package status_updater
 
 import (
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
+	"sync"
 
-	"github.com/run-ai/fake-gpu-operator/internal/common/config"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/handle"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
 	"k8s.io/client-go/dynamic"
@@ -23,43 +19,44 @@ var DynamicClientFn = func(c *rest.Config) dynamic.Interface {
 	return dynamic.NewForConfigOrDie(c)
 }
 
-type App struct {
-	stopper chan struct{}
+type StatusUpdaterAppConfiguration struct {
+	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
+	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
 }
 
-func NewApp() *App {
-	app := &App{
-		stopper: make(chan struct{}),
-	}
-	return app
+type StatusUpdaterApp struct {
+	Informer inform.Interface
+	Handler  handle.Interface
+	stopCh   chan struct{}
+	wg       *sync.WaitGroup
 }
 
-func (app *App) Run() {
-	defer app.Stop()
+func (app *StatusUpdaterApp) Start() {
+	app.wg.Add(2)
+	go app.Handler.Run(app.stopCh)
+	go app.Informer.Run(app.stopCh)
+}
 
-	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE"}
-	config.ValidateConfig(requiredEnvVars)
-
-	config, err := InClusterConfigFn()
+func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
+	clusterConfig, err := InClusterConfigFn()
 	if err != nil {
 		panic(err.Error())
 	}
-	kubeclient := KubeClientFn(config)
-	dynamicClient := DynamicClientFn(config)
 
-	var informer inform.Interface = inform.NewInformer(kubeclient)
-	var handler handle.Interface = handle.NewPodEventHandler(kubeclient, dynamicClient, informer)
+	app.wg = wg
 
-	go handler.Run(app.stopper)
-	go informer.Run(app.stopper)
+	kubeclient := KubeClientFn(clusterConfig)
+	dynamicClient := DynamicClientFn(clusterConfig)
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	s := <-sig
-	log.Printf("Received signal \"%v\"\n", s)
+	app.Informer = inform.NewInformer(kubeclient, app.wg)
+	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer, app.wg)
 }
 
-func (app *App) Stop() {
-	close(app.stopper)
+func (app *StatusUpdaterApp) Name() string {
+	return "StatusUpdater"
+}
+
+func (app *StatusUpdaterApp) GetConfig() interface{} {
+	var config StatusUpdaterAppConfiguration
+	return config
 }

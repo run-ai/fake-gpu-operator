@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: mig-faker
+  name: mig-faker
+spec:
+  selector:
+    matchLabels:
+      app: mig-faker
+      component: mig-faker
+  template:
+    metadata:
+      annotations:
+        checksum/initialTopology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+      labels:
+        app: mig-faker
+        component: mig-faker
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: feature.node.kubernetes.io/pci-10de.present
+                operator: In
+                values:
+                - "true"
+      containers:
+        - image: "{{ .Values.migFaker.image.repository }}:{{ .Values.migFaker.image.tag }}"
+          imagePullPolicy: "{{ .Values.migFaker.image.pullPolicy }}"
+          resources:
+            {{- toYaml .Values.migFaker.resources | nindent 12 }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          name: mig-faker
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        node-role.kubernetes.io/runai-dynamic-mig: "true"
+      restartPolicy: Always
+      serviceAccountName: mig-faker
+      terminationGracePeriodSeconds: 30
+      imagePullSecrets:
+        - name: gcr-secret
+      

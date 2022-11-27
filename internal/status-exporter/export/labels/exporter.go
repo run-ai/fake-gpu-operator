@@ -1,38 +1,38 @@
 package labels
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"os"
 	"strconv"
+	"sync"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
-	"k8s.io/client-go/kubernetes"
+	"github.com/spf13/viper"
 )
 
 type LabelsExporter struct {
 	topologyChan <-chan *topology.ClusterTopology
-	kubeclient   kubernetes.Interface
+	kubeclient   kubeclient.KubeClientInterface
+	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &LabelsExporter{}
 
-func NewLabelsExporter(watcher watch.Interface, kubeclient kubernetes.Interface) *LabelsExporter {
+func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface, wg *sync.WaitGroup) *LabelsExporter {
 	topologyChan := make(chan *topology.ClusterTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &LabelsExporter{
 		topologyChan: topologyChan,
 		kubeclient:   kubeclient,
+		wg:           wg,
 	}
 }
 
 func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
+	defer e.wg.Done()
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:
@@ -44,7 +44,7 @@ func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
 }
 
 func (e *LabelsExporter) export(clusterTopology *topology.ClusterTopology) {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
 		panic(fmt.Sprintf("node %s not found", nodeName))
@@ -57,23 +57,8 @@ func (e *LabelsExporter) export(clusterTopology *topology.ClusterTopology) {
 		"nvidia.com/gpu.count":    strconv.Itoa(len(node.Gpus)),
 	}
 
-	err := e.labelNode(nodeName, labels)
+	err := e.kubeclient.SetNodeLabels(labels)
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (e *LabelsExporter) labelNode(nodeName string, labels map[string]string) error {
-	node, err := e.kubeclient.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	for k, v := range labels {
-		node.Labels[k] = v
-	}
-
-	log.Printf("labelling node %s with %v\n", nodeName, labels)
-	_, err = e.kubeclient.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
-	return err
 }

@@ -1,14 +1,11 @@
 package main
 
 import (
-	"log"
-
+	"github.com/run-ai/fake-gpu-operator/internal/common/app"
 	status_exporter "github.com/run-ai/fake-gpu-operator/internal/status-exporter"
 )
 
 func main() {
-	log.Println("Fake Status Exporter Running")
-
-	app := status_exporter.NewApp()
-	app.Run(nil)
+	appRunner := app.NewAppRunner(&status_exporter.StatusExporterApp{})
+	appRunner.RunApp()
 }
