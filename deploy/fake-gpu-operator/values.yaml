@@ -57,7 +57,7 @@ statusExporter:
 migFaker:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-lab/fake-gpu-operator/mig-faker
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/mig-faker
     tag: 0.0.1
 
 initialTopology:
