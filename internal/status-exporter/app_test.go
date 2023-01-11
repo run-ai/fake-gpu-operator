@@ -68,7 +68,7 @@ var _ = Describe("StatusExporter", func() {
 		},
 	}
 	appRunner := app.NewAppRunner(exporter)
-	go appRunner.RunApp()
+	go appRunner.Run()
 	// Wait for the status exporter to initialize
 	time.Sleep(1000 * time.Millisecond)
 

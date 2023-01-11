@@ -91,7 +91,7 @@ var _ = Describe("StatusUpdater", func() {
 		setupConfig()
 
 		appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})
-		go appRunner.RunApp()
+		go appRunner.Run()
 		time.Sleep(100 * time.Millisecond)
 	})
 

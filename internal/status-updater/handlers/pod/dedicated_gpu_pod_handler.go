@@ -1,14 +1,19 @@
-package handle
+package pod
 
 import (
 	"fmt"
 	"log"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
 )
 
-func (p *PodEventHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+	if !util.IsDedicatedGpuPod(pod) {
+		return nil
+	}
+
 	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name("nvidia.com/gpu", "")
 	if requestedGpus == nil {
 		return fmt.Errorf("no GPUs requested in pod %s", pod.Name)
@@ -40,7 +45,7 @@ func (p *PodEventHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopo
 	return nil
 }
 
-func (p *PodEventHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.ClusterTopology) {
+func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.ClusterTopology) {
 	for idx, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&

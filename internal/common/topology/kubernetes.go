@@ -21,6 +21,17 @@ func GetFromKube(kubeclient kubernetes.Interface) (*ClusterTopology, error) {
 	return FromConfigMap(topologyCm)
 }
 
+func UpdateToKube(kubeclient kubernetes.Interface, clusterTopology *ClusterTopology) error {
+	topologyCm, err := ToConfigMap(clusterTopology)
+	if err != nil {
+		return err
+	}
+
+	_, err = kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), topologyCm, metav1.UpdateOptions{})
+	return err
+}
+
 func FromConfigMap(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 	var clusterTopology ClusterTopology
 	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)

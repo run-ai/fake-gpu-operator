@@ -17,7 +17,7 @@ type FakeApp struct {
 	stopCh  chan struct{}
 }
 
-func (fa *FakeApp) Start() {
+func (fa *FakeApp) Run() {
 	<-fa.stopCh
 	fa.stopped = true
 }
@@ -41,7 +41,7 @@ func TestRunnerStopsOnSignal(t *testing.T) {
 	runner := app.NewAppRunner(&FakeApp{})
 	wait := make(chan struct{})
 	go func() {
-		runner.RunApp()
+		runner.Run()
 		close(wait)
 	}()
 
@@ -61,7 +61,7 @@ func TestAllAppFunctionsCall(t *testing.T) {
 	runner := app.NewAppRunner(fa)
 	wait := make(chan struct{})
 	go func() {
-		runner.RunApp()
+		runner.Run()
 		close(wait)
 	}()
 

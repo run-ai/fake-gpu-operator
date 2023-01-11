@@ -28,7 +28,7 @@ type StatusExporterApp struct {
 	wg             *sync.WaitGroup
 }
 
-func (app *StatusExporterApp) Start() {
+func (app *StatusExporterApp) Run() {
 	app.wg.Add(4)
 	go app.Watcher.Watch(app.stopCh)
 	go app.MetricExporter.Run(app.stopCh)

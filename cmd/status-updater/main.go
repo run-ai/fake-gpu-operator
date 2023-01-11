@@ -7,5 +7,5 @@ import (
 
 func main() {
 	appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})
-	appRunner.RunApp()
+	appRunner.Run()
 }

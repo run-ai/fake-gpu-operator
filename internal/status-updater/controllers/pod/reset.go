@@ -1,4 +1,6 @@
-package handle
+package pod
+
+// GuyTodo: Remove file after RUN-6464 is resolved
 
 import (
 	"context"
@@ -12,7 +14,7 @@ import (
 
 func (p *PodEventHandler) resetTopologyStatus() error {
 	log.Println("Resetting topology status")
-	cm, clusterTopology, err := p.getTopology()
+	clusterTopology, err := topology.GetFromKube(p.kubeClient)
 	if err != nil {
 		return err
 	}
@@ -37,7 +39,7 @@ func (p *PodEventHandler) resetTopologyStatus() error {
 		}
 	}
 
-	return p.updateTopology(clusterTopology, cm)
+	return topology.UpdateToKube(p.kubeClient, clusterTopology)
 }
 
 func (p *PodEventHandler) autoConfigNodes(clusterTopology *topology.ClusterTopology) error {
@@ -45,7 +47,7 @@ func (p *PodEventHandler) autoConfigNodes(clusterTopology *topology.ClusterTopol
 		return err
 	}
 
-	nodes, err := p.kubeclient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	nodes, err := p.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting nodes: %v", err)
 	}

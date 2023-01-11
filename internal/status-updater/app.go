@@ -3,8 +3,8 @@ package status_updater
 import (
 	"sync"
 
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/handle"
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
+	podcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/pod"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -25,16 +25,14 @@ type StatusUpdaterAppConfiguration struct {
 }
 
 type StatusUpdaterApp struct {
-	Informer inform.Interface
-	Handler  handle.Interface
-	stopCh   chan struct{}
-	wg       *sync.WaitGroup
+	PodController controllers.Interface
+	stopCh        chan struct{}
+	wg            *sync.WaitGroup
 }
 
-func (app *StatusUpdaterApp) Start() {
-	app.wg.Add(2)
-	go app.Handler.Run(app.stopCh)
-	go app.Informer.Run(app.stopCh)
+func (app *StatusUpdaterApp) Run() {
+	app.wg.Add(1)
+	go app.PodController.Run(app.stopCh)
 }
 
 func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
@@ -48,8 +46,7 @@ func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
 	kubeclient := KubeClientFn(clusterConfig)
 	dynamicClient := DynamicClientFn(clusterConfig)
 
-	app.Informer = inform.NewInformer(kubeclient, app.wg)
-	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer, app.wg)
+	app.PodController = podcontroller.NewPodController(kubeclient, dynamicClient, app.wg)
 }
 
 func (app *StatusUpdaterApp) Name() string {
