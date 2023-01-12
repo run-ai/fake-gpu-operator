@@ -20,6 +20,8 @@ type PodHandler struct {
 	dynamicClient dynamic.Interface
 }
 
+var _ Interface = &PodHandler{}
+
 func NewPodHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface) *PodHandler {
 	return &PodHandler{
 		kubeClient:    kubeClient,

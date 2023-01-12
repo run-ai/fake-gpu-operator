@@ -7,13 +7,13 @@ import (
 )
 
 // Types
-type ClusterTopology struct {
-	MigStrategy string                  `yaml:"mig-strategy"`
-	Nodes       map[string]NodeTopology `yaml:"nodes"`
-	Config      Config                  `yaml:"config"`
+type Cluster struct {
+	MigStrategy string          `yaml:"mig-strategy"`
+	Nodes       map[string]Node `yaml:"nodes"`
+	Config      Config          `yaml:"config"`
 }
 
-type NodeTopology struct {
+type Node struct {
 	GpuCount   int          `yaml:"gpu-count"`
 	GpuMemory  int          `yaml:"gpu-memory"`
 	GpuProduct string       `yaml:"gpu-product"`
@@ -55,7 +55,11 @@ type Config struct {
 }
 
 type NodeAutofillSettings struct {
-	Enabled    bool   `yaml:"enabled"`
+	Enabled      bool         `yaml:"enabled"`
+	NodeTemplate NodeTemplate `yaml:"node-template"`
+}
+
+type NodeTemplate struct {
 	GpuCount   int    `yaml:"gpu-count"`
 	GpuMemory  int    `yaml:"gpu-memory"`
 	GpuProduct string `yaml:"gpu-product"`

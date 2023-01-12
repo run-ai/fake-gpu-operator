@@ -6,7 +6,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func GetClusterTopologyFromFs(topologyPath string) (*ClusterTopology, error) {
+func GetClusterTopologyFromFs(topologyPath string) (*Cluster, error) {
 	// Open file
 	file, err := os.Open(topologyPath)
 	if err != nil {
@@ -15,7 +15,7 @@ func GetClusterTopologyFromFs(topologyPath string) (*ClusterTopology, error) {
 	defer file.Close()
 
 	// Decode yaml file
-	var clusterTopology ClusterTopology
+	var clusterTopology Cluster
 	err = yaml.NewDecoder(file).Decode(&clusterTopology)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func GetClusterTopologyFromFs(topologyPath string) (*ClusterTopology, error) {
 	return &clusterTopology, nil
 }
 
-func GetNodeTopologyFromFs(topologyPath string, nodeName string) (*NodeTopology, error) {
+func GetNodeTopologyFromFs(topologyPath string, nodeName string) (*Node, error) {
 	clusterTopology, err := GetClusterTopologyFromFs(topologyPath)
 	if err != nil {
 		return nil, err

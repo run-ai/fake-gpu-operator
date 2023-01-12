@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.Cluster) error {
 	if !util.IsDedicatedGpuPod(pod) {
 		return nil
 	}
@@ -45,7 +45,7 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 	return nil
 }
 
-func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.ClusterTopology) {
+func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.Cluster) {
 	for idx, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&

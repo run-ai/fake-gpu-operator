@@ -17,7 +17,7 @@ const (
 	runaiReservationNs = "runai-reservation"
 )
 
-func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.Cluster) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
@@ -36,7 +36,7 @@ func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *to
 	return nil
 }
 
-func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
+func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.Cluster) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *to
 	return nil
 }
 
-func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Pod, nodeTopology *topology.NodeTopology) (int, error) {
+func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Pod, nodeTopology *topology.Node) (int, error) {
 	reservationPodName, err := getMatchingReservationPodName(kubeclient, pod)
 	if err != nil {
 		return -1, err

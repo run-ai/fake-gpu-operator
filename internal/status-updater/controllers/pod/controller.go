@@ -7,7 +7,6 @@ package pod
 
 import (
 	"log"
-	"os"
 	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
@@ -21,7 +20,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-type PodEventHandler struct {
+type PodController struct {
 	kubeClient kubernetes.Interface
 	wg         *sync.WaitGroup
 
@@ -29,17 +28,17 @@ type PodEventHandler struct {
 	handler  podhandler.Interface
 }
 
-var _ controllers.Interface = &PodEventHandler{}
+var _ controllers.Interface = &PodController{}
 
-func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface, wg *sync.WaitGroup) *PodEventHandler {
-	p := &PodEventHandler{
+func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Interface, wg *sync.WaitGroup) *PodController {
+	c := &PodController{
 		kubeClient: kubeClient,
 		wg:         wg,
 		informer:   informers.NewSharedInformerFactory(kubeClient, 0).Core().V1().Pods().Informer(),
 		handler:    podhandler.NewPodHandler(kubeClient, dynamicClient),
 	}
 
-	p.informer.AddEventHandler(cache.FilteringResourceEventHandler{
+	c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			switch pod := obj.(type) {
 			case *v1.Pod:
@@ -53,7 +52,7 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
 				if isPodRunning(pod) {
-					handleError(p.handler.HandleAdd(pod), "add")
+					handleError(c.handler.HandleAdd(pod), "add")
 				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -68,33 +67,24 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 				}
 
 				if isNewPodRunning {
-					handleError(p.handler.HandleAdd(newPod), "add")
+					handleError(c.handler.HandleAdd(newPod), "add")
 				} else {
-					handleError(p.handler.HandleDelete(newPod), "delete")
+					handleError(c.handler.HandleDelete(newPod), "delete")
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
 				if isPodRunning(pod) {
-					handleError(p.handler.HandleDelete(pod), "delete")
+					handleError(c.handler.HandleDelete(pod), "delete")
 				}
 			},
 		},
 	})
 
-	// GuyTodo: Remove after RUN-6464 is resolved
-	err := p.resetTopologyStatus()
-	if err != nil {
-		log.Printf("Error resetting topology status: %v\n", err)
-		log.Printf("Please reset the topology status manually\n")
-		log.Printf("Exiting...\n")
-		os.Exit(1)
-	}
-
-	return p
+	return c
 }
 
-func (p *PodEventHandler) Run(stopCh <-chan struct{}) {
+func (p *PodController) Run(stopCh <-chan struct{}) {
 	defer p.wg.Done()
 
 	p.informer.Run(stopCh)

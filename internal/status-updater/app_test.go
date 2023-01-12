@@ -44,6 +44,19 @@ const (
 	nodeGpuCount                = 2
 )
 
+var (
+	defaultTopologyConfig = topology.Config{
+		NodeAutofill: topology.NodeAutofillSettings{
+			Enabled: true,
+			NodeTemplate: topology.NodeTemplate{
+				GpuCount:   10,
+				GpuMemory:  11441,
+				GpuProduct: "Tesla-K80",
+			},
+		},
+	}
+)
+
 func TestStatusUpdater(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "StatusUpdater Suite")
@@ -57,15 +70,16 @@ var _ = Describe("StatusUpdater", func() {
 	)
 
 	BeforeEach(func() {
-		clusterTopology := &topology.ClusterTopology{
+		clusterTopology := &topology.Cluster{
 			MigStrategy: "mixed",
-			Nodes: map[string]topology.NodeTopology{
+			Nodes: map[string]topology.Node{
 				node: {
 					GpuMemory:  11441,
 					GpuCount:   nodeGpuCount,
 					GpuProduct: "Tesla-K80",
 				},
 			},
+			Config: defaultTopologyConfig,
 		}
 
 		topologyStr, err := yaml.Marshal(clusterTopology)
@@ -199,18 +213,99 @@ var _ = Describe("StatusUpdater", func() {
 			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
 		})
 	})
+
+	When("informed of a GPU node", func() {
+		It("should add the node to the cluster topology", func() {
+			node := &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+					Labels: map[string]string{
+						"nvidia.com/gpu.deploy.device-plugin": "true",
+						"nvidia.com/gpu.deploy.dcgm-exporter": "true",
+					},
+				},
+			}
+
+			_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(getTopologyNodesFromKube(kubeclient)).Should(HaveKey("node1"))
+
+			clusterTopology, err := getTopologyFromKube(kubeclient)()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(clusterTopology).ToNot(BeNil())
+
+			Expect(clusterTopology.Config.NodeAutofill.Enabled).To(BeTrue())
+
+			Expect(clusterTopology.Nodes["node1"].GpuCount).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuCount))
+			Expect(clusterTopology.Nodes["node1"].GpuMemory).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuMemory))
+			Expect(clusterTopology.Nodes["node1"].GpuProduct).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuProduct))
+			Expect(clusterTopology.Nodes["node1"].Gpus).To(HaveLen(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuCount))
+		})
+	})
+
+	When("informed of a node without GPU labels", func() {
+		It("should not add the node to the cluster topology", func() {
+			node := &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+				},
+			}
+
+			_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			Consistently(getTopologyNodesFromKube(kubeclient)).ShouldNot(HaveKey("node1"))
+		})
+	})
+
+	// When informed of a node deletion, it should remove the node from the cluster topology
+	When("informed of a node deletion", func() {
+		It("should remove the node from the cluster topology", func() {
+			node := &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+					Labels: map[string]string{
+						"nvidia.com/gpu.deploy.device-plugin": "true",
+						"nvidia.com/gpu.deploy.dcgm-exporter": "true",
+					},
+				},
+			}
+
+			_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(getTopologyNodesFromKube(kubeclient)).Should(HaveKey("node1"))
+
+			err = kubeclient.CoreV1().Nodes().Delete(context.TODO(), "node1", metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(getTopologyNodesFromKube(kubeclient)).ShouldNot(HaveKey("node1"))
+		})
+	})
 })
 
-func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.ClusterTopology, error) {
-	return func() (*topology.ClusterTopology, error) {
+func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.Cluster, error) {
+	return func() (*topology.Cluster, error) {
 		ret, err := topology.GetFromKube(kubeclient)
 		return ret, err
 	}
 }
 
+func getTopologyNodesFromKube(kubeclient kubernetes.Interface) func() (map[string]topology.Node, error) {
+	return func() (map[string]topology.Node, error) {
+		topology, err := topology.GetFromKube(kubeclient)
+		if err != nil {
+			return nil, err
+		}
+
+		return topology.Nodes, nil
+	}
+}
+
 func setupFakes(kubeclient kubernetes.Interface, dynamicClient dynamic.Interface) {
-	status_updater.InClusterConfigFn = func() (*rest.Config, error) {
-		return nil, nil
+	status_updater.InClusterConfigFn = func() *rest.Config {
+		return nil
 	}
 	status_updater.KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 		return kubeclient
@@ -229,27 +324,28 @@ func setupEnvs() {
 	os.Setenv("TOPOLOGY_CM_NAMESPACE", "fake-cm-namespace")
 }
 
-func createTopology(gpuCount int64, node string) *topology.ClusterTopology {
+func createTopology(gpuCount int64, nodeName string) *topology.Cluster {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for i := int64(0); i < gpuCount; i++ {
 		gpus[i] = topology.GpuDetails{
-			ID: fmt.Sprintf("GPU-%s", uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s-%d", node, i)))),
+			ID: fmt.Sprintf("GPU-%s", uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s-%d", nodeName, i)))),
 			Status: topology.GpuStatus{
 				PodGpuUsageStatus: topology.PodGpuUsageStatusMap{},
 			},
 		}
 	}
 
-	return &topology.ClusterTopology{
+	return &topology.Cluster{
 		MigStrategy: "mixed",
-		Nodes: map[string]topology.NodeTopology{
-			node: {
+		Nodes: map[string]topology.Node{
+			nodeName: {
 				GpuMemory:  11441,
 				GpuCount:   int(gpuCount),
 				GpuProduct: "Tesla-K80",
 				Gpus:       gpus,
 			},
 		},
+		Config: defaultTopologyConfig,
 	}
 }
 
