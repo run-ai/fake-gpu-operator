@@ -47,9 +47,8 @@ const (
 var (
 	defaultTopologyConfig = topology.Config{
 		NodeAutofill: topology.NodeAutofillSettings{
-			Enabled: true,
 			NodeTemplate: topology.NodeTemplate{
-				GpuCount:   10,
+				GpuCount:   nodeGpuCount,
 				GpuMemory:  11441,
 				GpuProduct: "Tesla-K80",
 			},
@@ -72,14 +71,8 @@ var _ = Describe("StatusUpdater", func() {
 	BeforeEach(func() {
 		clusterTopology := &topology.Cluster{
 			MigStrategy: "mixed",
-			Nodes: map[string]topology.Node{
-				node: {
-					GpuMemory:  11441,
-					GpuCount:   nodeGpuCount,
-					GpuProduct: "Tesla-K80",
-				},
-			},
-			Config: defaultTopologyConfig,
+			Nodes:       map[string]topology.Node{},
+			Config:      defaultTopologyConfig,
 		}
 
 		topologyStr, err := yaml.Marshal(clusterTopology)
@@ -101,6 +94,21 @@ var _ = Describe("StatusUpdater", func() {
 
 		_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), topologyConfigMap, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
+
+		// Create a gpuNode
+		gpuNode := &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: node,
+				Labels: map[string]string{
+					"nvidia.com/gpu.deploy.dcgm-exporter": "true",
+					"nvidia.com/gpu.deploy.device-plugin": "true",
+				},
+			},
+		}
+
+		_, err = kubeclient.CoreV1().Nodes().Create(context.TODO(), gpuNode, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
+
 		setupFakes(kubeclient, dynamicClient)
 		setupConfig()
 
@@ -116,7 +124,7 @@ var _ = Describe("StatusUpdater", func() {
 	})
 
 	When("the status updater is started", func() {
-		It("should reset the cluster topology", func() {
+		It("should initialize the topology nodes", func() {
 			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount, node)))
 		})
 	})
@@ -234,8 +242,6 @@ var _ = Describe("StatusUpdater", func() {
 			clusterTopology, err := getTopologyFromKube(kubeclient)()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(clusterTopology).ToNot(BeNil())
-
-			Expect(clusterTopology.Config.NodeAutofill.Enabled).To(BeTrue())
 
 			Expect(clusterTopology.Nodes["node1"].GpuCount).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuCount))
 			Expect(clusterTopology.Nodes["node1"].GpuMemory).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuMemory))

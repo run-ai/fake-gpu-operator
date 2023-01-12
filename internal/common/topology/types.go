@@ -55,7 +55,6 @@ type Config struct {
 }
 
 type NodeAutofillSettings struct {
-	Enabled      bool         `yaml:"enabled"`
 	NodeTemplate NodeTemplate `yaml:"node-template"`
 }
 
