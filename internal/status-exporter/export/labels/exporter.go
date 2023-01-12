@@ -13,7 +13,7 @@ import (
 )
 
 type LabelsExporter struct {
-	topologyChan <-chan *topology.ClusterTopology
+	topologyChan <-chan *topology.Cluster
 	kubeclient   kubeclient.KubeClientInterface
 	wg           *sync.WaitGroup
 }
@@ -21,7 +21,7 @@ type LabelsExporter struct {
 var _ export.Interface = &LabelsExporter{}
 
 func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface, wg *sync.WaitGroup) *LabelsExporter {
-	topologyChan := make(chan *topology.ClusterTopology)
+	topologyChan := make(chan *topology.Cluster)
 	watcher.Subscribe(topologyChan)
 
 	return &LabelsExporter{
@@ -43,7 +43,7 @@ func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *LabelsExporter) export(clusterTopology *topology.ClusterTopology) {
+func (e *LabelsExporter) export(clusterTopology *topology.Cluster) {
 	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {

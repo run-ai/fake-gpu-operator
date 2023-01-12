@@ -1,4 +1,4 @@
-package handle
+package pod
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -16,8 +17,8 @@ const (
 	runaiReservationNs = "runai-reservation"
 )
 
-func (p *PodEventHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
-	if !isSharedGpuPod(pod) {
+func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
 
@@ -26,7 +27,7 @@ func (p *PodEventHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopolog
 		return fmt.Errorf("could not find node %s in cluster topology", pod.Spec.NodeName)
 	}
 
-	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeclient, pod, &nodeTopology)
+	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, &nodeTopology)
 	if err != nil {
 		return err
 	}
@@ -35,8 +36,8 @@ func (p *PodEventHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopolog
 	return nil
 }
 
-func (p *PodEventHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.ClusterTopology) error {
-	if !isSharedGpuPod(pod) {
+func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
 
@@ -45,7 +46,7 @@ func (p *PodEventHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopolog
 		return fmt.Errorf("could not find node %s in cluster topology", pod.Spec.NodeName)
 	}
 
-	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeclient, pod, &nodeTopology)
+	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, &nodeTopology)
 	if err != nil {
 		return err
 	}
@@ -54,11 +55,7 @@ func (p *PodEventHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopolog
 	return nil
 }
 
-func isSharedGpuPod(pod *v1.Pod) bool {
-	return pod.Annotations["runai-gpu"] != ""
-}
-
-func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Pod, nodeTopology *topology.NodeTopology) (int, error) {
+func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Pod, nodeTopology *topology.Node) (int, error) {
 	reservationPodName, err := getMatchingReservationPodName(kubeclient, pod)
 	if err != nil {
 		return -1, err

@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetFromKube(kubeclient kubernetes.Interface) (*ClusterTopology, error) {
+func GetFromKube(kubeclient kubernetes.Interface) (*Cluster, error) {
 	topologyCm, err := kubeclient.CoreV1().ConfigMaps(
 		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
 		context.TODO(), viper.GetString("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
@@ -21,8 +21,19 @@ func GetFromKube(kubeclient kubernetes.Interface) (*ClusterTopology, error) {
 	return FromConfigMap(topologyCm)
 }
 
-func FromConfigMap(cm *corev1.ConfigMap) (*ClusterTopology, error) {
-	var clusterTopology ClusterTopology
+func UpdateToKube(kubeclient kubernetes.Interface, clusterTopology *Cluster) error {
+	topologyCm, err := ToConfigMap(clusterTopology)
+	if err != nil {
+		return err
+	}
+
+	_, err = kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), topologyCm, metav1.UpdateOptions{})
+	return err
+}
+
+func FromConfigMap(cm *corev1.ConfigMap) (*Cluster, error) {
+	var clusterTopology Cluster
 	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)
 	if err != nil {
 		return nil, err
@@ -31,7 +42,7 @@ func FromConfigMap(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 	return &clusterTopology, nil
 }
 
-func ToConfigMap(clusterTopology *ClusterTopology) (*corev1.ConfigMap, error) {
+func ToConfigMap(clusterTopology *Cluster) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      viper.GetString("TOPOLOGY_CM_NAME"),

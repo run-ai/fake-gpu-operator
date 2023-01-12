@@ -18,14 +18,14 @@ import (
 )
 
 type MetricsExporter struct {
-	topologyChan <-chan *topology.ClusterTopology
+	topologyChan <-chan *topology.Cluster
 	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &MetricsExporter{}
 
 func NewMetricsExporter(watcher watch.Interface, wg *sync.WaitGroup) *MetricsExporter {
-	topologyChan := make(chan *topology.ClusterTopology)
+	topologyChan := make(chan *topology.Cluster)
 	watcher.Subscribe(topologyChan)
 
 	return &MetricsExporter{
@@ -41,7 +41,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	// Republish the metrics every 10 seconds to refresh utilization ranges
 	// TODO: make this configurable?
 	ticker := time.NewTicker(time.Second * 10)
-	var clusterTopologyCache *topology.ClusterTopology
+	var clusterTopologyCache *topology.Cluster
 
 	for {
 		select {
@@ -58,7 +58,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *MetricsExporter) export(clusterTopology *topology.ClusterTopology) {
+func (e *MetricsExporter) export(clusterTopology *topology.Cluster) {
 	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {

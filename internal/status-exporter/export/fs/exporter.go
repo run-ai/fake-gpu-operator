@@ -15,14 +15,14 @@ import (
 )
 
 type FsExporter struct {
-	topologyChan <-chan *topology.ClusterTopology
+	topologyChan <-chan *topology.Cluster
 	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &FsExporter{}
 
 func NewFsExporter(watcher watch.Interface, wg *sync.WaitGroup) *FsExporter {
-	topologyChan := make(chan *topology.ClusterTopology)
+	topologyChan := make(chan *topology.Cluster)
 	watcher.Subscribe(topologyChan)
 
 	return &FsExporter{
@@ -43,7 +43,7 @@ func (e *FsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *FsExporter) export(clusterTopology *topology.ClusterTopology) {
+func (e *FsExporter) export(clusterTopology *topology.Cluster) {
 	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {

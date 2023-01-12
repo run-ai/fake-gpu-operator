@@ -24,7 +24,7 @@ import (
 )
 
 type testCase struct {
-	clusterTopology *topology.ClusterTopology
+	clusterTopology *topology.Cluster
 	expectedLabels  map[string]string
 	expectedMetrics []*dto.MetricFamily
 }
@@ -68,7 +68,7 @@ var _ = Describe("StatusExporter", func() {
 		},
 	}
 	appRunner := app.NewAppRunner(exporter)
-	go appRunner.RunApp()
+	go appRunner.Run()
 	// Wait for the status exporter to initialize
 	time.Sleep(1000 * time.Millisecond)
 
@@ -152,9 +152,9 @@ func createPtr[T any](val T) *T {
 func getTestCases() map[string]testCase {
 	return map[string]testCase{
 		"Single GPU": {
-			clusterTopology: &topology.ClusterTopology{
+			clusterTopology: &topology.Cluster{
 				MigStrategy: "mixed",
-				Nodes: map[string]topology.NodeTopology{
+				Nodes: map[string]topology.Node{
 					nodeName: {
 						GpuMemory:  20000,
 						GpuProduct: "Tesla P100",
@@ -258,9 +258,9 @@ func getTestCases() map[string]testCase {
 			},
 		},
 		"Multiple GPUs": {
-			clusterTopology: &topology.ClusterTopology{
+			clusterTopology: &topology.Cluster{
 				MigStrategy: "mixed",
-				Nodes: map[string]topology.NodeTopology{
+				Nodes: map[string]topology.Node{
 					nodeName: {
 						GpuMemory:  20000,
 						GpuProduct: "Tesla P100",
@@ -393,10 +393,10 @@ func getTestCases() map[string]testCase {
 	}
 }
 
-func createInitialTopology() *topology.ClusterTopology {
-	return &topology.ClusterTopology{
+func createInitialTopology() *topology.Cluster {
+	return &topology.Cluster{
 		MigStrategy: "mixed",
-		Nodes: map[string]topology.NodeTopology{
+		Nodes: map[string]topology.Node{
 			nodeName: {
 				GpuMemory:  20000,
 				GpuProduct: "Tesla P100",

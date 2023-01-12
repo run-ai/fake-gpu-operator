@@ -43,7 +43,7 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	// Parse the response
-	var clusterTopology topology.ClusterTopology
+	var clusterTopology topology.Cluster
 	err = json.NewDecoder(resp.Body).Decode(&clusterTopology)
 	if err != nil {
 		panic(err)

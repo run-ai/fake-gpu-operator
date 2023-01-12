@@ -15,7 +15,7 @@ const defaultMaxExportInterval = 10 * time.Second
 // type kubewatcher
 type KubeWatcher struct {
 	kubeclient  kubeclient.KubeClientInterface
-	subscribers []chan<- *topology.ClusterTopology
+	subscribers []chan<- *topology.Cluster
 	wg          *sync.WaitGroup
 }
 
@@ -26,7 +26,7 @@ func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface, wg *sync.WaitGrou
 	}
 }
 
-func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
+func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.Cluster) {
 	w.subscribers = append(w.subscribers, subscriber)
 }
 
@@ -70,7 +70,7 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
 	}
 }
 
-func (w *KubeWatcher) publishTopology(clusterTopology *topology.ClusterTopology) {
+func (w *KubeWatcher) publishTopology(clusterTopology *topology.Cluster) {
 	for _, subscriber := range w.subscribers {
 		subscriber <- clusterTopology
 	}
