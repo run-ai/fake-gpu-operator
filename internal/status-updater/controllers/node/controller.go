@@ -8,6 +8,7 @@ import (
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/util"
 
 	nodehandler "github.com/run-ai/fake-gpu-operator/internal/status-updater/handlers/node"
 
@@ -36,7 +37,7 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 		handler:    nodehandler.NewNodeHandler(kubeClient),
 	}
 
-	c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, err := c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			switch node := obj.(type) {
 			case *v1.Node:
@@ -48,14 +49,17 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				node := obj.(*v1.Node)
-				c.handler.HandleAdd(node)
+				util.LogError(c.handler.HandleAdd(node), "Failed to handle node addition")
 			},
 			DeleteFunc: func(obj interface{}) {
 				node := obj.(*v1.Node)
-				c.handler.HandleDelete(node)
+				util.LogError(c.handler.HandleDelete(node), "Failed to handle node deletion")
 			},
 		},
 	})
+	if err != nil {
+		log.Fatalf("Failed to add node event handler: %v", err)
+	}
 
 	return c
 }
@@ -63,7 +67,10 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 func (c *NodeController) Run(stopCh <-chan struct{}) {
 	defer c.wg.Done()
 
-	c.pruneTopologyNodes()
+	err := c.pruneTopologyNodes()
+	if err != nil {
+		log.Fatalf("Failed to prune topology nodes: %v", err)
+	}
 
 	c.informer.Run(stopCh)
 }

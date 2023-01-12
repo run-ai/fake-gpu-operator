@@ -34,7 +34,6 @@ type StatusUpdaterApp struct {
 }
 
 func (app *StatusUpdaterApp) Run() {
-
 	app.wg.Add(len(app.Controllers))
 	for _, controller := range app.Controllers {
 		go controller.Run(app.stopCh)

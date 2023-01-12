@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
+	controllers_util "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/util"
 	podhandler "github.com/run-ai/fake-gpu-operator/internal/status-updater/handlers/pod"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 
@@ -38,7 +39,10 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 		handler:    podhandler.NewPodHandler(kubeClient, dynamicClient),
 	}
 
-	c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
+	podAddFailureMsg := "Failed to handle pod addition"
+	podDeleteFailureMsg := "Failed to handle pod deletion"
+
+	_, err := c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			switch pod := obj.(type) {
 			case *v1.Pod:
@@ -52,7 +56,7 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
 				if isPodRunning(pod) {
-					handleError(c.handler.HandleAdd(pod), "add")
+					controllers_util.LogError(c.handler.HandleAdd(pod), podAddFailureMsg)
 				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
@@ -67,19 +71,22 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 				}
 
 				if isNewPodRunning {
-					handleError(c.handler.HandleAdd(newPod), "add")
+					controllers_util.LogError(c.handler.HandleAdd(newPod), podAddFailureMsg)
 				} else {
-					handleError(c.handler.HandleDelete(newPod), "delete")
+					controllers_util.LogError(c.handler.HandleDelete(newPod), podDeleteFailureMsg)
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
 				if isPodRunning(pod) {
-					handleError(c.handler.HandleDelete(pod), "delete")
+					controllers_util.LogError(c.handler.HandleDelete(pod), podDeleteFailureMsg)
 				}
 			},
 		},
 	})
+	if err != nil {
+		log.Fatalf("Failed to add pod event handler: %v", err)
+	}
 
 	return c
 }
@@ -88,10 +95,4 @@ func (p *PodController) Run(stopCh <-chan struct{}) {
 	defer p.wg.Done()
 
 	p.informer.Run(stopCh)
-}
-
-func handleError(err error, operation string) {
-	if err != nil {
-		log.Printf("Error handling pod %s: %v\n", operation, err)
-	}
 }
