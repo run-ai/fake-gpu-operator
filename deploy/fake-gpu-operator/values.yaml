@@ -63,18 +63,18 @@ migFaker:
 initialTopology:
   config:
     node-autofill:
-      enabled: true
-      gpu-count: 2
-      gpu-product: Tesla-K80
-      gpu-memory: 11441
+      node-template:
+        gpu-count: 2
+        gpu-product: Tesla-K80
+        gpu-memory: 11441
   mig-strategy: mixed
+  # nodes can be defined in the following way:
+  # runai-worker:
+  #   gpu-count: 8
+  #   gpu-memory: 11441
+  #   gpu-product: Tesla-K80
+  # runai-worker2:
+  #   gpu-count: 16
+  #   gpu-memory: 11441
+  #   gpu-product: Tesla-K80
   nodes: {}
-    # nodes can be defined in the following way:
-    # runai-worker:
-    #   gpu-count: 8
-    #   gpu-memory: 11441
-    #   gpu-product: Tesla-K80
-    # runai-worker2:
-    #   gpu-count: 16
-    #   gpu-memory: 11441
-    #   gpu-product: Tesla-K80
