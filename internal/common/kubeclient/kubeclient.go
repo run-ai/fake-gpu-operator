@@ -97,7 +97,6 @@ func (client *KubeClient) WatchConfigMap(namespace string, configmapName string)
 	go client.watchCmChange(cmWatch, configMapsChan)
 
 	return configMapsChan, nil
-
 }
 
 func (client *KubeClient) watchCmChange(cmWatch watch.Interface, configMapsChan chan *corev1.ConfigMap) {

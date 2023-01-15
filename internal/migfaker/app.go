@@ -28,7 +28,7 @@ type MigFakeApp struct {
 	wg                *sync.WaitGroup
 }
 
-func (app *MigFakeApp) Start() {
+func (app *MigFakeApp) Run() {
 	ContinuouslySyncMigConfigChanges(app.KubeClient.ClientSet, app.SyncableMigConfig, app.stopCh)
 	err := app.MigFaker.FakeNodeLabels()
 	if err != nil {

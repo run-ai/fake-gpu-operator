@@ -31,7 +31,7 @@ type DevicePlugin struct {
 	server *grpc.Server
 }
 
-func NewDevicePlugin(topology *topology.NodeTopology) *DevicePlugin {
+func NewDevicePlugin(topology *topology.Node) *DevicePlugin {
 	if topology == nil {
 		panic("topology is nil")
 	}
@@ -42,7 +42,7 @@ func NewDevicePlugin(topology *topology.NodeTopology) *DevicePlugin {
 	}
 }
 
-func getGpuCount(topology *topology.NodeTopology) int {
+func getGpuCount(topology *topology.Node) int {
 	ret := topology.GpuCount
 	if ret == 0 {
 		ret = len(topology.Gpus)

@@ -13,10 +13,10 @@ import (
 )
 
 type FakeWatcher struct {
-	topologyChan chan<- *topology.ClusterTopology
+	topologyChan chan<- *topology.Cluster
 }
 
-func (watcher *FakeWatcher) Subscribe(subscriber chan<- *topology.ClusterTopology) {
+func (watcher *FakeWatcher) Subscribe(subscriber chan<- *topology.Cluster) {
 	watcher.topologyChan = subscriber
 }
 func (watcher *FakeWatcher) Watch(stopCh <-chan struct{}) {}
@@ -24,7 +24,7 @@ func (watcher *FakeWatcher) Watch(stopCh <-chan struct{}) {}
 func TestExport(t *testing.T) {
 	viper.SetDefault("NODE_NAME", "my_node")
 
-	myNode := &topology.NodeTopology{
+	myNode := &topology.Node{
 		GpuProduct: "some gpu",
 		Gpus: []topology.GpuDetails{
 			{
@@ -33,9 +33,9 @@ func TestExport(t *testing.T) {
 		},
 	}
 
-	topology := &topology.ClusterTopology{
+	topology := &topology.Cluster{
 		MigStrategy: "some strategy",
-		Nodes: map[string]topology.NodeTopology{
+		Nodes: map[string]topology.Node{
 			"my_node": *myNode,
 		},
 	}

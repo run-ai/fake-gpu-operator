@@ -1,6 +1,6 @@
 package topology
 
-func (ct *ClusterTopology) GetNodeTopology(nodeName string) (*NodeTopology, error) {
+func (ct *Cluster) GetNodeTopology(nodeName string) (*Node, error) {
 	if ct.Nodes == nil {
 		return nil, ErrNoNodes
 	}

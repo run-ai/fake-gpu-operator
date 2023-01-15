@@ -7,5 +7,5 @@ import (
 
 func main() {
 	appRunner := app.NewAppRunner(&status_exporter.StatusExporterApp{})
-	appRunner.RunApp()
+	appRunner.Run()
 }

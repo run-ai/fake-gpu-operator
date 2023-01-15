@@ -3,14 +3,17 @@ package status_updater
 import (
 	"sync"
 
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/handle"
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/inform"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
+	nodecontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/node"
+	podcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/pod"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var InClusterConfigFn = rest.InClusterConfig
+var InClusterConfigFn = ctrl.GetConfigOrDie
 var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 	return kubernetes.NewForConfigOrDie(c)
 }
@@ -25,31 +28,28 @@ type StatusUpdaterAppConfiguration struct {
 }
 
 type StatusUpdaterApp struct {
-	Informer inform.Interface
-	Handler  handle.Interface
-	stopCh   chan struct{}
-	wg       *sync.WaitGroup
+	Controllers []controllers.Interface
+	stopCh      chan struct{}
+	wg          *sync.WaitGroup
 }
 
-func (app *StatusUpdaterApp) Start() {
-	app.wg.Add(2)
-	go app.Handler.Run(app.stopCh)
-	go app.Informer.Run(app.stopCh)
+func (app *StatusUpdaterApp) Run() {
+	app.wg.Add(len(app.Controllers))
+	for _, controller := range app.Controllers {
+		go controller.Run(app.stopCh)
+	}
 }
 
 func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
-	clusterConfig, err := InClusterConfigFn()
-	if err != nil {
-		panic(err.Error())
-	}
+	clusterConfig := InClusterConfigFn()
 
 	app.wg = wg
 
-	kubeclient := KubeClientFn(clusterConfig)
+	kubeClient := KubeClientFn(clusterConfig)
 	dynamicClient := DynamicClientFn(clusterConfig)
 
-	app.Informer = inform.NewInformer(kubeclient, app.wg)
-	app.Handler = handle.NewPodEventHandler(kubeclient, dynamicClient, app.Informer, app.wg)
+	app.Controllers = append(app.Controllers, podcontroller.NewPodController(kubeClient, dynamicClient, app.wg))
+	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(kubeClient, app.wg))
 }
 
 func (app *StatusUpdaterApp) Name() string {
@@ -58,5 +58,6 @@ func (app *StatusUpdaterApp) Name() string {
 
 func (app *StatusUpdaterApp) GetConfig() interface{} {
 	var config StatusUpdaterAppConfiguration
+
 	return config
 }

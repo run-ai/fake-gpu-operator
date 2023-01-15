@@ -33,12 +33,12 @@ func NewAppRunner(app App) *AppRunner {
 	}
 }
 
-func (appRunner *AppRunner) RunApp() {
+func (appRunner *AppRunner) Run() {
 	appRunner.Wg.Add(1)
 	print("added")
 	go func() {
 		defer appRunner.Wg.Done()
-		appRunner.App.Start()
+		appRunner.App.Run()
 	}()
 
 	log.Printf("%s was Started", appRunner.App.Name())
@@ -61,11 +61,12 @@ func LoadConfig(app App) {
 	if config == nil {
 		return
 	}
-	err := BindStruct(config)
+	err := bindStruct(config)
 	if err != nil {
 		log.Fatal("Error binding environment variables")
 	}
 
+	setDefaults()
 	viper.AutomaticEnv()
 	err = viper.Unmarshal(&config)
 	if err != nil {
@@ -80,7 +81,7 @@ func LoadConfig(app App) {
 
 // patch for viper to bind all relevant envs, from here: https://github.com/spf13/viper/pull/1429
 // scan be deleted on feuture versions of viper
-func BindStruct(input interface{}) error {
+func bindStruct(input interface{}) error {
 	envKeysMap := map[string]interface{}{}
 	if err := mapstructure.Decode(input, &envKeysMap); err != nil {
 		return err
@@ -93,4 +94,9 @@ func BindStruct(input interface{}) error {
 	}
 
 	return nil
+}
+
+func setDefaults() {
+	viper.SetDefault("TOPOLOGY_CM_NAME", "topology")
+	viper.SetDefault("TOPOLOGY_CM_NAMESPACE", "gpu-operator")
 }

@@ -7,5 +7,5 @@ import (
 
 func main() {
 	appRunner := app.NewAppRunner(&migfaker.MigFakeApp{})
-	appRunner.RunApp()
+	appRunner.Run()
 }

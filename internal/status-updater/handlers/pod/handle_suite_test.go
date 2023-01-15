@@ -1,4 +1,4 @@
-package handle_test
+package pod_test
 
 import (
 	"testing"
