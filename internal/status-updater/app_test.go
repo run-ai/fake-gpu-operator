@@ -47,11 +47,9 @@ const (
 var (
 	defaultTopologyConfig = topology.Config{
 		NodeAutofill: topology.NodeAutofillSettings{
-			NodeTemplate: topology.NodeTemplate{
-				GpuCount:   nodeGpuCount,
-				GpuMemory:  11441,
-				GpuProduct: "Tesla-K80",
-			},
+			GpuCount:   nodeGpuCount,
+			GpuMemory:  11441,
+			GpuProduct: "Tesla-K80",
 		},
 	}
 )
@@ -243,10 +241,10 @@ var _ = Describe("StatusUpdater", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(clusterTopology).ToNot(BeNil())
 
-			Expect(clusterTopology.Nodes["node1"].GpuCount).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuCount))
-			Expect(clusterTopology.Nodes["node1"].GpuMemory).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuMemory))
-			Expect(clusterTopology.Nodes["node1"].GpuProduct).To(Equal(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuProduct))
-			Expect(clusterTopology.Nodes["node1"].Gpus).To(HaveLen(clusterTopology.Config.NodeAutofill.NodeTemplate.GpuCount))
+			Expect(clusterTopology.Nodes["node1"].GpuCount).To(Equal(clusterTopology.Config.NodeAutofill.GpuCount))
+			Expect(clusterTopology.Nodes["node1"].GpuMemory).To(Equal(clusterTopology.Config.NodeAutofill.GpuMemory))
+			Expect(clusterTopology.Nodes["node1"].GpuProduct).To(Equal(clusterTopology.Config.NodeAutofill.GpuProduct))
+			Expect(clusterTopology.Nodes["node1"].Gpus).To(HaveLen(clusterTopology.Config.NodeAutofill.GpuCount))
 		})
 	})
 

@@ -55,10 +55,6 @@ type Config struct {
 }
 
 type NodeAutofillSettings struct {
-	NodeTemplate NodeTemplate `yaml:"node-template"`
-}
-
-type NodeTemplate struct {
 	GpuCount   int    `yaml:"gpu-count"`
 	GpuMemory  int    `yaml:"gpu-memory"`
 	GpuProduct string `yaml:"gpu-product"`
