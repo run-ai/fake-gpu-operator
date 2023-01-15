@@ -39,13 +39,13 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return nil
 	}
 
-	nodeTemplate := clusterTopology.Config.NodeAutofill.NodeTemplate
+	nodeAutofillSettings := clusterTopology.Config.NodeAutofill
 
 	clusterTopology.Nodes[node.Name] = topology.Node{
-		GpuCount:   nodeTemplate.GpuCount,
-		GpuMemory:  nodeTemplate.GpuMemory,
-		GpuProduct: nodeTemplate.GpuProduct,
-		Gpus:       generateGpuDetails(nodeTemplate.GpuCount, node.Name),
+		GpuCount:   nodeAutofillSettings.GpuCount,
+		GpuMemory:  nodeAutofillSettings.GpuMemory,
+		GpuProduct: nodeAutofillSettings.GpuProduct,
+		Gpus:       generateGpuDetails(nodeAutofillSettings.GpuCount, node.Name),
 	}
 
 	err = topology.UpdateToKube(p.kubeClient, clusterTopology)
