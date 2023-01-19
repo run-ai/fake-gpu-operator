@@ -1,0 +1,347 @@
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    flannel.alpha.coreos.com/backend-data: '{"VNI":1,"VtepMAC":"76:25:16:25:5b:52"}'
+    flannel.alpha.coreos.com/backend-type: vxlan
+    flannel.alpha.coreos.com/kube-subnet-manager: "true"
+    flannel.alpha.coreos.com/public-ip: 10.51.0.4
+    kubeadm.alpha.kubernetes.io/cri-socket: /var/run/dockershim.sock
+    nfd.node.kubernetes.io/extended-resources: ""
+    nfd.node.kubernetes.io/feature-labels: cpu-cpuid.AESNI,cpu-cpuid.AVX,cpu-cpuid.AVX2,cpu-cpuid.FMA3,cpu-cpuid.HYPERVISOR,cpu-cpuid.IBPB,cpu-cpuid.STIBP,cpu-hardware_multithreading,kernel-config.NO_HZ,kernel-config.NO_HZ_IDLE,kernel-version.full,kernel-version.major,kernel-version.minor,kernel-version.revision,nvidia.com/cuda.driver.major,nvidia.com/cuda.driver.minor,nvidia.com/cuda.driver.rev,nvidia.com/cuda.runtime.major,nvidia.com/cuda.runtime.minor,nvidia.com/gfd.timestamp,nvidia.com/gpu.compute.major,nvidia.com/gpu.compute.minor,nvidia.com/gpu.count,nvidia.com/gpu.family,nvidia.com/gpu.machine,nvidia.com/gpu.memory,nvidia.com/gpu.product,nvidia.com/gpu.replicas,nvidia.com/mig.capable,nvidia.com/mig.strategy,nvidia.com/run.ai-swap.enabled,pci-10de.present,pci-1af4.present,system-os_release.ID,system-os_release.VERSION_ID,system-os_release.VERSION_ID.major,system-os_release.VERSION_ID.minor
+    nfd.node.kubernetes.io/worker.version: v0.10.1
+    node.alpha.kubernetes.io/ttl: "0"
+    volumes.kubernetes.io/controller-managed-attach-detach: "true"
+  creationTimestamp: "2022-12-26T14:13:03Z"
+  labels:
+    beta.kubernetes.io/arch: amd64
+    beta.kubernetes.io/os: linux
+    feature.node.kubernetes.io/cpu-cpuid.AESNI: "true"
+    feature.node.kubernetes.io/cpu-cpuid.AVX: "true"
+    feature.node.kubernetes.io/cpu-cpuid.AVX2: "true"
+    feature.node.kubernetes.io/cpu-cpuid.FMA3: "true"
+    feature.node.kubernetes.io/cpu-cpuid.HYPERVISOR: "true"
+    feature.node.kubernetes.io/cpu-cpuid.IBPB: "true"
+    feature.node.kubernetes.io/cpu-cpuid.STIBP: "true"
+    feature.node.kubernetes.io/cpu-hardware_multithreading: "true"
+    feature.node.kubernetes.io/kernel-config.NO_HZ: "true"
+    feature.node.kubernetes.io/kernel-config.NO_HZ_IDLE: "true"
+    feature.node.kubernetes.io/kernel-version.full: 5.4.0-1042-gcp
+    feature.node.kubernetes.io/kernel-version.major: "5"
+    feature.node.kubernetes.io/kernel-version.minor: "4"
+    feature.node.kubernetes.io/kernel-version.revision: "0"
+    feature.node.kubernetes.io/pci-10de.present: "true"
+    feature.node.kubernetes.io/pci-1af4.present: "true"
+    feature.node.kubernetes.io/system-os_release.ID: ubuntu
+    feature.node.kubernetes.io/system-os_release.VERSION_ID: "20.04"
+    feature.node.kubernetes.io/system-os_release.VERSION_ID.major: "20"
+    feature.node.kubernetes.io/system-os_release.VERSION_ID.minor: "04"
+    kubernetes.io/arch: amd64
+    kubernetes.io/hostname: qa-mig-worker-gpu-1
+    kubernetes.io/os: linux
+    nvidia.com/cuda.driver.major: "525"
+    nvidia.com/cuda.driver.minor: "60"
+    nvidia.com/cuda.driver.rev: "13"
+    nvidia.com/cuda.runtime.major: "12"
+    nvidia.com/cuda.runtime.minor: "0"
+    nvidia.com/gfd.timestamp: "1674110256"
+    nvidia.com/gpu.compute.major: "7"
+    nvidia.com/gpu.compute.minor: "5"
+    nvidia.com/gpu.count: "2"
+    nvidia.com/gpu.deploy.container-toolkit: "true"
+    nvidia.com/gpu.deploy.dcgm: "true"
+    nvidia.com/gpu.deploy.dcgm-exporter: "true"
+    nvidia.com/gpu.deploy.device-plugin: "true"
+    nvidia.com/gpu.deploy.driver: "true"
+    nvidia.com/gpu.deploy.gpu-feature-discovery: "true"
+    nvidia.com/gpu.deploy.node-status-exporter: "true"
+    nvidia.com/gpu.deploy.nvsm: ""
+    nvidia.com/gpu.deploy.operator-validator: "true"
+    nvidia.com/gpu.family: turing
+    nvidia.com/gpu.machine: Google-Compute-Engine
+    nvidia.com/gpu.memory: "15360"
+    nvidia.com/gpu.present: "true"
+    nvidia.com/gpu.product: Tesla-T4
+    nvidia.com/gpu.replicas: "1"
+    nvidia.com/mig.capable: "false"
+    nvidia.com/mig.strategy: mixed
+    nvidia.com/run.ai-swap.enabled: "false"
+  name: qa-mig-worker-gpu-1
+  resourceVersion: "3084398"
+  uid: 018b97a5-7073-4701-8576-646aef94752d
+spec:
+  podCIDR: 10.244.1.0/24
+  podCIDRs:
+  - 10.244.1.0/24
+status:
+  addresses:
+  - address: 10.51.0.4
+    type: InternalIP
+  - address: qa-mig-worker-gpu-1
+    type: Hostname
+  allocatable:
+    cpu: "32"
+    ephemeral-storage: "93492209510"
+    hugepages-1Gi: "0"
+    hugepages-2Mi: "0"
+    memory: 123560520Ki
+    nvidia.com/gpu: "2"
+    pods: "110"
+  capacity:
+    cpu: "32"
+    ephemeral-storage: 101445540Ki
+    hugepages-1Gi: "0"
+    hugepages-2Mi: "0"
+    memory: 123662920Ki
+    nvidia.com/gpu: "2"
+    pods: "110"
+  conditions:
+  - lastHeartbeatTime: "2023-01-19T06:32:28Z"
+    lastTransitionTime: "2023-01-19T06:32:28Z"
+    message: Flannel is running on this node
+    reason: FlannelIsUp
+    status: "False"
+    type: NetworkUnavailable
+  - lastHeartbeatTime: "2023-01-19T06:49:40Z"
+    lastTransitionTime: "2022-12-28T08:31:06Z"
+    message: kubelet has sufficient memory available
+    reason: KubeletHasSufficientMemory
+    status: "False"
+    type: MemoryPressure
+  - lastHeartbeatTime: "2023-01-19T06:49:40Z"
+    lastTransitionTime: "2022-12-28T08:31:06Z"
+    message: kubelet has no disk pressure
+    reason: KubeletHasNoDiskPressure
+    status: "False"
+    type: DiskPressure
+  - lastHeartbeatTime: "2023-01-19T06:49:40Z"
+    lastTransitionTime: "2022-12-28T08:31:06Z"
+    message: kubelet has sufficient PID available
+    reason: KubeletHasSufficientPID
+    status: "False"
+    type: PIDPressure
+  - lastHeartbeatTime: "2023-01-19T06:49:40Z"
+    lastTransitionTime: "2023-01-19T06:31:33Z"
+    message: kubelet is posting ready status. AppArmor enabled
+    reason: KubeletReady
+    status: "True"
+    type: Ready
+  daemonEndpoints:
+    kubeletEndpoint:
+      Port: 10250
+  images:
+  - names:
+    - gcr.io/run-ai-demo/quickstart@sha256:7837847d3a186bb2daa03f1781542212cb7c66575ea8b0aaf3fd886f0043c405
+    - gcr.io/run-ai-demo/quickstart:latest
+    sizeBytes: 12072476783
+  - names:
+    - gcr.io/run-ai-demo/quickstart-hpo@sha256:e410172eea2db1d140092714db75e365e4eef574d5d22729ed239e197e7d4594
+    - gcr.io/run-ai-demo/quickstart-hpo:latest
+    sizeBytes: 4038802056
+  - names:
+    - runai/example-tf-keras-mnist-acgan@sha256:4395e5204646a9a24021e552e978d59ae305da54d8c873c4ebc0698d33bf3aa2
+    - runai/example-tf-keras-mnist-acgan:latest
+    sizeBytes: 3652196155
+  - names:
+    - runai/example-tf-keras-builtin@sha256:f2578dc65651fe8dbfcff45b952a85633ffeb4bb948f957f3dfa96f1265498b2
+    - runai/example-tf-keras-builtin:latest
+    sizeBytes: 3459613901
+  - names:
+    - runai/example-pytorch-builtin@sha256:378341b8de16eae018d0d1966bc6c6f7e47ac81c31727d7c6a7c518b8bf407d8
+    - runai/example-pytorch-builtin:latest
+    sizeBytes: 3326431187
+  - names:
+    - nvcr.io/nvidia/k8s/dcgm-exporter@sha256:c1418a43dd54946ad0d08864c7da5591e067fd0e21791ab48a2dec8bdde14774
+    - nvcr.io/nvidia/k8s/dcgm-exporter:3.1.3-3.1.2-ubuntu20.04
+    sizeBytes: 1989114969
+  - names:
+    - gshaibi/gpu-burn@sha256:ed07993b0581228c2bd7113fae0ed214549547f0fa91ba50165bc2473cfaf979
+    - gshaibi/gpu-burn:latest
+    sizeBytes: 1619723452
+  - names:
+    - nvcr.io/nvidia/k8s/dcgm-exporter@sha256:952ec6be586dcff7c4b2936a20b7704c55b91be2b0ddb6d121ce72f5a833e804
+    - nvcr.io/nvidia/k8s/dcgm-exporter:3.0.4-3.0.0-ubuntu20.04
+    sizeBytes: 1222518599
+  - names:
+    - gcr.io/run-ai-lab/mig-provisioner@sha256:d62020d74399d3b7e99ba0e5f8b8715325ad966493218dba2b83c28e261ead48
+    - gcr.io/run-ai-lab/mig-provisioner:galb
+    sizeBytes: 1188454365
+  - names:
+    - gcr.io/run-ai-lab/runai-scheduler@sha256:258baff8c969b1950c70a142545ecb5d150daf5abd257c92959e0e18c4acc04e
+    - gcr.io/run-ai-lab/runai-scheduler:erez
+    sizeBytes: 1183999183
+  - names:
+    - nvcr.io/nvidia/driver@sha256:0ee0c585fa720f177734b3295a073f402d75986c1fe018ae68bd73fe9c21b8d8
+    - nvcr.io/nvidia/driver:525.60.13-ubuntu20.04
+    sizeBytes: 1111261102
+  - names:
+    - gcr.io/run-ai-test-1/agent@sha256:9fad66ecc81185f67dce9bc5adc809b99438ebe3faba1a193de2fafda3cebc14
+    - gcr.io/run-ai-test-1/agent:0.0.0-1004326.master-191381
+    sizeBytes: 1087873401
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:853a80f941ba666ab0f34a0790811ce9d78ce93562b7efdc535a72bcb485faf7
+    - gcr.io/run-ai-prod/agent:2.8.12-rc.0
+    sizeBytes: 1079477044
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:36c305603419ffa30755eb8d250493b2d388bd2d12e3cbd969763e1e80ac6d18
+    - gcr.io/run-ai-prod/agent:2.8.9-rc.1
+    sizeBytes: 1079177946
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:d21a6b1438597e82f85f392b37b5fe1ad63a1a46d0044462fb2d50ef7aec9323
+    - gcr.io/run-ai-prod/agent:2.8.8
+    sizeBytes: 1079071238
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:446b3eafe54640bb2c81e35f1c1a3d286fd081cdd30fb4d908ffe6719528fbce
+    - gcr.io/run-ai-prod/agent:2.7.0
+    sizeBytes: 1078148837
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:9236f3ab5f37d1cc9365b9a5b3bc0e59602cb29bc366bd8e5143bf4c26e18974
+    - gcr.io/run-ai-prod/agent:2.7.0-rc.13
+    sizeBytes: 1078145358
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:25bb759919e8c60f693788806d2a7d6f5d13f18300d7547bf4b8b8cafe16caa3
+    - gcr.io/run-ai-prod/agent:2.7.1-rc.1
+    sizeBytes: 1078139486
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:f5bb90de8420f178ac3c3c0bd376fbf4d2608e23d626ce0555d1cd1a5deca28a
+    - gcr.io/run-ai-prod/agent:2.7.0-rc.8
+    sizeBytes: 1078129526
+  - names:
+    - gcr.io/run-ai-prod/agent@sha256:cf062c46dcbb829bc80f64b54f2c0e3bb3f43952af9ad1b510236444dd802f2f
+    - gcr.io/run-ai-prod/agent:v2.6.0-rc.5
+    sizeBytes: 1077024287
+  - names:
+    - gcr.io/run-ai-test-1/pod-grouper@sha256:25c27e0825504e580981706baca4ce5d82ae362a2aac0db7babbc15c910f16e8
+    - gcr.io/run-ai-test-1/pod-grouper:0.0.0-1004326.master-191381
+    sizeBytes: 1041696207
+  - names:
+    - nvcr.io/nvidia/driver@sha256:c24371b1793eab4f2f035bc0584015de3a7be3031587d6cd948069c9127542f6
+    - nvcr.io/nvidia/driver:515.65.01-ubuntu20.04
+    sizeBytes: 1026833848
+  - names:
+    - gcr.io/run-ai-test-1/nodepool-controller@sha256:ccd526e359bacfd83589ab711d8251c8a1d01e4d4dab95486bcc46684154e1ba
+    - gcr.io/run-ai-test-1/nodepool-controller:0.0.0-1004326.master-191381
+    sizeBytes: 990822532
+  - names:
+    - gcr.io/run-ai-prod/nodepool-controller@sha256:621a08552c775e34949f62b0f822f882af3b9e5d6d2e3a228531389f1167ea21
+    - gcr.io/run-ai-prod/nodepool-controller:2.8.0-rc.4
+    sizeBytes: 988355646
+  - names:
+    - nvcr.io/nvidia/driver@sha256:d944da4ec30065b98c170f924c75fe1222e06998f5dff726a1867fa1c1f9b801
+    - nvcr.io/nvidia/driver:510.47.03-ubuntu20.04
+    sizeBytes: 932659896
+  - names:
+    - nvcr.io/nvidia/k8s/dcgm-exporter@sha256:7507d27b8d4736531504abf4f011c0b9586fbb7dd9436e26c3b5cd1e262369db
+    - nvcr.io/nvidia/k8s/dcgm-exporter:2.3.4-2.6.4-ubuntu20.04
+    sizeBytes: 572817930
+  - names:
+    - nvcr.io/nvidia/cloud-native/k8s-driver-manager@sha256:6240c5912aabed789c672f3179b4a65e45511d10fa8c41a5de0d91644a792b14
+    - nvcr.io/nvidia/cloud-native/k8s-driver-manager:v0.5.1
+    sizeBytes: 562256065
+  - names:
+    - bitnami/fluentd@sha256:11bb83687b44a9fb7a4f773e2ecf120e2b4523613a5544999723f0b9cd8fe2ed
+    - bitnami/fluentd:1.12.0-debian-10-r0
+    sizeBytes: 512854333
+  - names:
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator@sha256:18c9ea88ae06d479e6657b8a4126a8ee3f4300a40c16ddc29fb7ab3763d46005
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator:v22.9.1
+    sizeBytes: 478600391
+  - names:
+    - nvcr.io/nvidia/cloud-native/k8s-driver-manager@sha256:e3f16c26b9340ed46aed248cc4d18353ba3a65886bf7a2f0cea25ff41b2553da
+    - nvcr.io/nvidia/cloud-native/k8s-driver-manager:v0.4.2
+    sizeBytes: 459618644
+  - names:
+    - nvcr.io/nvidia/k8s-device-plugin@sha256:9c17d3a907eb77eb8f7b4f3faf52d8352e4252af92003f828083f80d629bd2c3
+    - nvcr.io/nvidia/k8s-device-plugin:v0.13.0-ubi8
+    sizeBytes: 444556116
+  - names:
+    - calico/node@sha256:349c10be37e64a310d25869128d482b17bfeb4166bc80bd9a2ed095203a77ddb
+    - calico/node:v3.15.5
+    sizeBytes: 437164545
+  - names:
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator@sha256:6fe4200960b2b49d6dac1c91e596f61dacb6b3dcff878c84eb74c5136fedd5b6
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator:v22.9.0
+    sizeBytes: 432799839
+  - names:
+    - nvcr.io/nvidia/gpu-feature-discovery@sha256:bec9f026d9b3d9404c78d6091817a359015c6a7aa411735b34138c1518853b5d
+    - nvcr.io/nvidia/gpu-feature-discovery:v0.7.0-ubi8
+    sizeBytes: 415829527
+  - names:
+    - nvcr.io/nvidia/cloud-native/k8s-driver-manager@sha256:5b16056257acc51b517d9cdb1da3218693cefc214af93789e6e214fd2b4cacf1
+    - nvcr.io/nvidia/cloud-native/k8s-driver-manager:v0.3.0
+    sizeBytes: 413807613
+  - names:
+    - nvcr.io/nvidia/k8s-device-plugin@sha256:d1c61116647bb9388eb3c4e31848dd6038458b7ba33c0eb3b659d96739eceb73
+    - nvcr.io/nvidia/k8s-device-plugin:v0.12.3-ubi8
+    sizeBytes: 408778270
+  - names:
+    - nvcr.io/nvidia/gpu-feature-discovery@sha256:37821ea7829def707f819ac21122cea62efdbbd640679b6004e552fb9a1e17a3
+    - nvcr.io/nvidia/gpu-feature-discovery:v0.6.2-ubi8
+    sizeBytes: 380437918
+  - names:
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator@sha256:24d804e8f005d7aeca8343aa13e5f92295d8642a4c47cb24e3ac86a22543bc37
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator:v1.10.1
+    sizeBytes: 368369724
+  - names:
+    - gcr.io/run-ai-prod/researcher-service@sha256:7cc6c19900277272e4ebccec918e023cc15d0ba2d20ab51b9c65db33f9cf0587
+    - gcr.io/run-ai-prod/researcher-service:2.8.8
+    sizeBytes: 367572145
+  - names:
+    - gcr.io/run-ai-prod/researcher-service@sha256:91d3fa61f9d3594455e5b6e491a780deb86cb707107e8c5f6998f663e4ab84a0
+    - gcr.io/run-ai-prod/researcher-service:2.8.9-rc.1
+    sizeBytes: 367571729
+  - names:
+    - gcr.io/run-ai-prod/operator@sha256:073f85f69b7c3dcbb954b630501380f408c7862f4e85f7ae4b6a51f27b7759fc
+    - gcr.io/run-ai-prod/operator:2.5.5
+    sizeBytes: 363172473
+  - names:
+    - bitnami/fluentd@sha256:44309f5c8ccd5c65e18923ed6936aaeee8e930038177eb17bb712872cd18592b
+    - bitnami/fluentd:1.14.6-debian-11-r5
+    sizeBytes: 354777953
+  - names:
+    - gcr.io/run-ai-prod/researcher-service@sha256:de4f5ee6536699256e04d1897eb0bb36396132555236b6a7fb9bf55a8e0b54f9
+    - gcr.io/run-ai-prod/researcher-service:2.7.1-rc.1
+    sizeBytes: 350391480
+  - names:
+    - gcr.io/run-ai-prod/researcher-service@sha256:8401b01cabe20b39edc358ea3b02322021f133b5d7795478dcf526617a8eccdf
+    - gcr.io/run-ai-prod/researcher-service:2.7.0
+    sizeBytes: 350350686
+  - names:
+    - gcr.io/run-ai-prod/researcher-service@sha256:495f7ba24b078072dee03e3d079730090a6a98d06bf7310f1ac3eb5f99a30147
+    - gcr.io/run-ai-prod/researcher-service:2.7.0-rc.13
+    sizeBytes: 350347074
+  - names:
+    - gcr.io/run-ai-prod/researcher-service@sha256:d1a19f29248335500c6db22977324f4dcb70500d4eb8402fddb183bbd0ef5caa
+    - gcr.io/run-ai-prod/researcher-service:2.7.0-rc.8
+    sizeBytes: 350347074
+  - names:
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator@sha256:d7e0397249cd5099046506f32841535ea4f329f7b7583a6ddd9f75ff0f53385e
+    - nvcr.io/nvidia/cloud-native/gpu-operator-validator:v1.9.1
+    sizeBytes: 346600785
+  - names:
+    - nvcr.io/nvidia/k8s-device-plugin@sha256:aa95c16106280e36a5e32d2fe4c66e8b70f5a114860c6f4ed5b1a4085c63601b
+    - nvcr.io/nvidia/k8s-device-plugin:v0.11.0-ubi8
+    sizeBytes: 316060543
+  - names:
+    - grafana/grafana@sha256:8c65b333a3d369a095d752da2e784b484d4246659e9a4ac6a09b74353f95d1c9
+    - grafana/grafana:9.3.1
+    sizeBytes: 314580571
+  - names:
+    - nvcr.io/nvidia/gpu-feature-discovery@sha256:c2e3d0fe41a0d227dbb70caec03c780cc76317515e5ab3875f31d50c63f41c66
+    - nvcr.io/nvidia/gpu-feature-discovery:v0.5.0
+    sizeBytes: 308759280
+  nodeInfo:
+    architecture: amd64
+    bootID: 654bb2c4-19d4-4d7c-bada-7d07b3da1adb
+    containerRuntimeVersion: docker://20.10.13
+    kernelVersion: 5.4.0-1042-gcp
+    kubeProxyVersion: v1.23.4
+    kubeletVersion: v1.23.4
+    machineID: f551d6896536dedbb04180ef1a399ef4
+    operatingSystem: linux
+    osImage: Ubuntu 20.04.2 LTS
+    systemUUID: 5e13faf9-9279-cdbb-3620-5fe3a1ecafb1

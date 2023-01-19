@@ -1,0 +1,169 @@
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    nvidia.com/mig-7g.40gb: "1"
+    pod-group-name: pg-job-969475a25a51-cfb7521b-0251-4c5c-88ed-5a84678c1461
+    received-resource-type: MigInstance
+    runai-allocated-gpu-memory: "0"
+    runai-allocated-gpus: "0"
+    runai-allocated-mig-gpus: "1"
+    runai-calculated-status: Running
+    runai-cli-command: runai submit --interactive -i gcr.io/run-ai-demo/mat-mul --mig-profile
+      7g.40gb -p p1
+    runai-job-id: cfb7521b-0251-4c5c-88ed-5a84678c1461
+    runai-mig-device: '{"name":"nvidia.com/mig-7g.40gb","position":0,"gpuamount":7,"deviceUUID":"MIG-6d9be9db-d376-5991-8c4c-18ab448933ff","gpuinstanceid":0,"gpuindex":"0","gputype":"A100-40GB"}'
+    user: galben-yair
+  creationTimestamp: "2023-01-19T11:03:42Z"
+  generateName: job-969475a25a51-
+  labels:
+    app: runaijob
+    controller-uid: cfb7521b-0251-4c5c-88ed-5a84678c1461
+    createdBy: RunaiJob
+    project: p1
+    release: job-969475a25a51
+    runai/pod-index: 0-0
+  name: job-969475a25a51-0-0
+  namespace: runai-p1
+  ownerReferences:
+  - apiVersion: run.ai/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: RunaiJob
+    name: job-969475a25a51
+    uid: cfb7521b-0251-4c5c-88ed-5a84678c1461
+  resourceVersion: "3332596"
+  uid: 83a0c3bc-63ed-4b94-85bc-e5bd124c72f2
+spec:
+  containers:
+  - env:
+    - name: POD_INDEX
+      value: "0"
+    - name: NVIDIA_VISIBLE_DEVICES
+      valueFrom:
+        configMapKeyRef:
+          key: RUNAI-VISIBLE-DEVICES
+          name: job-969475a25a51-jzjkqqm-runai-sh-gpu
+    - name: RUNAI_NUM_OF_GPUS
+      valueFrom:
+        configMapKeyRef:
+          key: RUNAI_NUM_OF_GPUS
+          name: job-969475a25a51-jzjkqqm-runai-sh-gpu
+    - name: jobUUID
+      value: cfb7521b-0251-4c5c-88ed-5a84678c1461
+    - name: JOB_UUID
+      value: cfb7521b-0251-4c5c-88ed-5a84678c1461
+    - name: jobName
+      value: job-969475a25a51
+    - name: JOB_NAME
+      value: job-969475a25a51
+    - name: reporterGatewayURL
+      value: runai-prometheus-pushgateway.runai.svc.cluster.local:9091
+    - name: REPORTER_GATEWAY_URL
+      value: runai-prometheus-pushgateway.runai.svc.cluster.local:9091
+    - name: podUUID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+    - name: POD_UUID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    image: gcr.io/run-ai-demo/mat-mul
+    imagePullPolicy: Always
+    name: job-969475a25a51
+    resources: {}
+    securityContext: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-n4xs2
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: qa-mig-worker-gpu-a100
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: runai-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-n4xs2
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T11:04:17Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T11:04:19Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T11:04:19Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T11:04:17Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: docker://e71fcd88233bbbac6d719ebceb272cd1d1580f3f527e05abf4f766d214ebe101
+    image: gcr.io/run-ai-demo/mat-mul:latest
+    imageID: docker-pullable://gcr.io/run-ai-demo/mat-mul@sha256:4d6fdf600f2be44b2bf62375633ab63bde8d9597007a7997d91e368fb1678856
+    lastState: {}
+    name: job-969475a25a51
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2023-01-19T11:04:18Z"
+  hostIP: 10.51.0.6
+  phase: Running
+  podIP: 10.244.2.58
+  podIPs:
+  - ip: 10.244.2.58
+  qosClass: BestEffort
+  startTime: "2023-01-19T11:04:17Z"

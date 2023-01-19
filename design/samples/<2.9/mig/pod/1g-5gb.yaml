@@ -1,0 +1,174 @@
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    nvidia.com/mig-1g.5gb: "1"
+    pod-group-name: pg-job-2-0-a369bc70-fa23-4181-a163-c749f2e49ba1
+    received-resource-type: MigInstance
+    runai-allocated-gpu-memory: "0"
+    runai-allocated-gpus: "0"
+    runai-allocated-mig-gpus: "0.14285714285714285"
+    runai-calculated-status: Running
+    runai-cli-command: runai submit -i gshaibi/gpu-burn --mig-profile 1g.5gb --cpu
+      0.5
+    runai-job-id: a369bc70-fa23-4181-a163-c749f2e49ba1
+    runai-mig-device: '{"name":"nvidia.com/mig-1g.5gb","position":6,"gpuamount":1,"instanceid":"MIG-28810d46-0180-5139-a975-020bdc7f9cb1","gpuindex":0,"gputype":"A100-40GB"}'
+    user: guyshaibi
+  creationTimestamp: "2023-01-19T07:56:47Z"
+  generateName: job-2-
+  labels:
+    app: runaijob
+    controller-uid: a369bc70-fa23-4181-a163-c749f2e49ba1
+    createdBy: RunaiJob
+    project: team-a
+    release: job-2
+    runai-pod-job-mutated: "true"
+    runai/pod-index: 0-0
+    runai/queue: team-a
+  name: job-2-0-0
+  namespace: runai-team-a
+  ownerReferences:
+  - apiVersion: run.ai/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: RunaiJob
+    name: job-2
+    uid: a369bc70-fa23-4181-a163-c749f2e49ba1
+  resourceVersion: "3247064"
+  uid: cb9aaa99-97df-4c10-bfa7-c1ed024c672b
+spec:
+  containers:
+  - env:
+    - name: reporterGatewayURL
+      value: runai-prometheus-pushgateway.runai.svc.cluster.local:9091
+    - name: REPORTER_GATEWAY_URL
+      value: runai-prometheus-pushgateway.runai.svc.cluster.local:9091
+    - name: podUUID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+    - name: POD_UUID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    - name: POD_INDEX
+      value: "0"
+    - name: jobUUID
+      value: a369bc70-fa23-4181-a163-c749f2e49ba1
+    - name: JOB_UUID
+      value: a369bc70-fa23-4181-a163-c749f2e49ba1
+    - name: jobName
+      value: job-2
+    - name: JOB_NAME
+      value: job-2
+    - name: NVIDIA_VISIBLE_DEVICES
+      valueFrom:
+        configMapKeyRef:
+          key: RUNAI-VISIBLE-DEVICES
+          name: job-2-7zvpqdb-runai-sh-gpu
+    - name: RUNAI_NUM_OF_GPUS
+      valueFrom:
+        configMapKeyRef:
+          key: RUNAI_NUM_OF_GPUS
+          name: job-2-7zvpqdb-runai-sh-gpu
+    image: gshaibi/gpu-burn
+    imagePullPolicy: Always
+    name: job-2
+    resources:
+      requests:
+        cpu: 500m
+    securityContext:
+      allowPrivilegeEscalation: true
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-d4m7c
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: qa-mig-worker-gpu-a100
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: runai-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-d4m7c
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T07:56:50Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T07:56:57Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T07:56:57Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2023-01-19T07:56:49Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: docker://3c3ceaec786d1c7da5950dc026a1be636244998bb007664c6aa874e457c11e5a
+    image: gshaibi/gpu-burn:latest
+    imageID: docker-pullable://gshaibi/gpu-burn@sha256:ed07993b0581228c2bd7113fae0ed214549547f0fa91ba50165bc2473cfaf979
+    lastState: {}
+    name: job-2
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2023-01-19T07:56:55Z"
+  hostIP: 10.51.0.6
+  phase: Running
+  podIP: 10.244.2.31
+  podIPs:
+  - ip: 10.244.2.31
+  qosClass: Burstable
+  startTime: "2023-01-19T07:56:50Z"
