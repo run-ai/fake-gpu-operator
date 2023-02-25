@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
@@ -82,6 +83,25 @@ func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Po
 }
 
 func getMatchingReservationPodName(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
+	var multiErr error
+	reservationPodName, err := getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient, pod)
+	if err == nil {
+		return reservationPodName, nil
+	} else {
+		multiErr = multierror.Append(multiErr, fmt.Errorf("failed to find reservation pod by runai-gpu annotation: %v", err))
+	}
+
+	reservationPodName, err = getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient, pod)
+	if err == nil {
+		return reservationPodName, nil
+	} else {
+		multiErr = multierror.Append(multiErr, fmt.Errorf("failed to find reservation pod by runai-gpu-group label: %v", err))
+	}
+
+	return "", multiErr
+}
+
+func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
 	runaiGpu := pod.Annotations["runai-gpu"]
 	if runaiGpu == "" {
 		return "", fmt.Errorf("pod %s has empty runai-gpu annotation", pod.Name)
@@ -108,6 +128,33 @@ func getMatchingReservationPodName(kubeclient kubernetes.Interface, pod *v1.Pod)
 
 	if matchingReservationPod == nil {
 		return "", fmt.Errorf("no reservation pod found for gpu %d on node %s", gpuIdx, nodeName)
+	}
+
+	return matchingReservationPod.Name, nil
+}
+
+func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
+	runaiGpuGroup := pod.Labels["runai-gpu-group"]
+	if runaiGpuGroup == "" {
+		return "", fmt.Errorf("pod %s has empty runai-gpu-group label", pod.Name)
+	}
+
+	nodeName := pod.Spec.NodeName
+
+	nodeReservationPods, err := kubeclient.CoreV1().Pods(runaiReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
+	if err != nil {
+		return "", err
+	}
+
+	var matchingReservationPod *v1.Pod
+	for _, nodeReservationPod := range nodeReservationPods.Items {
+		if nodeReservationPod.Labels["runai-gpu-group"] == runaiGpuGroup {
+			matchingReservationPod = &nodeReservationPod
+		}
+	}
+
+	if matchingReservationPod == nil {
+		return "", fmt.Errorf("no reservation pod found for gpu group %s on node %s", runaiGpuGroup, nodeName)
 	}
 
 	return matchingReservationPod.Name, nil

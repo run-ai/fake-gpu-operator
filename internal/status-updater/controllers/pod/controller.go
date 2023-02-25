@@ -1,8 +1,3 @@
-/*
-Subscribes to pod updates and handles them.
-When a pod is added, we'll mark a random GPU on the pod's node as fully utilized
-When a pod is removed, we'll unmark the GPU.
-*/
 package pod
 
 import (
@@ -47,6 +42,7 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 			switch pod := obj.(type) {
 			case *v1.Pod:
 				return (pod != nil) &&
+					util.IsPodRunning(pod) &&
 					(util.IsDedicatedGpuPod(pod) || util.IsSharedGpuPod(pod))
 			default:
 				return false
@@ -55,32 +51,15 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				if isPodRunning(pod) {
-					controllers_util.LogError(c.handler.HandleAdd(pod), podAddFailureMsg)
-				}
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				oldPod := oldObj.(*v1.Pod)
-				newPod := newObj.(*v1.Pod)
-
-				isOldPodRunning := isPodRunning(oldPod)
-				isNewPodRunning := isPodRunning(newPod)
-
-				if isOldPodRunning == isNewPodRunning {
-					return
-				}
-
-				if isNewPodRunning {
-					controllers_util.LogError(c.handler.HandleAdd(newPod), podAddFailureMsg)
-				} else {
-					controllers_util.LogError(c.handler.HandleDelete(newPod), podDeleteFailureMsg)
-				}
+				// Log
+				log.Printf("Handling pod addition: %s\n", pod.Name)
+				controllers_util.LogError(c.handler.HandleAdd(pod), podAddFailureMsg)
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				if isPodRunning(pod) {
-					controllers_util.LogError(c.handler.HandleDelete(pod), podDeleteFailureMsg)
-				}
+				// Log
+				log.Printf("Handling pod deletion: %s\n", pod.Name)
+				controllers_util.LogError(c.handler.HandleDelete(pod), podDeleteFailureMsg)
 			},
 		},
 	})

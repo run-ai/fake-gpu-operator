@@ -6,10 +6,17 @@ import (
 )
 
 func IsSharedGpuPod(pod *v1.Pod) bool {
-	_, ok := pod.Annotations["runai-gpu"]
-	return ok
+	_, runaiGpuExists := pod.Annotations["runai-gpu"]
+	_, runaiGpuGroupExists := pod.Labels["runai-gpu-group"]
+	isReservationPod := pod.Namespace == "runai-reservation"
+
+	return !isReservationPod && (runaiGpuExists || runaiGpuGroupExists)
 }
 
 func IsDedicatedGpuPod(pod *v1.Pod) bool {
 	return !pod.Spec.Containers[0].Resources.Limits["nvidia.com/gpu"].Equal(resource.MustParse("0"))
+}
+
+func IsPodRunning(pod *v1.Pod) bool {
+	return pod.Status.Phase == v1.PodRunning
 }
