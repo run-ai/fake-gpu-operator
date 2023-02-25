@@ -112,9 +112,7 @@ func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Int
 		return "", err
 	}
 
-	nodeName := pod.Spec.NodeName
-
-	nodeReservationPods, err := kubeclient.CoreV1().Pods(runaiReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
+	nodeReservationPods, err := getNodeReservationPods(kubeclient, pod.Spec.NodeName)
 	if err != nil {
 		return "", err
 	}
@@ -127,7 +125,7 @@ func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Int
 	}
 
 	if matchingReservationPod == nil {
-		return "", fmt.Errorf("no reservation pod found for gpu %d on node %s", gpuIdx, nodeName)
+		return "", fmt.Errorf("no reservation pod found for gpu %d on node %s", gpuIdx, pod.Spec.NodeName)
 	}
 
 	return matchingReservationPod.Name, nil
@@ -139,9 +137,7 @@ func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Int
 		return "", fmt.Errorf("pod %s has empty runai-gpu-group label", pod.Name)
 	}
 
-	nodeName := pod.Spec.NodeName
-
-	nodeReservationPods, err := kubeclient.CoreV1().Pods(runaiReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
+	nodeReservationPods, err := getNodeReservationPods(kubeclient, pod.Spec.NodeName)
 	if err != nil {
 		return "", err
 	}
@@ -154,8 +150,12 @@ func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Int
 	}
 
 	if matchingReservationPod == nil {
-		return "", fmt.Errorf("no reservation pod found for gpu group %s on node %s", runaiGpuGroup, nodeName)
+		return "", fmt.Errorf("no reservation pod found for gpu group %s on node %s", runaiGpuGroup, pod.Spec.NodeName)
 	}
 
 	return matchingReservationPod.Name, nil
+}
+
+func getNodeReservationPods(kubeclient kubernetes.Interface, nodeName string) (*v1.PodList, error) {
+	return kubeclient.CoreV1().Pods(runaiReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
 }
