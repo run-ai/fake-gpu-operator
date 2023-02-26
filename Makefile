@@ -1,4 +1,4 @@
-BUILD_DIR=./bin
+BUILD_DIR=$(shell pwd)/bin
 COMPONENT="$1"
 
 DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
@@ -61,6 +61,10 @@ image-test:
 	docker build -t test-image --target test .
 .PHONY: image-test
 
-test-all:
-	 go run github.com/onsi/ginkgo/v2/ginkgo -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
+GINKGO=$(BUILD_DIR)/ginkgo
+$(GINKGO):
+	GOBIN=${BUILD_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.0
+
+test-all: $(GINKGO)
+	$(GINKGO) -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
 .PHONY: test-all
