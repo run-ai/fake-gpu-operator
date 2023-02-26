@@ -401,7 +401,7 @@ func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase) *v1.Pod {
 			Namespace: podNamespace,
 			UID:       podUID,
 			Annotations: map[string]string{
-				"pod-group-name": podGroupName,
+				constants.PodGroupNameAnnotation: podGroupName,
 			},
 		},
 		Spec: v1.PodSpec{
@@ -444,8 +444,8 @@ func createBaseSharedGpuPod(gpuFraction float64) *v1.Pod {
 			Namespace: podNamespace,
 			UID:       podUID,
 			Annotations: map[string]string{
-				constants.GpuFractionAnnotation: fmt.Sprintf("%f", gpuFraction),
-				"pod-group-name":                podGroupName,
+				constants.GpuFractionAnnotation:  fmt.Sprintf("%f", gpuFraction),
+				constants.PodGroupNameAnnotation: podGroupName,
 			},
 			Labels: map[string]string{},
 		},
@@ -465,7 +465,7 @@ func createBaseSharedGpuPod(gpuFraction float64) *v1.Pod {
 
 func createGpuIdxReservationPod(gpuIdx int) *v1.Pod {
 	pod := createBaseReservationPod()
-	pod.Annotations["run.ai/reserve_for_gpu_index"] = strconv.Itoa(gpuIdx)
+	pod.Annotations[constants.ReservationPodGpuIdxAnnotation] = strconv.Itoa(gpuIdx)
 	return pod
 }
 

@@ -123,7 +123,7 @@ func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Int
 
 	var matchingReservationPod *v1.Pod
 	for _, nodeReservationPod := range nodeReservationPods.Items {
-		if nodeReservationPod.Annotations["run.ai/reserve_for_gpu_index"] == runaiGpu {
+		if nodeReservationPod.Annotations[constants.ReservationPodGpuIdxAnnotation] == runaiGpu {
 			matchingReservationPod = &nodeReservationPod
 		}
 	}

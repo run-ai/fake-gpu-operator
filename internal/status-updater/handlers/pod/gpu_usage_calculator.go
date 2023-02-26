@@ -99,9 +99,9 @@ func calculateUtilizationFromAnnotation(annotationValue string) (*topology.Range
 }
 
 func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
-	podGroupName := pod.Annotations["pod-group-name"]
+	podGroupName := pod.Annotations[constants.PodGroupNameAnnotation]
 	if podGroupName == "" {
-		return "", fmt.Errorf("pod %s has no pod-group-name annotation", pod.Name)
+		return "", fmt.Errorf("pod %s has no constants.PodGroupNameAnnotation annotation", pod.Name)
 	}
 
 	gvr := schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}
