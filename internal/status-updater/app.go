@@ -3,14 +3,15 @@ package status_updater
 import (
 	"sync"
 
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
-	nodecontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/node"
-	podcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/pod"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
+	nodecontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/node"
+	podcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/pod"
 )
 
 var InClusterConfigFn = ctrl.GetConfigOrDie

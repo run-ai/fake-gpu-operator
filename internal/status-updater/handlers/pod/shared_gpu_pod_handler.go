@@ -84,12 +84,15 @@ func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Po
 
 func getMatchingReservationPodName(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
 	var multiErr error
+
+	// DEPRECATED_START
 	reservationPodName, err := getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient, pod)
 	if err == nil {
 		return reservationPodName, nil
 	} else {
 		multiErr = multierror.Append(multiErr, fmt.Errorf("failed to find reservation pod by runai-gpu annotation: %v", err))
 	}
+	// DEPRECATED_END
 
 	reservationPodName, err = getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient, pod)
 	if err == nil {

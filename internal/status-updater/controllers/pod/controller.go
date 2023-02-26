@@ -51,14 +51,10 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				// Log
-				log.Printf("Handling pod addition: %s\n", pod.Name)
 				controllers_util.LogError(c.handler.HandleAdd(pod), podAddFailureMsg)
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				// Log
-				log.Printf("Handling pod deletion: %s\n", pod.Name)
 				controllers_util.LogError(c.handler.HandleDelete(pod), podDeleteFailureMsg)
 			},
 		},
