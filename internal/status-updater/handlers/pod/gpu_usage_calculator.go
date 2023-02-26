@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -18,7 +19,7 @@ import (
 
 const (
 	gpuUtilizationAnnotationKey = "run.ai/simulated-gpu-utilization"
-	gpuFractionAnnotationKey    = "gpu-fraction"
+	gpuFractionAnnotationKey    = constants.GpuFractionAnnotation
 
 	idleGpuPodNamePrefix = "runai-idle-gpu-"
 )

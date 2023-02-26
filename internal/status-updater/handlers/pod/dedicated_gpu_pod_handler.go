@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
 )
@@ -21,7 +22,7 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 		return nil
 	}
 
-	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name("nvidia.com/gpu", "")
+	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name(constants.GpuResourceName, "")
 	if requestedGpus == nil {
 		return fmt.Errorf("no GPUs requested in pod %s", pod.Name)
 	}
@@ -41,7 +42,7 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 
 			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx] = gpu
 
-			if pod.Namespace != "runai-reservation" {
+			if pod.Namespace != constants.ReservationNs {
 				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
 			}
 

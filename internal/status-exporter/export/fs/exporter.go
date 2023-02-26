@@ -11,6 +11,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	"github.com/spf13/viper"
 )
 
@@ -52,7 +53,7 @@ func (e *FsExporter) export(clusterTopology *topology.Cluster) {
 
 	for gpuIdx, gpu := range node.Gpus {
 		// Ignoring pods that are not supposed to be seen by runai-container-toolkit
-		if gpu.Status.AllocatedBy.Namespace != "runai-reservation" {
+		if gpu.Status.AllocatedBy.Namespace != constants.ReservationNs {
 			continue
 		}
 

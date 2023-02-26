@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	runaiReservationNs = "runai-reservation"
+	runaiReservationNs = constants.ReservationNs
 )
 
 func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.Cluster) error {
@@ -105,7 +106,7 @@ func getMatchingReservationPodName(kubeclient kubernetes.Interface, pod *v1.Pod)
 }
 
 func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
-	runaiGpu := pod.Annotations["runai-gpu"]
+	runaiGpu := pod.Annotations[constants.GpuIdxAnnotation]
 	if runaiGpu == "" {
 		return "", fmt.Errorf("pod %s has empty runai-gpu annotation", pod.Name)
 	}
@@ -135,7 +136,7 @@ func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Int
 }
 
 func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
-	runaiGpuGroup := pod.Labels["runai-gpu-group"]
+	runaiGpuGroup := pod.Labels[constants.GpuGroupLabel]
 	if runaiGpuGroup == "" {
 		return "", fmt.Errorf("pod %s has empty runai-gpu-group label", pod.Name)
 	}
@@ -147,7 +148,7 @@ func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Int
 
 	var matchingReservationPod *v1.Pod
 	for _, nodeReservationPod := range nodeReservationPods.Items {
-		if nodeReservationPod.Labels["runai-gpu-group"] == runaiGpuGroup {
+		if nodeReservationPod.Labels[constants.GpuGroupLabel] == runaiGpuGroup {
 			matchingReservationPod = &nodeReservationPod
 		}
 	}

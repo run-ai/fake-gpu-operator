@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,7 +37,6 @@ const (
 	podName                     = "fake-pod-name"
 	podUID                      = "fake-pod-uid"
 	containerName               = "fake-container-name"
-	reservationPodNs            = "runai-reservation"
 	reservationPodName          = "gpu-reservation-pod"
 	reservationPodContainerName = "reservation-pod-container"
 	podGroupName                = "pg"
@@ -194,7 +194,7 @@ var _ = Describe("StatusUpdater", func() {
 				expectedTopology = createTopology(nodeGpuCount, node)
 				expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Pod = reservationPodName
 				expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
-				expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Namespace = reservationPodNs
+				expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Namespace = constants.ReservationNs
 				Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
 			}
 			expectTopologyToBeUpdatedWithSharedGpuPod = func() {
@@ -218,7 +218,7 @@ var _ = Describe("StatusUpdater", func() {
 
 				// Test reservation pod handling
 				reservationPod := createGpuIdxReservationPod(gpuIdx)
-				_, err := kubeclient.CoreV1().Pods(reservationPodNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
+				_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				expectTopologyToBeUpdatedWithReservationPod()
@@ -242,7 +242,7 @@ var _ = Describe("StatusUpdater", func() {
 
 				// Test reservation pod handling
 				reservationPod := createGpuGroupReservationPod(gpuGroup)
-				_, err := kubeclient.CoreV1().Pods(reservationPodNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
+				_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				expectTopologyToBeUpdatedWithReservationPod()
@@ -411,7 +411,7 @@ func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase) *v1.Pod {
 					Name: containerName,
 					Resources: v1.ResourceRequirements{
 						Limits: v1.ResourceList{
-							"nvidia.com/gpu": *resource.NewQuantity(gpuCount, resource.DecimalSI),
+							constants.GpuResourceName: *resource.NewQuantity(gpuCount, resource.DecimalSI),
 						},
 					},
 				},
@@ -426,17 +426,14 @@ func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase) *v1.Pod {
 func createGpuIdxSharedGpuPod(gpuIdx int, gpuFraction float64) *v1.Pod {
 	pod := createBaseSharedGpuPod(gpuFraction)
 
-	pod.Annotations["runai-gpu"] = fmt.Sprintf("%d", gpuIdx)
+	pod.Annotations[constants.GpuIdxAnnotation] = fmt.Sprintf("%d", gpuIdx)
 
 	return pod
 }
 
 func createGpuGroupSharedGpuPod(gpuGroup string, gpuFraction float64) *v1.Pod {
 	pod := createBaseSharedGpuPod(gpuFraction)
-
-	// GuyTodo
-	pod.Labels["runai-gpu-group"] = gpuGroup
-
+	pod.Labels[constants.GpuGroupLabel] = gpuGroup
 	return pod
 }
 
@@ -447,8 +444,8 @@ func createBaseSharedGpuPod(gpuFraction float64) *v1.Pod {
 			Namespace: podNamespace,
 			UID:       podUID,
 			Annotations: map[string]string{
-				"gpu-fraction":   fmt.Sprintf("%f", gpuFraction),
-				"pod-group-name": podGroupName,
+				constants.GpuFractionAnnotation: fmt.Sprintf("%f", gpuFraction),
+				"pod-group-name":                podGroupName,
 			},
 			Labels: map[string]string{},
 		},
@@ -474,7 +471,7 @@ func createGpuIdxReservationPod(gpuIdx int) *v1.Pod {
 
 func createGpuGroupReservationPod(gpuGroup string) *v1.Pod {
 	pod := createBaseReservationPod()
-	pod.Labels["runai-gpu-group"] = gpuGroup
+	pod.Labels[constants.GpuGroupLabel] = gpuGroup
 	return pod
 }
 
@@ -482,7 +479,7 @@ func createBaseReservationPod() *v1.Pod {
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        reservationPodName,
-			Namespace:   reservationPodNs,
+			Namespace:   constants.ReservationNs,
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
 		},
@@ -493,7 +490,7 @@ func createBaseReservationPod() *v1.Pod {
 					Name: reservationPodContainerName,
 					Resources: v1.ResourceRequirements{
 						Limits: v1.ResourceList{
-							"nvidia.com/gpu": *resource.NewQuantity(1, resource.DecimalSI),
+							constants.GpuResourceName: *resource.NewQuantity(1, resource.DecimalSI),
 						},
 					},
 				},
