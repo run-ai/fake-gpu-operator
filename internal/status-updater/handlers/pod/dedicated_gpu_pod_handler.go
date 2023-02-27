@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
 )
@@ -14,7 +15,14 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 		return nil
 	}
 
-	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name("nvidia.com/gpu", "")
+	// This can happen when the status updater is restarted.
+	// (If that will affect performance, we should construct a helper map of allocated pods)
+	if isAlreadyAllocated(pod, clusterTopology) {
+		log.Printf("Pod %s is already allocated, skipping...\n", pod.Name)
+		return nil
+	}
+
+	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name(constants.GpuResourceName, "")
 	if requestedGpus == nil {
 		return fmt.Errorf("no GPUs requested in pod %s", pod.Name)
 	}
@@ -34,7 +42,7 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 
 			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx] = gpu
 
-			if pod.Namespace != "runai-reservation" {
+			if pod.Namespace != constants.ReservationNs {
 				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
 			}
 
@@ -54,4 +62,17 @@ func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology 
 			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx].Status = topology.GpuStatus{}
 		}
 	}
+}
+
+func isAlreadyAllocated(pod *v1.Pod, clusterTopology *topology.Cluster) bool {
+	for _, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
+		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
+			gpu.Status.AllocatedBy.Pod == pod.Name &&
+			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
+		if isGpuOccupiedByPod {
+			return true
+		}
+	}
+
+	return false
 }

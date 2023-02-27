@@ -35,7 +35,6 @@ func NewAppRunner(app App) *AppRunner {
 
 func (appRunner *AppRunner) Run() {
 	appRunner.Wg.Add(1)
-	print("added")
 	go func() {
 		defer appRunner.Wg.Done()
 		appRunner.App.Run()
