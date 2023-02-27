@@ -121,18 +121,13 @@ func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Int
 		return "", err
 	}
 
-	var matchingReservationPod *v1.Pod
 	for _, nodeReservationPod := range nodeReservationPods.Items {
 		if nodeReservationPod.Annotations[constants.ReservationPodGpuIdxAnnotation] == runaiGpu {
-			matchingReservationPod = &nodeReservationPod
+			return nodeReservationPod.Name, nil
 		}
 	}
 
-	if matchingReservationPod == nil {
-		return "", fmt.Errorf("no reservation pod found for gpu %d on node %s", gpuIdx, pod.Spec.NodeName)
-	}
-
-	return matchingReservationPod.Name, nil
+	return "", fmt.Errorf("no reservation pod found for gpu %d on node %s", gpuIdx, pod.Spec.NodeName)
 }
 
 func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
@@ -146,18 +141,13 @@ func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Int
 		return "", err
 	}
 
-	var matchingReservationPod *v1.Pod
 	for _, nodeReservationPod := range nodeReservationPods.Items {
 		if nodeReservationPod.Labels[constants.GpuGroupLabel] == runaiGpuGroup {
-			matchingReservationPod = &nodeReservationPod
+			return nodeReservationPod.Name, nil
 		}
 	}
 
-	if matchingReservationPod == nil {
-		return "", fmt.Errorf("no reservation pod found for gpu group %s on node %s", runaiGpuGroup, pod.Spec.NodeName)
-	}
-
-	return matchingReservationPod.Name, nil
+	return "", fmt.Errorf("no reservation pod found for gpu group %s on node %s", runaiGpuGroup, pod.Spec.NodeName)
 }
 
 func getNodeReservationPods(kubeclient kubernetes.Interface, nodeName string) (*v1.PodList, error) {
