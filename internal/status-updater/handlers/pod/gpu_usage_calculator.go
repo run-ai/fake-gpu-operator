@@ -125,10 +125,10 @@ func isPodNameMarkedAsIdle(podName string) bool {
 	return strings.HasPrefix(podName, idleGpuPodNamePrefix)
 }
 
-func generateGpuUsageStatus(gpuUtilization topology.Range, gpuFraction float64, totalGpuMemory int, isInferencePod bool) topology.GpuUsageStatus {
+func generateGpuUsageStatus(gpuUtilization topology.Range, gpuFraction float64, totalGpuMemory int, useKnativeUtilization bool) topology.GpuUsageStatus {
 	return topology.GpuUsageStatus{
-		Utilization:    gpuUtilization,
-		FbUsed:         int(float64(totalGpuMemory) * gpuFraction),
-		IsInferencePod: isInferencePod,
+		Utilization:           gpuUtilization,
+		FbUsed:                int(float64(totalGpuMemory) * gpuFraction),
+		UseKnativeUtilization: useKnativeUtilization,
 	}
 }

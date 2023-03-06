@@ -14,7 +14,7 @@ import (
 func (m *PodGpuUsageStatusMap) Utilization() int {
 	var sum int
 	for k, v := range *m {
-		if v.IsInferencePod {
+		if v.UseKnativeUtilization {
 			sum += m.knativeUtilization(string(k))
 		} else {
 			sum += v.Utilization.Random()

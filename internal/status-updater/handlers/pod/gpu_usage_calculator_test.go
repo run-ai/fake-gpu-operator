@@ -30,8 +30,8 @@ var _ = Describe("GpuUsageCalculator", func() {
 					Min: 15,
 					Max: 15,
 				},
-				FbUsed:         500,
-				IsInferencePod: false,
+				FbUsed:                500,
+				UseKnativeUtilization: false,
 			},
 		},
 		"annotated with range GPU utilization": {
@@ -42,8 +42,8 @@ var _ = Describe("GpuUsageCalculator", func() {
 					Min: 15,
 					Max: 30,
 				},
-				FbUsed:         1000,
-				IsInferencePod: false,
+				FbUsed:                1000,
+				UseKnativeUtilization: false,
 			},
 		},
 		"named as idle": {
@@ -54,8 +54,8 @@ var _ = Describe("GpuUsageCalculator", func() {
 					Min: 0,
 					Max: 0,
 				},
-				FbUsed:         1000,
-				IsInferencePod: false,
+				FbUsed:                1000,
+				UseKnativeUtilization: false,
 			},
 		},
 	}

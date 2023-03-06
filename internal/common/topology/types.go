@@ -40,9 +40,9 @@ type ContainerDetails struct {
 }
 
 type GpuUsageStatus struct {
-	Utilization    Range `yaml:"utilization"`
-	FbUsed         int   `yaml:"fb-used"`
-	IsInferencePod bool  `yaml:"is-inference-pod"`
+	Utilization           Range `yaml:"utilization"`
+	FbUsed                int   `yaml:"fb-used"`
+	UseKnativeUtilization bool  `yaml:"use-knative-utilization"`
 }
 
 type Range struct {

@@ -164,9 +164,9 @@ var _ = Describe("StatusUpdater", func() {
 					for i := 0; i < int(caseDetails.podGpuCount); i++ {
 						expectedTopology.Nodes[node].Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 							podUID: topology.GpuUsageStatus{
-								Utilization:    getWorkloadTypeExpectedUtilization(caseDetails.workloadType),
-								FbUsed:         expectedTopology.Nodes[node].GpuMemory,
-								IsInferencePod: caseDetails.workloadType == "inference",
+								Utilization:           getWorkloadTypeExpectedUtilization(caseDetails.workloadType),
+								FbUsed:                expectedTopology.Nodes[node].GpuMemory,
+								UseKnativeUtilization: caseDetails.workloadType == "inference",
 							},
 						}
 						expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Pod = podName
