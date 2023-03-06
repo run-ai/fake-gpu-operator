@@ -10,6 +10,7 @@ import (
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,6 +38,10 @@ func calculateUsage(dynamicclient dynamic.Interface, pod *v1.Pod, totalGpuMemory
 		} else {
 			log.Printf("Error parsing gpu-fraction annotation: %s\n", err)
 		}
+	}
+
+	if !util.IsPodRunning(pod) {
+		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, false)
 	}
 
 	if isPodNameMarkedAsIdle(pod.Name) {

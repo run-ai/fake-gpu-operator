@@ -129,9 +129,10 @@ var _ = Describe("StatusUpdater", func() {
 
 	When("informed of a dedicated GPU pod", func() {
 		type testCase struct {
-			podGpuCount  int64
-			podPhase     v1.PodPhase
-			workloadType string
+			podGpuCount   int64
+			podPhase      v1.PodPhase
+			podConditions []v1.PodCondition
+			workloadType  string
 		}
 
 		cases := []testCase{}
@@ -139,11 +140,22 @@ var _ = Describe("StatusUpdater", func() {
 		for i := int64(1); i <= nodeGpuCount; i++ {
 			for _, phase := range []v1.PodPhase{v1.PodPending, v1.PodRunning, v1.PodSucceeded, v1.PodFailed, v1.PodUnknown} {
 				for _, workloadType := range []string{"build", "train", "interactive-preemptible", "inference"} {
-					cases = append(cases, testCase{
+					tCase := testCase{
 						podGpuCount:  i,
 						podPhase:     phase,
 						workloadType: workloadType,
-					})
+					}
+
+					if phase == v1.PodPending { // Pending pods can be unscheduled or scheduled (e.g. when scheduled but the containers are not started yet)
+						tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionFalse}}
+						cases = append(cases, tCase)
+
+						tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}}
+						cases = append(cases, tCase)
+					} else { // Non-pending pods are always scheduled
+						tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}}
+						cases = append(cases, tCase)
+					}
 				}
 			}
 		}
@@ -152,7 +164,7 @@ var _ = Describe("StatusUpdater", func() {
 			caseBaseName := fmt.Sprintf("GPU count %d, pod phase %s, workloadType: %s", caseDetails.podGpuCount, caseDetails.podPhase, caseDetails.workloadType)
 			caseDetails := caseDetails
 			It(caseBaseName, func() {
-				pod := createDedicatedGpuPod(caseDetails.podGpuCount, caseDetails.podPhase)
+				pod := createDedicatedGpuPod(caseDetails.podGpuCount, caseDetails.podPhase, caseDetails.podConditions)
 				_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 				podGroup := createPodGroup(caseDetails.workloadType)
@@ -160,13 +172,16 @@ var _ = Describe("StatusUpdater", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				expectedTopology := createTopology(nodeGpuCount, node)
-				if caseDetails.podPhase == v1.PodRunning {
+				isPodScheduledConditionTrue := isConditionTrue(caseDetails.podConditions, v1.PodScheduled)
+
+				if caseDetails.podPhase == v1.PodRunning ||
+					(caseDetails.podPhase == v1.PodPending && isPodScheduledConditionTrue) {
 					for i := 0; i < int(caseDetails.podGpuCount); i++ {
 						expectedTopology.Nodes[node].Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 							podUID: topology.GpuUsageStatus{
-								Utilization:           getWorkloadTypeExpectedUtilization(caseDetails.workloadType),
+								Utilization:           getExpectedUtilization(caseDetails.workloadType, caseDetails.podPhase),
 								FbUsed:                expectedTopology.Nodes[node].GpuMemory,
-								UseKnativeUtilization: caseDetails.workloadType == "inference",
+								UseKnativeUtilization: caseDetails.workloadType == "inference" && caseDetails.podPhase == v1.PodRunning,
 							},
 						}
 						expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Pod = podName
@@ -394,7 +409,7 @@ func createTopology(gpuCount int64, nodeName string) *topology.Cluster {
 	}
 }
 
-func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase) *v1.Pod {
+func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase, conditions []v1.PodCondition) *v1.Pod {
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
@@ -418,7 +433,8 @@ func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase) *v1.Pod {
 			},
 		},
 		Status: v1.PodStatus{
-			Phase: phase,
+			Phase:      phase,
+			Conditions: conditions,
 		},
 	}
 }
@@ -459,6 +475,12 @@ func createBaseSharedGpuPod(gpuFraction float64) *v1.Pod {
 		},
 		Status: v1.PodStatus{
 			Phase: v1.PodRunning,
+			Conditions: []v1.PodCondition{
+				{
+					Type:   v1.PodScheduled,
+					Status: v1.ConditionTrue,
+				},
+			},
 		},
 	}
 }
@@ -497,7 +519,8 @@ func createBaseReservationPod() *v1.Pod {
 			},
 		},
 		Status: v1.PodStatus{
-			Phase: v1.PodRunning,
+			Phase:      v1.PodRunning,
+			Conditions: []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}},
 		},
 	}
 }
@@ -518,7 +541,14 @@ func createPodGroup(workloadType string) *unstructured.Unstructured {
 	}
 }
 
-func getWorkloadTypeExpectedUtilization(workloadType string) topology.Range {
+func getExpectedUtilization(workloadType string, podPhase v1.PodPhase) topology.Range {
+	if podPhase != v1.PodRunning {
+		return topology.Range{
+			Min: 0,
+			Max: 0,
+		}
+	}
+
 	switch workloadType {
 	case "train":
 		return topology.Range{
@@ -536,4 +566,13 @@ func getWorkloadTypeExpectedUtilization(workloadType string) topology.Range {
 			Max: 100,
 		}
 	}
+}
+
+func isConditionTrue(conditions []v1.PodCondition, conditionType v1.PodConditionType) bool {
+	for _, condition := range conditions {
+		if condition.Type == conditionType && condition.Status == v1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
