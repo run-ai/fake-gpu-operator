@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=status-
 
 FROM common-builder as status-exporter-builder
 COPY ./cmd/status-exporter/ ./cmd/status-exporter/
-COPY ./internal/status-exporter/ ./internal/status-exporter/
+COPY ./internal/ ./internal/
 RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=status-exporter
 
 FROM common-builder as topology-server-builder
