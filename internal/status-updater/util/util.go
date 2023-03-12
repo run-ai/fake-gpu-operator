@@ -21,3 +21,17 @@ func IsDedicatedGpuPod(pod *v1.Pod) bool {
 func IsPodRunning(pod *v1.Pod) bool {
 	return pod.Status.Phase == v1.PodRunning
 }
+
+func IsPodTerminated(pod *v1.Pod) bool {
+	return pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed
+}
+
+func IsPodScheduled(pod *v1.Pod) bool {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == v1.PodScheduled && condition.Status == v1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
+}
