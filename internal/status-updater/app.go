@@ -42,6 +42,7 @@ func (app *StatusUpdaterApp) Run() {
 }
 
 func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
+	app.stopCh = stop
 	clusterConfig := InClusterConfigFn()
 
 	app.wg = wg
