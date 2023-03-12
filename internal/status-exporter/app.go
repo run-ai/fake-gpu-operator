@@ -37,6 +37,7 @@ func (app *StatusExporterApp) Run() {
 }
 
 func (app *StatusExporterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
+	app.stopCh = stop
 	if app.Kubeclient == nil {
 		app.Kubeclient = kubeclient.NewKubeClient(nil, stop)
 	}
