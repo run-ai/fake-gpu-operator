@@ -42,7 +42,6 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 	nodeAutofillSettings := clusterTopology.Config.NodeAutofill
 
 	clusterTopology.Nodes[node.Name] = topology.Node{
-		GpuCount:   nodeAutofillSettings.GpuCount,
 		GpuMemory:  nodeAutofillSettings.GpuMemory,
 		GpuProduct: nodeAutofillSettings.GpuProduct,
 		Gpus:       generateGpuDetails(nodeAutofillSettings.GpuCount, node.Name),
