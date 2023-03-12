@@ -52,10 +52,14 @@ func TestExport(t *testing.T) {
 	}
 
 	fakeWatcher := &FakeWatcher{}
-	wg.Add(1)
-	lablesExporter := labels.NewLabelsExporter(fakeWatcher, kubeClientMock, wg)
+	lablesExporter := labels.NewLabelsExporter(fakeWatcher, kubeClientMock)
 	stop := make(chan struct{})
-	go lablesExporter.Run(stop)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		lablesExporter.Run(stop)
+	}()
+
 	fakeWatcher.topologyChan <- topology
 	stop <- struct{}{}
 	wg.Wait()

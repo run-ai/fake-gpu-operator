@@ -2,7 +2,6 @@ package watch
 
 import (
 	"log"
-	"sync"
 	"time"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
@@ -16,13 +15,11 @@ const defaultMaxExportInterval = 10 * time.Second
 type KubeWatcher struct {
 	kubeclient  kubeclient.KubeClientInterface
 	subscribers []chan<- *topology.Cluster
-	wg          *sync.WaitGroup
 }
 
-func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface, wg *sync.WaitGroup) *KubeWatcher {
+func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface) *KubeWatcher {
 	return &KubeWatcher{
 		kubeclient: kubeclient,
-		wg:         wg,
 	}
 }
 
@@ -31,7 +28,6 @@ func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.Cluster) {
 }
 
 func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
-	defer w.wg.Done()
 	cmChan, err := w.kubeclient.WatchConfigMap(viper.GetString("TOPOLOGY_CM_NAMESPACE"), viper.GetString("TOPOLOGY_CM_NAME"))
 	if err != nil {
 		panic(err)

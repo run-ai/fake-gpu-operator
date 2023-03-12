@@ -30,23 +30,40 @@ type StatusExporterApp struct {
 
 func (app *StatusExporterApp) Run() {
 	app.wg.Add(4)
-	go app.Watcher.Watch(app.stopCh)
-	go app.MetricExporter.Run(app.stopCh)
-	go app.LabelsExporter.Run(app.stopCh)
-	go app.FsExporter.Run(app.stopCh)
+
+	go func() {
+		defer app.wg.Done()
+		app.Watcher.Watch(app.stopCh)
+	}()
+
+	go func() {
+		defer app.wg.Done()
+		app.MetricExporter.Run(app.stopCh)
+	}()
+
+	go func() {
+		defer app.wg.Done()
+		app.LabelsExporter.Run(app.stopCh)
+	}()
+
+	go func() {
+		defer app.wg.Done()
+		app.FsExporter.Run(app.stopCh)
+	}()
+
+	app.wg.Wait()
 }
 
-func (app *StatusExporterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
-	app.stopCh = stop
+func (app *StatusExporterApp) Init(stop chan struct{}) {
 	if app.Kubeclient == nil {
 		app.Kubeclient = kubeclient.NewKubeClient(nil, stop)
 	}
-	app.wg = wg
+	app.wg = &sync.WaitGroup{}
 
-	app.Watcher = watch.NewKubeWatcher(app.Kubeclient, app.wg)
-	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher, app.wg)
-	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, app.Kubeclient, app.wg)
-	app.FsExporter = fs.NewFsExporter(app.Watcher, app.wg)
+	app.Watcher = watch.NewKubeWatcher(app.Kubeclient)
+	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher)
+	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, app.Kubeclient)
+	app.FsExporter = fs.NewFsExporter(app.Watcher)
 }
 
 func (app *StatusExporterApp) Name() string {

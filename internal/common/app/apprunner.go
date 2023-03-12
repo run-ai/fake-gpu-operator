@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -16,27 +17,26 @@ type AppRunner struct {
 	App        App
 	stopSignal chan os.Signal
 	stopper    chan struct{}
-	Wg         sync.WaitGroup
+	wg         sync.WaitGroup
 }
 
 func NewAppRunner(app App) *AppRunner {
 	stop := make(chan os.Signal, 1)
 	stopCh := make(chan struct{}, 1)
-	wg := &sync.WaitGroup{}
 	LoadConfig(app)
-	app.Init(stopCh, wg)
+	app.Init(stopCh)
 	return &AppRunner{
 		App:        app,
 		stopSignal: stop,
 		stopper:    stopCh,
-		Wg:         sync.WaitGroup{},
+		wg:         sync.WaitGroup{},
 	}
 }
 
 func (appRunner *AppRunner) Run() {
-	appRunner.Wg.Add(1)
+	appRunner.wg.Add(1)
 	go func() {
-		defer appRunner.Wg.Done()
+		defer appRunner.wg.Done()
 		appRunner.App.Run()
 	}()
 
@@ -47,7 +47,9 @@ func (appRunner *AppRunner) Run() {
 	log.Printf("Received signal \"%v\"\n shuting down", s)
 
 	close(appRunner.stopper)
-	appRunner.Wg.Wait()
+	fmt.Println("AppRunner, waiting to stop")
+	appRunner.wg.Wait()
+	fmt.Println("AppRunner, stopped")
 	log.Printf("%s was Stopped", appRunner.App.Name())
 }
 

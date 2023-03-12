@@ -67,7 +67,5 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 }
 
 func (p *PodController) Run(stopCh <-chan struct{}) {
-	defer p.wg.Done()
-
 	p.informer.Run(stopCh)
 }

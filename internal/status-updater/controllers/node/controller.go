@@ -22,7 +22,6 @@ import (
 
 type NodeController struct {
 	kubeClient kubernetes.Interface
-	wg         *sync.WaitGroup
 	informer   cache.SharedIndexInformer
 	handler    nodehandler.Interface
 }
@@ -32,7 +31,6 @@ var _ controllers.Interface = &NodeController{}
 func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *NodeController {
 	c := &NodeController{
 		kubeClient: kubeClient,
-		wg:         wg,
 		informer:   informers.NewSharedInformerFactory(kubeClient, 0).Core().V1().Nodes().Informer(),
 		handler:    nodehandler.NewNodeHandler(kubeClient),
 	}
@@ -65,8 +63,6 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 }
 
 func (c *NodeController) Run(stopCh <-chan struct{}) {
-	defer c.wg.Done()
-
 	err := c.pruneTopologyNodes()
 	if err != nil {
 		log.Fatalf("Failed to prune topology nodes: %v", err)
