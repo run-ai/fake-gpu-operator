@@ -58,9 +58,9 @@ func (app *MigFakeApp) Run() {
 	}
 }
 
-func (app *MigFakeApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
+func (app *MigFakeApp) Init(stop chan struct{}) {
 	app.stopCh = stop
-	app.wg = wg
+	app.wg = &sync.WaitGroup{}
 	err := viper.Unmarshal(&app.Config)
 	if err != nil {
 		log.Fatalf("failed to unmarshal configuration: %e", err)

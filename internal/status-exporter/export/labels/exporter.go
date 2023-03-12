@@ -3,7 +3,6 @@ package labels
 import (
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -15,24 +14,21 @@ import (
 type LabelsExporter struct {
 	topologyChan <-chan *topology.Cluster
 	kubeclient   kubeclient.KubeClientInterface
-	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &LabelsExporter{}
 
-func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface, wg *sync.WaitGroup) *LabelsExporter {
+func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface) *LabelsExporter {
 	topologyChan := make(chan *topology.Cluster)
 	watcher.Subscribe(topologyChan)
 
 	return &LabelsExporter{
 		topologyChan: topologyChan,
 		kubeclient:   kubeclient,
-		wg:           wg,
 	}
 }
 
 func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
-	defer e.wg.Done()
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:

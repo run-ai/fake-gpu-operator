@@ -1,7 +1,6 @@
 package app_test
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -32,7 +31,7 @@ func (fa *FakeApp) GetConfig() interface{} {
 	return nil
 }
 
-func (fa *FakeApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
+func (fa *FakeApp) Init(stop chan struct{}) {
 	fa.stopCh = stop
 	fa.init = true
 }
