@@ -20,11 +20,13 @@ var _ = Describe("GpuUsageCalculator", func() {
 		gpuUtilizationAnnotation string
 		gpuFractionAnnotation    string
 		podName                  string
+		podPhase                 corev1.PodPhase
 		expected                 topology.GpuUsageStatus
 	}{
 		"annotated with static GPU utilization": {
 			gpuUtilizationAnnotation: "15",
 			gpuFractionAnnotation:    "0.5",
+			podPhase:                 corev1.PodRunning,
 			expected: topology.GpuUsageStatus{
 				Utilization: topology.Range{
 					Min: 15,
@@ -37,6 +39,7 @@ var _ = Describe("GpuUsageCalculator", func() {
 		"annotated with range GPU utilization": {
 			gpuUtilizationAnnotation: "15-30",
 			gpuFractionAnnotation:    "1",
+			podPhase:                 corev1.PodRunning,
 			expected: topology.GpuUsageStatus{
 				Utilization: topology.Range{
 					Min: 15,
@@ -49,6 +52,19 @@ var _ = Describe("GpuUsageCalculator", func() {
 		"named as idle": {
 			podName:               idleGpuPodNamePrefix,
 			gpuFractionAnnotation: "1",
+			podPhase:              corev1.PodRunning,
+			expected: topology.GpuUsageStatus{
+				Utilization: topology.Range{
+					Min: 0,
+					Max: 0,
+				},
+				FbUsed:                1000,
+				UseKnativeUtilization: false,
+			},
+		},
+		"not running": {
+			gpuFractionAnnotation: "1",
+			podPhase:              corev1.PodPending,
 			expected: topology.GpuUsageStatus{
 				Utilization: topology.Range{
 					Min: 0,
@@ -70,6 +86,9 @@ var _ = Describe("GpuUsageCalculator", func() {
 						gpuUtilizationAnnotationKey: cInfo.gpuUtilizationAnnotation,
 					},
 					Name: cInfo.podName,
+				},
+				Status: corev1.PodStatus{
+					Phase: cInfo.podPhase,
 				},
 			}
 
