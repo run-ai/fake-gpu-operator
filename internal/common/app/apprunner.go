@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -47,9 +46,7 @@ func (appRunner *AppRunner) Run() {
 	log.Printf("Received signal \"%v\"\n shuting down", s)
 
 	close(appRunner.stopper)
-	fmt.Println("AppRunner, waiting to stop")
 	appRunner.wg.Wait()
-	fmt.Println("AppRunner, stopped")
 	log.Printf("%s was Stopped", appRunner.App.Name())
 }
 
