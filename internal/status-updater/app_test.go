@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -64,6 +65,7 @@ var _ = Describe("StatusUpdater", func() {
 		kubeclient    kubernetes.Interface
 		dynamicClient dynamic.Interface
 		appRunner     *app.AppRunner
+		wg            *sync.WaitGroup
 	)
 
 	BeforeEach(func() {
@@ -110,14 +112,20 @@ var _ = Describe("StatusUpdater", func() {
 		setupFakes(kubeclient, dynamicClient)
 		setupConfig()
 
-		appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})
-		go appRunner.Run()
+		appRunner = app.NewAppRunner(&status_updater.StatusUpdaterApp{})
+		wg = &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			appRunner.Run()
+		}()
 		time.Sleep(100 * time.Millisecond)
 	})
 
 	AfterEach(func() {
 		if appRunner != nil {
 			appRunner.Stop()
+			wg.Wait()
 		}
 	})
 

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,23 +18,20 @@ import (
 
 type MetricsExporter struct {
 	topologyChan <-chan *topology.Cluster
-	wg           *sync.WaitGroup
 }
 
 var _ export.Interface = &MetricsExporter{}
 
-func NewMetricsExporter(watcher watch.Interface, wg *sync.WaitGroup) *MetricsExporter {
+func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
 	topologyChan := make(chan *topology.Cluster)
 	watcher.Subscribe(topologyChan)
 
 	return &MetricsExporter{
 		topologyChan: topologyChan,
-		wg:           wg,
 	}
 }
 
 func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
-	defer e.wg.Done()
 	go setupServer()
 
 	// Republish the metrics every 10 seconds to refresh utilization ranges

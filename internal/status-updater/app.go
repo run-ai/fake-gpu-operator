@@ -37,15 +37,21 @@ type StatusUpdaterApp struct {
 func (app *StatusUpdaterApp) Run() {
 	app.wg.Add(len(app.Controllers))
 	for _, controller := range app.Controllers {
-		go controller.Run(app.stopCh)
+		go func(controller controllers.Interface) {
+			defer app.wg.Done()
+			controller.Run(app.stopCh)
+		}(controller)
 	}
+
+	app.wg.Wait()
 }
 
-func (app *StatusUpdaterApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
-	app.stopCh = stop
+func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
+	app.stopCh = stopCh
+
 	clusterConfig := InClusterConfigFn()
 
-	app.wg = wg
+	app.wg = &sync.WaitGroup{}
 
 	kubeClient := KubeClientFn(clusterConfig)
 	dynamicClient := DynamicClientFn(clusterConfig)

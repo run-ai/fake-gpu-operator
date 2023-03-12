@@ -2,7 +2,6 @@ package migfaker
 
 import (
 	"log"
-	"sync"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/spf13/viper"
@@ -25,7 +24,6 @@ type MigFakeApp struct {
 	KubeClient        *kubeclient.KubeClient
 	MigFaker          *MigFaker
 	stopCh            chan struct{}
-	wg                *sync.WaitGroup
 }
 
 func (app *MigFakeApp) Run() {
@@ -58,9 +56,8 @@ func (app *MigFakeApp) Run() {
 	}
 }
 
-func (app *MigFakeApp) Init(stop chan struct{}, wg *sync.WaitGroup) {
+func (app *MigFakeApp) Init(stop chan struct{}) {
 	app.stopCh = stop
-	app.wg = wg
 	err := viper.Unmarshal(&app.Config)
 	if err != nil {
 		log.Fatalf("failed to unmarshal configuration: %e", err)
