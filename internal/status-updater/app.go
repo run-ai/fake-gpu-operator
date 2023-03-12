@@ -1,7 +1,6 @@
 package status_updater
 
 import (
-	"fmt"
 	"sync"
 
 	"k8s.io/client-go/dynamic"
@@ -41,7 +40,6 @@ func (app *StatusUpdaterApp) Run() {
 		go func(controller controllers.Interface) {
 			defer app.wg.Done()
 			controller.Run(app.stopCh)
-			fmt.Println("Controller, stopped")
 		}(controller)
 	}
 
