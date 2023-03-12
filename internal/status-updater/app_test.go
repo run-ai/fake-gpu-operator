@@ -282,7 +282,6 @@ var _ = Describe("StatusUpdater", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(clusterTopology).ToNot(BeNil())
 
-			Expect(clusterTopology.Nodes["node1"].GpuCount).To(Equal(clusterTopology.Config.NodeAutofill.GpuCount))
 			Expect(clusterTopology.Nodes["node1"].GpuMemory).To(Equal(clusterTopology.Config.NodeAutofill.GpuMemory))
 			Expect(clusterTopology.Nodes["node1"].GpuProduct).To(Equal(clusterTopology.Config.NodeAutofill.GpuProduct))
 			Expect(clusterTopology.Nodes["node1"].Gpus).To(HaveLen(clusterTopology.Config.NodeAutofill.GpuCount))
@@ -385,7 +384,6 @@ func createTopology(gpuCount int64, nodeName string) *topology.Cluster {
 		Nodes: map[string]topology.Node{
 			nodeName: {
 				GpuMemory:  11441,
-				GpuCount:   int(gpuCount),
 				GpuProduct: "Tesla-K80",
 				Gpus:       gpus,
 			},
