@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/migfaker"
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,11 @@ func TestFakeMapping(t *testing.T) {
 	kubeClientMock.ActualSetNodeLabels = func(labels map[string]string) {
 		assert.Equal(t, labels["nvidia.com/mig.config.state"], "success")
 	}
+	kubeClientMock.ActualGetNodeLabels = func() (map[string]string, error) {
+		return map[string]string{
+			constants.GpuProductLabel: "NVIDIA-A100-SXM4-40GB",
+		}, nil
+	}
 
 	kubeClientMock.ActualSetNodeAnnotations = func(labels map[string]string) {
 		b64mapping := labels["run.ai/mig-mapping"]
@@ -45,7 +51,7 @@ func TestFakeMapping(t *testing.T) {
 				{
 					Position:      0,
 					DeviceUUID:    fmt.Sprintf("MIG-%s", uid),
-					GpuInstanceId: 0,
+					GpuInstanceId: 5,
 				},
 			},
 		}

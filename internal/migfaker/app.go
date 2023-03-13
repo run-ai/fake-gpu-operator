@@ -28,10 +28,6 @@ type MigFakeApp struct {
 
 func (app *MigFakeApp) Run() {
 	ContinuouslySyncMigConfigChanges(app.KubeClient.ClientSet, app.SyncableMigConfig, app.stopCh)
-	err := app.MigFaker.FakeNodeLabels()
-	if err != nil {
-		log.Fatalf("Error faking node labels: %e", err)
-	}
 	for {
 		select {
 		case <-app.stopCh:
