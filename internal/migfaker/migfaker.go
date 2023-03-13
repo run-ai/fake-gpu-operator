@@ -42,7 +42,7 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 
 		gpuIdx, err := strconv.Atoi(selectedDevice.Devices[0])
 		if err != nil {
-			return fmt.Errorf("failed to parse gpu index: %w", err)
+			return fmt.Errorf("failed to parse gpu index %s: %w", selectedDevice.Devices[0], err)
 		}
 		mappings[gpuIdx] = faker.copyMigDevices(selectedDevice)
 	}
