@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
 )

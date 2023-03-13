@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
 	"github.com/spf13/viper"
 )
 

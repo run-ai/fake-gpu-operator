@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
