@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
@@ -33,9 +34,17 @@ func (faker *MigFaker) FakeNodeLabels() error {
 }
 
 func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
-	mappings := map[string]map[string]string{}
-	for id, selectedDevice := range config.SelectedDevices {
-		mappings[fmt.Sprint(id)] = faker.copyMigDevices(selectedDevice)
+	mappings := MigMapping{}
+	for _, selectedDevice := range config.SelectedDevices {
+		if len(selectedDevice.Devices) == 0 {
+			continue
+		}
+
+		gpuIdx, err := strconv.Atoi(selectedDevice.Devices[0])
+		if err != nil {
+			return fmt.Errorf("failed to parse gpu index: %w", err)
+		}
+		mappings[gpuIdx] = faker.copyMigDevices(selectedDevice)
 	}
 
 	smappings, _ := json.Marshal(mappings)
@@ -60,10 +69,14 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 	return nil
 }
 
-func (*MigFaker) copyMigDevices(devices SelectedDevices) map[string]string {
-	migDevices := map[string]string{}
-	for key := range devices.MigDevices {
-		migDevices[key] = fmt.Sprintf("MIG-%s", GenerateUuid())
+func (*MigFaker) copyMigDevices(devices SelectedDevices) []MigDeviceMappingInfo {
+	migDevices := []MigDeviceMappingInfo{}
+	for _, migDevice := range devices.MigDevices {
+		migDevices = append(migDevices, MigDeviceMappingInfo{
+			Position:      migDevice.Position,
+			DeviceUUID:    fmt.Sprintf("MIG-%s", GenerateUuid()),
+			GpuInstanceId: 0,
+		})
 	}
 	return migDevices
 }

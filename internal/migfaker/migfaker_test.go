@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"encoding/base64"
+	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
@@ -19,8 +20,12 @@ func TestFakeMapping(t *testing.T) {
 			{
 				Devices:    []string{"0"},
 				MigEnabled: true,
-				MigDevices: map[string]string{
-					"4": uid.String(),
+				MigDevices: []migfaker.MigDevice{
+					{
+						Name:     "4g.20gb",
+						Position: 0,
+						Size:     4,
+					},
 				},
 			},
 		},
@@ -33,8 +38,21 @@ func TestFakeMapping(t *testing.T) {
 
 	kubeClientMock.ActualSetNodeAnnotations = func(labels map[string]string) {
 		b64mapping := labels["run.ai/mig-mapping"]
-		mapping, _ := base64.StdEncoding.DecodeString(b64mapping)
-		assert.JSONEq(t, string(mapping), fmt.Sprintf(`{"0":{"4":"MIG-%s"}}`, uid))
+		actualMappingJson, _ := base64.StdEncoding.DecodeString(b64mapping)
+
+		expectedMapping := migfaker.MigMapping{
+			0: []migfaker.MigDeviceMappingInfo{
+				{
+					Position:      0,
+					DeviceUUID:    fmt.Sprintf("MIG-%s", uid),
+					GpuInstanceId: 0,
+				},
+			},
+		}
+		expectedMappingJson, err := json.Marshal(expectedMapping)
+
+		assert.NoError(t, err)
+		assert.JSONEq(t, string(expectedMappingJson), string(actualMappingJson))
 	}
 
 	migFaker := migfaker.NewMigFaker(kubeClientMock)
