@@ -5,6 +5,8 @@ type AnnotationMigConfig struct {
 	MigConfigs MigConfigs `yaml:"mig-configs"`
 }
 
+// A copy of github.com/run-ai/runai-operator/mig-parted/api/spec/v1.Spec
+// (not imported to reduce dependencies)
 type MigConfigs struct {
 	SelectedDevices []SelectedDevices `yaml:"selected"`
 }
@@ -22,6 +24,7 @@ type MigDevice struct {
 }
 
 // A copy of github.com/run-ai/runai-operator/mig-provisioner/pkg/node.MigMapping
+// (not imported to reduce dependencies)
 type MigMapping map[int][]MigDeviceMappingInfo
 
 type MigDeviceMappingInfo struct {
