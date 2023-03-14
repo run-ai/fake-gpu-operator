@@ -7,7 +7,6 @@ import (
 type KubeClientMock struct {
 	ActualSetNodeLabels      func(labels map[string]string)
 	ActualSetNodeAnnotations func(annotations map[string]string)
-	ActualGetNodeLabels      func() (map[string]string, error)
 	ActualWatchConfigMap     func(namespace string, configmapName string)
 }
 
@@ -20,10 +19,6 @@ func (client *KubeClientMock) SetNodeAnnotations(annotations map[string]string) 
 func (client *KubeClientMock) SetNodeLabels(labels map[string]string) error {
 	client.ActualSetNodeLabels(labels)
 	return nil
-}
-
-func (client *KubeClientMock) GetNodeLabels() (map[string]string, error) {
-	return client.ActualGetNodeLabels()
 }
 
 func (client *KubeClientMock) WatchConfigMap(namespace string, configmapName string) (chan *corev1.ConfigMap, error) {
