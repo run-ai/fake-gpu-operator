@@ -200,12 +200,12 @@ var _ = Describe("StatusUpdater", func() {
 						}
 					}
 
-					Eventually(getTopologyFromKube(kubeclient)).WithTimeout(3 * time.Second).Should(Equal(expectedTopology))
+					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
 
 					By("deleting the pod")
 					err = kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 					Expect(err).ToNot(HaveOccurred())
-					Eventually(getTopologyFromKube(kubeclient)).WithTimeout(3 * time.Second).Should(Equal(createTopology(nodeGpuCount, node)))
+					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount, node)))
 				})
 			}
 		})
