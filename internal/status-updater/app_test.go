@@ -185,7 +185,7 @@ var _ = Describe("StatusUpdater", func() {
 					isPodScheduledConditionTrue := isConditionTrue(caseDetails.podConditions, v1.PodScheduled)
 
 					if caseDetails.podPhase == v1.PodRunning ||
-						(caseDetails.podPhase == v1.PodPending && isPodScheduledConditionTrue) {
+						((caseDetails.podPhase == v1.PodPending || caseDetails.podPhase == v1.PodUnknown) && isPodScheduledConditionTrue) {
 						for i := 0; i < int(caseDetails.podGpuCount); i++ {
 							expectedTopology.Nodes[node].Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 								podUID: topology.GpuUsageStatus{
