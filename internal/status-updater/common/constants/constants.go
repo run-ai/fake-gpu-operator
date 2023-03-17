@@ -6,7 +6,7 @@ const (
 	PodGroupNameAnnotation         = "pod-group-name"
 	ReservationPodGpuIdxAnnotation = "run.ai/reserve_for_gpu_index"
 
-	GpuGroupLabel = "runai-pod-group"
+	GpuGroupLabel = "runai-gpu-group"
 
 	ReservationNs = "runai-reservation"
 

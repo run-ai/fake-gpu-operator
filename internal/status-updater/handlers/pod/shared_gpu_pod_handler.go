@@ -24,18 +24,16 @@ func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *to
 		return nil
 	}
 
-	nodeTopology, ok := clusterTopology.Nodes[pod.Spec.NodeName]
-	if !ok {
-		return fmt.Errorf("could not find node %s in cluster topology", pod.Spec.NodeName)
+	return p.calculateAndSetPodGpuUsageStatus(pod, clusterTopology)
+}
+
+func (p *PodHandler) handleSharedGpuPodUpdate(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+	if !util.IsSharedGpuPod(pod) {
+		return nil
 	}
 
-	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, &nodeTopology)
-	if err != nil {
-		return err
-	}
-
-	nodeTopology.Gpus[reservationPodGpuIdx].Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
-	return nil
+	// Recalculate the pod's GPU usage status.
+	return p.calculateAndSetPodGpuUsageStatus(pod, clusterTopology)
 }
 
 func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.Cluster) error {
@@ -54,6 +52,21 @@ func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *to
 	}
 
 	delete(nodeTopology.Gpus[reservationPodGpuIdx].Status.PodGpuUsageStatus, pod.UID)
+	return nil
+}
+
+func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+	nodeTopology, ok := clusterTopology.Nodes[pod.Spec.NodeName]
+	if !ok {
+		return fmt.Errorf("could not find node %s in cluster topology", pod.Spec.NodeName)
+	}
+
+	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, &nodeTopology)
+	if err != nil {
+		return err
+	}
+
+	nodeTopology.Gpus[reservationPodGpuIdx].Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
 	return nil
 }
 

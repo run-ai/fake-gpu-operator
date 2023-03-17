@@ -29,7 +29,9 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 
 	requestedGpusCount := requestedGpus.Value()
 	log.Printf("Requested GPUs: %d\n", requestedGpusCount)
-	for idx, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
+	for idx := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
+		gpu := &clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx]
+
 		if requestedGpusCount <= 0 {
 			break
 		}
@@ -39,8 +41,6 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 			gpu.Status.AllocatedBy.Namespace = pod.Namespace
 			gpu.Status.AllocatedBy.Pod = pod.Name
 			gpu.Status.AllocatedBy.Container = pod.Spec.Containers[0].Name
-
-			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx] = gpu
 
 			if pod.Namespace != constants.ReservationNs {
 				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
@@ -53,7 +53,33 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 	return nil
 }
 
+func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+	if !util.IsDedicatedGpuPod(pod) {
+		return nil
+	}
+
+	for idx := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
+		gpu := &clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx]
+
+		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
+			gpu.Status.AllocatedBy.Pod == pod.Name &&
+			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
+		if isGpuOccupiedByPod {
+			if pod.Namespace != constants.ReservationNs {
+				gpu.Status.PodGpuUsageStatus[pod.UID] =
+					calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.Cluster) {
+	if !util.IsDedicatedGpuPod(pod) {
+		return
+	}
+
 	for idx, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&

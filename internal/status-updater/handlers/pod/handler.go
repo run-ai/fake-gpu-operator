@@ -12,6 +12,7 @@ import (
 
 type Interface interface {
 	HandleAdd(pod *v1.Pod) error
+	HandleUpdate(pod *v1.Pod) error
 	HandleDelete(pod *v1.Pod) error
 }
 
@@ -48,6 +49,32 @@ func (p *PodHandler) HandleAdd(pod *v1.Pod) error {
 	}
 
 	err = p.handleSharedGpuPodAddition(pod, clusterTopology)
+	if err != nil {
+		return err
+	}
+
+	return topology.UpdateToKube(p.kubeClient, clusterTopology)
+}
+
+func (p *PodHandler) HandleUpdate(pod *v1.Pod) error {
+	log.Printf("Handling pod update: %s\n", pod.Name)
+
+	clusterTopology, err := topology.GetFromKube(p.kubeClient)
+	if err != nil {
+		return fmt.Errorf("error getting topology: %v", err)
+	}
+
+	_, ok := clusterTopology.Nodes[pod.Spec.NodeName]
+	if !ok {
+		return fmt.Errorf("node %s not found in topology", pod.Spec.NodeName)
+	}
+
+	err = p.handleDedicatedGpuPodUpdate(pod, clusterTopology)
+	if err != nil {
+		return err
+	}
+
+	err = p.handleSharedGpuPodUpdate(pod, clusterTopology)
 	if err != nil {
 		return err
 	}
