@@ -15,6 +15,7 @@ import (
 type KubeClientInterface interface {
 	SetNodeLabels(lables map[string]string) error
 	SetNodeAnnotations(annotations map[string]string) error
+	GetNodeLabels() (map[string]string, error)
 	WatchConfigMap(namespace string, configmapName string) (chan *corev1.ConfigMap, error)
 	GetConfigMap(namespace string, configmapName string) (*corev1.ConfigMap, bool)
 }
@@ -69,6 +70,15 @@ func (client *KubeClient) SetNodeAnnotations(annotations map[string]string) erro
 	log.Printf("labelling node %s with %v\n", nodeName, annotations)
 	_, err = client.ClientSet.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	return err
+}
+
+func (client *KubeClient) GetNodeLabels() (map[string]string, error) {
+	nodeName := viper.GetString("NODE_NAME")
+	node, err := client.ClientSet.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return node.Labels, nil
 }
 
 func (client *KubeClient) GetConfigMap(namespace string, configmapName string) (*corev1.ConfigMap, bool) {

@@ -47,10 +47,11 @@ func (e *LabelsExporter) export(clusterTopology *topology.Cluster) {
 	}
 
 	labels := map[string]string{
-		"nvidia.com/gpu.memory":   strconv.Itoa(node.GpuMemory),
-		"nvidia.com/gpu.product":  node.GpuProduct,
-		"nvidia.com/mig.strategy": clusterTopology.MigStrategy,
-		"nvidia.com/gpu.count":    strconv.Itoa(len(node.Gpus)),
+		"nvidia.com/gpu.memory":                       strconv.Itoa(node.GpuMemory),
+		"nvidia.com/gpu.product":                      node.GpuProduct,
+		"nvidia.com/mig.strategy":                     clusterTopology.MigStrategy,
+		"nvidia.com/gpu.count":                        strconv.Itoa(len(node.Gpus)),
+		"feature.node.kubernetes.io/pci-10de.present": "true",
 	}
 
 	err := e.kubeclient.SetNodeLabels(labels)
