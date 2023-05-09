@@ -183,7 +183,7 @@ func (m *DevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.AllocateReq
 			Mounts: []*pluginapi.Mount{
 				{
 					ContainerPath: "/bin/nvidia-smi",
-					HostPath:      "/var/lib/runai/shared/bin/nvidia-smi",
+					HostPath:      "/var/lib/runai/bin/nvidia-smi",
 				},
 			},
 		}

@@ -11,6 +11,10 @@ build:
 	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
 .PHONY: build
 
+build-shared:
+	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ -buildmode=c-shared ./cmd/${COMPONENT}
+.PHONY: build
+
 clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean
