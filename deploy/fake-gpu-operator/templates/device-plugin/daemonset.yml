@@ -42,6 +42,8 @@ spec:
           volumeMounts:
             - mountPath: /runai/bin
               name: runai-bin-directory
+            - mountPath: /runai/shared
+              name: runai-shared-directory              
             - mountPath: /var/lib/kubelet/device-plugins
               name: device-plugin
             - mountPath: /etc/config/
@@ -67,6 +69,10 @@ spec:
             name: topology
           name: topology
         - hostPath:
-            path: /var/lib/runai/shared/bin
+            path: /var/lib/runai/bin
             type: DirectoryOrCreate
           name: runai-bin-directory
+        - hostPath:
+            path: /var/lib/runai/shared
+            type: DirectoryOrCreate
+          name: runai-shared-directory

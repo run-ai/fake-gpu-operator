@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 
 	"github.com/otiai10/copy"
@@ -14,7 +15,6 @@ import (
 
 func main() {
 	log.Println("Fake Device Plugin Running")
-
 	requiredEnvVars := []string{"TOPOLOGY_PATH", "NODE_NAME"}
 	config.ValidateConfig(requiredEnvVars)
 
@@ -25,6 +25,7 @@ func main() {
 	}
 
 	initNvidiaSmi()
+	initPreloaders()
 
 	devicePlugin := deviceplugin.NewDevicePlugin(topology)
 	if err = devicePlugin.Serve(); err != nil {
@@ -40,17 +41,26 @@ func main() {
 }
 
 func initNvidiaSmi() {
-	srcFileInfo, err := os.Stat("/bin/nvidia-smi")
+	publish("/bin/nvidia-smi", "/runai/bin/nvidia-smi")
+}
+
+func initPreloaders() {
+	publish("/shared/memory/preloader.so", "/runai/shared/memory/preloader.so")
+	publish("/shared/pid/preloader.so", "/runai/shared/pid/preloader.so")
+}
+
+func publish(srcFile string, destFile string) {
+	srcFileInfo, err := os.Stat(srcFile)
 	if os.IsNotExist(err) {
-		log.Println("nvidia-smi not found in /bin/nvidia-smi")
+		log.Printf("%s not found in %s\n", path.Base(srcFile), srcFile)
 		return
 	}
 
-	if destFileInfo, err := os.Stat("/runai/bin/nvidia-smi"); os.IsNotExist(err) || destFileInfo.ModTime().Before(srcFileInfo.ModTime()) {
-		log.Println("nvidia-smi is missing or outdated on the host, copying it from /runai/bin")
-		err = copy.Copy("/bin/nvidia-smi", "/runai/bin/nvidia-smi")
+	if destFileInfo, err := os.Stat(destFile); os.IsNotExist(err) || destFileInfo.ModTime().Before(srcFileInfo.ModTime()) {
+		log.Printf("%s is missing or outdated on the host, copying it from /runai/bin\n", destFile)
+		err = copy.Copy(srcFile, destFile)
 		if err != nil {
-			log.Printf("Failed to copy nvidia-smi: %s\n", err)
+			log.Printf("Failed to copy %s: %s\n", srcFile, err)
 		}
 	}
 }

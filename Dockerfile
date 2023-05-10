@@ -29,6 +29,10 @@ FROM common-builder as nvidia-smi-builder
 COPY ./cmd/nvidia-smi/ ./cmd/nvidia-smi/
 RUN make build COMPONENT=nvidia-smi
 
+FROM common-builder as preloader-builder 
+COPY ./cmd/preloader/ ./cmd/preloader/
+RUN make build-shared COMPONENT=preloader
+
 FROM common-builder as mig-faker-builder
 COPY ./cmd/mig-faker/ ./cmd/mig-faker/
 COPY ./internal/ ./internal/
@@ -37,6 +41,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=mig-fak
 FROM ubuntu as device-plugin
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
 COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
+COPY --from=preloader-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/preloader /shared/memory/preloader.so
+COPY --from=preloader-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/preloader /shared/pid/preloader.so
 ENTRYPOINT ["/bin/device-plugin"]
 
 FROM ubuntu as status-updater
