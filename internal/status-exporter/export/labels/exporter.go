@@ -2,6 +2,7 @@ package labels
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
@@ -32,18 +33,21 @@ func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:
-			e.export(clusterTopology)
+			err := e.export(clusterTopology)
+			if err != nil {
+				log.Printf("Failed to export labels: %v", err)
+			}
 		case <-stopCh:
 			return
 		}
 	}
 }
 
-func (e *LabelsExporter) export(clusterTopology *topology.Cluster) {
+func (e *LabelsExporter) export(clusterTopology *topology.Cluster) error {
 	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
-		panic(fmt.Sprintf("node %s not found", nodeName))
+		return fmt.Errorf("node %s not found", nodeName)
 	}
 
 	labels := map[string]string{
@@ -56,6 +60,8 @@ func (e *LabelsExporter) export(clusterTopology *topology.Cluster) {
 
 	err := e.kubeclient.SetNodeLabels(labels)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to set node labels: %v", err)
 	}
+
+	return nil
 }
