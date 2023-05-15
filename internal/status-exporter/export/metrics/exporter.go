@@ -54,11 +54,11 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *MetricsExporter) export(clusterTopology *topology.Cluster) {
+func (e *MetricsExporter) export(clusterTopology *topology.Cluster) error {
 	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
-		panic(fmt.Sprintf("node %s not found", nodeName))
+		return fmt.Errorf("node %s not found on topology", nodeName)
 	}
 
 	gpuUtilization.Reset()

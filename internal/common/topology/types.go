@@ -6,7 +6,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Types
 type Cluster struct {
 	MigStrategy string          `yaml:"mig-strategy"`
 	Nodes       map[string]Node `yaml:"nodes"`

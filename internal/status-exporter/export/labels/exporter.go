@@ -47,7 +47,7 @@ func (e *LabelsExporter) export(clusterTopology *topology.Cluster) error {
 	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
-		return fmt.Errorf("node %s not found", nodeName)
+		return fmt.Errorf("node %s not found on topology", nodeName)
 	}
 
 	labels := map[string]string{
@@ -60,7 +60,7 @@ func (e *LabelsExporter) export(clusterTopology *topology.Cluster) error {
 
 	err := e.kubeclient.SetNodeLabels(labels)
 	if err != nil {
-		return fmt.Errorf("failed to set node labels: %v", err)
+		return fmt.Errorf("failed to set node labels: %w", err)
 	}
 
 	return nil
