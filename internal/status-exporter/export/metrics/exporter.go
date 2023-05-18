@@ -85,6 +85,8 @@ func (e *MetricsExporter) export(clusterTopology *topology.Cluster) error {
 		gpuFbUsed.With(labels).Set(float64(fbUsed))
 		gpuFbFree.With(labels).Set(float64(node.GpuMemory - fbUsed))
 	}
+
+	return nil
 }
 
 func setupServer() {
