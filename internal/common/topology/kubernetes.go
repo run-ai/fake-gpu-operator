@@ -2,6 +2,7 @@ package topology
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -15,10 +16,15 @@ func GetFromKube(kubeclient kubernetes.Interface) (*Cluster, error) {
 		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
 		context.TODO(), viper.GetString("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to get topology configmap: %v", err)
 	}
 
-	return FromConfigMap(topologyCm)
+	cluster, err := FromConfigMap(topologyCm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse topology configmap: %v", err)
+	}
+
+	return cluster, nil
 }
 
 func UpdateToKube(kubeclient kubernetes.Interface, clusterTopology *Cluster) error {

@@ -51,7 +51,7 @@ func (client *KubeClient) SetNodeLabels(lables map[string]string) error {
 		node.Labels[k] = v
 	}
 
-	log.Printf("labelling node %s with %v\n", nodeName, lables)
+	log.Printf("Labelling node %s with %v\n", nodeName, lables)
 	_, err = client.ClientSet.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	return err
 }
@@ -67,7 +67,7 @@ func (client *KubeClient) SetNodeAnnotations(annotations map[string]string) erro
 		node.Annotations[k] = v
 	}
 
-	log.Printf("labelling node %s with %v\n", nodeName, annotations)
+	log.Printf("Labelling node %s with %v\n", nodeName, annotations)
 	_, err = client.ClientSet.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	return err
 }

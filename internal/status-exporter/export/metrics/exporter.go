@@ -42,11 +42,17 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	for {
 		select {
 		case clusterTopology := <-e.topologyChan:
-			e.export(clusterTopology)
+			err := e.export(clusterTopology)
+			if err != nil {
+				log.Printf("Failed to export metrics: %v", err)
+			}
 			clusterTopologyCache = clusterTopology
 		case <-ticker.C:
 			if clusterTopologyCache != nil {
-				e.export(clusterTopologyCache)
+				err := e.export(clusterTopologyCache)
+				if err != nil {
+					log.Printf("Failed to export metrics: %v", err)
+				}
 			}
 		case <-stopCh:
 			return
@@ -54,11 +60,11 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *MetricsExporter) export(clusterTopology *topology.Cluster) {
+func (e *MetricsExporter) export(clusterTopology *topology.Cluster) error {
 	nodeName := viper.GetString("NODE_NAME")
 	node, ok := clusterTopology.Nodes[nodeName]
 	if !ok {
-		panic(fmt.Sprintf("node %s not found", nodeName))
+		return fmt.Errorf("node %s not found on topology", nodeName)
 	}
 
 	gpuUtilization.Reset()
@@ -85,6 +91,8 @@ func (e *MetricsExporter) export(clusterTopology *topology.Cluster) {
 		gpuFbUsed.With(labels).Set(float64(fbUsed))
 		gpuFbFree.With(labels).Set(float64(node.GpuMemory - fbUsed))
 	}
+
+	return nil
 }
 
 func setupServer() {
