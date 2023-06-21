@@ -1,5 +1,4 @@
 FROM golang:1.18.2 as common-builder
-RUN apt-get update && apt-get install -y clang
 WORKDIR $GOPATH/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
