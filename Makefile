@@ -11,8 +11,9 @@ build:
 	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
 .PHONY: build
 
-build-shared:
-	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ -buildmode=c-shared ./cmd/${COMPONENT}
+build-preloader:
+	mkdir -p ${BUILD_DIR}
+	gcc -fPIC -shared -o ${BUILD_DIR}/preloader ./cmd/preloader/main.c
 .PHONY: build
 
 clean:

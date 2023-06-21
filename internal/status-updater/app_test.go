@@ -2,6 +2,7 @@ package status_updater_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -15,7 +16,6 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
-	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,7 +75,7 @@ var _ = Describe("StatusUpdater", func() {
 			Config:      defaultTopologyConfig,
 		}
 
-		topologyStr, err := yaml.Marshal(clusterTopology)
+		topologyStr, err := json.Marshal(clusterTopology)
 		Expect(err).ToNot(HaveOccurred())
 		topologyConfigMap := &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{

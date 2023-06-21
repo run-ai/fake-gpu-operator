@@ -2,10 +2,10 @@ package topology
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -40,7 +40,7 @@ func UpdateToKube(kubeclient kubernetes.Interface, clusterTopology *Cluster) err
 
 func FromConfigMap(cm *corev1.ConfigMap) (*Cluster, error) {
 	var clusterTopology Cluster
-	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)
+	err := json.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func ToConfigMap(clusterTopology *Cluster) (*corev1.ConfigMap, error) {
 		Data: make(map[string]string),
 	}
 
-	topologyData, err := yaml.Marshal(clusterTopology)
+	topologyData, err := json.Marshal(clusterTopology)
 	if err != nil {
 		return nil, err
 	}
