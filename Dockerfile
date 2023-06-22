@@ -31,7 +31,7 @@ RUN make build COMPONENT=nvidia-smi
 
 FROM common-builder as preloader-builder 
 COPY ./cmd/preloader/ ./cmd/preloader/
-RUN make build-shared COMPONENT=preloader
+RUN make build-preloader
 
 FROM common-builder as mig-faker-builder
 COPY ./cmd/mig-faker/ ./cmd/mig-faker/

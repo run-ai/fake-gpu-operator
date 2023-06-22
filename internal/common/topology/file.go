@@ -1,9 +1,8 @@
 package topology
 
 import (
+	"encoding/json"
 	"os"
-
-	"gopkg.in/yaml.v2"
 )
 
 func GetClusterTopologyFromFs(topologyPath string) (*Cluster, error) {
@@ -14,9 +13,9 @@ func GetClusterTopologyFromFs(topologyPath string) (*Cluster, error) {
 	}
 	defer file.Close()
 
-	// Decode yaml file
+	// Decode json file
 	var clusterTopology Cluster
-	err = yaml.NewDecoder(file).Decode(&clusterTopology)
+	err = json.NewDecoder(file).Decode(&clusterTopology)
 	if err != nil {
 		return nil, err
 	}

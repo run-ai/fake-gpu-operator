@@ -1,61 +1,70 @@
 package topology
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 )
 
 type Cluster struct {
-	MigStrategy string          `yaml:"mig-strategy"`
-	Nodes       map[string]Node `yaml:"nodes"`
-	Config      Config          `yaml:"config"`
+	MigStrategy string          `json:"mig-strategy"`
+	Nodes       map[string]Node `json:"nodes"`
+	Config      Config          `json:"config"`
 }
 
 type Node struct {
-	GpuMemory  int          `yaml:"gpu-memory"`
-	GpuProduct string       `yaml:"gpu-product"`
-	Gpus       []GpuDetails `yaml:"gpus"`
+	GpuMemory  int          `json:"gpu-memory"`
+	GpuProduct string       `json:"gpu-product"`
+	Gpus       []GpuDetails `json:"gpus"`
 }
 
 type GpuDetails struct {
-	ID     string    `yaml:"id"`
-	Status GpuStatus `yaml:"status"`
+	ID     string    `json:"id"`
+	Status GpuStatus `json:"status"`
 }
 
 type PodGpuUsageStatusMap map[types.UID]GpuUsageStatus
 
+func (m PodGpuUsageStatusMap) MarshalJSON() ([]byte, error) {
+	if m == nil {
+		return []byte("{}"), nil
+	}
+
+	return json.Marshal(map[types.UID]GpuUsageStatus(m))
+}
+
 type GpuStatus struct {
-	AllocatedBy ContainerDetails `yaml:"allocated-by"`
+	AllocatedBy ContainerDetails `json:"allocated-by"`
 	// Maps PodUID to its GPU usage status
-	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"pod-gpu-usage-status"`
+	PodGpuUsageStatus PodGpuUsageStatusMap `json:"pod-gpu-usage-status"`
 }
 
 type ContainerDetails struct {
-	Namespace string `yaml:"namespace"`
-	Pod       string `yaml:"pod"`
-	Container string `yaml:"container"`
+	Namespace string `json:"namespace"`
+	Pod       string `json:"pod"`
+	Container string `json:"container"`
 }
 
 type GpuUsageStatus struct {
-	Utilization           Range `yaml:"utilization"`
-	FbUsed                int   `yaml:"fb-used"`
-	UseKnativeUtilization bool  `yaml:"use-knative-utilization"`
+	Utilization           Range `json:"utilization"`
+	FbUsed                int   `json:"fb-used"`
+	UseKnativeUtilization bool  `json:"use-knative-utilization"`
 }
 
 type Range struct {
-	Min int `yaml:"min"`
-	Max int `yaml:"max"`
+	Min int `json:"min"`
+	Max int `json:"max"`
 }
 
 type Config struct {
-	NodeAutofill NodeAutofillSettings `yaml:"node-autofill"`
+	NodeAutofill NodeAutofillSettings `json:"node-autofill"`
 }
 
 type NodeAutofillSettings struct {
-	GpuCount   int    `yaml:"gpu-count"`
-	GpuMemory  int    `yaml:"gpu-memory"`
-	GpuProduct string `yaml:"gpu-product"`
+	GpuCount   int    `json:"gpu-count"`
+	GpuMemory  int    `json:"gpu-memory"`
+	GpuProduct string `json:"gpu-product"`
 }
 
 // Errors
