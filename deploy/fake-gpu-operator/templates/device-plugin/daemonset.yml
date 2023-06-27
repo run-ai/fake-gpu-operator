@@ -50,7 +50,7 @@ spec:
               name: device-plugin
             - mountPath: /etc/config/
               name: topology
-            - mountPath: "etc/config/topology"
+            - mountPath: /etc/config/topology 
               name: topology-new
       dnsPolicy: ClusterFirst
       nodeSelector:
