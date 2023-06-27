@@ -17,8 +17,15 @@ spec:
         app: topology-server
         component: topology-server
     spec:
+      volumes:
+        - name: topology-new
+          persistentVolumeClaim:
+            claimName: topology-pvc
       containers:
         - name: topology-server
+          volumeMounts:
+            - name: topology-new
+              mountPath: "etc/config/topology"
           image: "{{ .Values.topologyServer.image.repository }}:{{ .Values.topologyServer.image.tag }}"
           imagePullPolicy: "{{ .Values.topologyServer.image.pullPolicy }}"
           resources:

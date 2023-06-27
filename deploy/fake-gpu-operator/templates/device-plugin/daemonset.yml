@@ -33,6 +33,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: TOPOLOGY_PATH
               value: /etc/config/topology.yml
+            - name: TOPOLOGY_PATH_NEW
+              value: /etc/config/topology/topology.yml
           imagePullPolicy: Always
           name: nvidia-device-plugin-ctr
           securityContext:
@@ -48,6 +50,8 @@ spec:
               name: device-plugin
             - mountPath: /etc/config/
               name: topology
+            - mountPath: "etc/config/topology"
+              name: topology-new
       dnsPolicy: ClusterFirst
       nodeSelector:
         nvidia.com/gpu.deploy.device-plugin: "true"
@@ -68,6 +72,9 @@ spec:
         - configMap:
             name: topology
           name: topology
+        - name: topology-new
+          persistentVolumeClaim:
+            claimName: topology-pvc
         - hostPath:
             path: /var/lib/runai/bin
             type: DirectoryOrCreate
