@@ -21,6 +21,17 @@ spec:
         - name: topology-new
           persistentVolumeClaim:
             claimName: topology-pvc
+      initContainers:
+        - name: topology-server-init
+          image: openjdk:8-jdk-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo {{ toJson .Values.initialTopology | indent 4 }} > /etc/config/topology/topology.yaml
+          volumeMounts:
+            - name: topology-new
+              mountPath: "etc/config/topology"
       containers:
         - name: topology-server
           volumeMounts:
