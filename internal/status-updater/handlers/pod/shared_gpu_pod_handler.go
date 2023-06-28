@@ -19,34 +19,29 @@ const (
 	runaiReservationNs = constants.ReservationNs
 )
 
-func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.Node) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
 
-	return p.calculateAndSetPodGpuUsageStatus(pod, clusterTopology)
+	return p.calculateAndSetPodGpuUsageStatus(pod, nodeTopology)
 }
 
-func (p *PodHandler) handleSharedGpuPodUpdate(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+func (p *PodHandler) handleSharedGpuPodUpdate(pod *v1.Pod, nodeTopology *topology.Node) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
 
 	// Recalculate the pod's GPU usage status.
-	return p.calculateAndSetPodGpuUsageStatus(pod, clusterTopology)
+	return p.calculateAndSetPodGpuUsageStatus(pod, nodeTopology)
 }
 
-func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, nodeTopology *topology.Node) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
 
-	nodeTopology, ok := clusterTopology.Nodes[pod.Spec.NodeName]
-	if !ok {
-		return fmt.Errorf("could not find node %s in cluster topology", pod.Spec.NodeName)
-	}
-
-	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, &nodeTopology)
+	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, nodeTopology)
 	if err != nil {
 		return err
 	}
@@ -55,13 +50,9 @@ func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, clusterTopology *to
 	return nil
 }
 
-func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, clusterTopology *topology.Cluster) error {
-	nodeTopology, ok := clusterTopology.Nodes[pod.Spec.NodeName]
-	if !ok {
-		return fmt.Errorf("could not find node %s in cluster topology", pod.Spec.NodeName)
-	}
+func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, nodeTopology *topology.Node) error {
 
-	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, &nodeTopology)
+	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, nodeTopology)
 	if err != nil {
 		return err
 	}
@@ -90,7 +81,7 @@ func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Po
 	}
 
 	if reservationPodGpuIdx == -1 {
-		return -1, fmt.Errorf("could not find reservation pod %s in node %s in cluster topology", reservationPodName, pod.Spec.NodeName)
+		return -1, fmt.Errorf("could not find reservation pod %s in node %s topology", reservationPodName, pod.Spec.NodeName)
 	}
 
 	return reservationPodGpuIdx, nil

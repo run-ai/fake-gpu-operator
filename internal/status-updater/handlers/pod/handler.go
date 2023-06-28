@@ -33,74 +33,58 @@ func NewPodHandler(kubeClient kubernetes.Interface, dynamicClient dynamic.Interf
 func (p *PodHandler) HandleAdd(pod *v1.Pod) error {
 	log.Printf("Handling pod addition: %s\n", pod.Name)
 
-	clusterTopology, err := topology.GetFromKube(p.kubeClient)
+	nodeTopology, err := topology.GetNodeTopologyFromCM(p.kubeClient, pod.Spec.NodeName)
 	if err != nil {
-		return fmt.Errorf("error getting topology: %v", err)
+		return fmt.Errorf("could not get node %s topology: %w", pod.Spec.NodeName, err)
 	}
 
-	_, ok := clusterTopology.Nodes[pod.Spec.NodeName]
-	if !ok {
-		return fmt.Errorf("node %s not found in topology", pod.Spec.NodeName)
-	}
-
-	err = p.handleDedicatedGpuPodAddition(pod, clusterTopology)
+	err = p.handleDedicatedGpuPodAddition(pod, nodeTopology)
 	if err != nil {
 		return err
 	}
 
-	err = p.handleSharedGpuPodAddition(pod, clusterTopology)
+	err = p.handleSharedGpuPodAddition(pod, nodeTopology)
 	if err != nil {
 		return err
 	}
 
-	return topology.UpdateToKube(p.kubeClient, clusterTopology)
+	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
 }
 
 func (p *PodHandler) HandleUpdate(pod *v1.Pod) error {
 	log.Printf("Handling pod update: %s\n", pod.Name)
 
-	clusterTopology, err := topology.GetFromKube(p.kubeClient)
+	nodeTopology, err := topology.GetNodeTopologyFromCM(p.kubeClient, pod.Spec.NodeName)
 	if err != nil {
-		return fmt.Errorf("error getting topology: %v", err)
+		return fmt.Errorf("could not get node %s topology: %w", pod.Spec.NodeName, err)
 	}
 
-	_, ok := clusterTopology.Nodes[pod.Spec.NodeName]
-	if !ok {
-		return fmt.Errorf("node %s not found in topology", pod.Spec.NodeName)
-	}
-
-	err = p.handleDedicatedGpuPodUpdate(pod, clusterTopology)
+	err = p.handleDedicatedGpuPodUpdate(pod, nodeTopology)
 	if err != nil {
 		return err
 	}
 
-	err = p.handleSharedGpuPodUpdate(pod, clusterTopology)
+	err = p.handleSharedGpuPodUpdate(pod, nodeTopology)
 	if err != nil {
 		return err
 	}
 
-	return topology.UpdateToKube(p.kubeClient, clusterTopology)
+	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
 }
 
 func (p *PodHandler) HandleDelete(pod *v1.Pod) error {
 	log.Printf("Handling pod deletion: %s\n", pod.Name)
 
-	clusterTopology, err := topology.GetFromKube(p.kubeClient)
+	nodeTopology, err := topology.GetNodeTopologyFromCM(p.kubeClient, pod.Spec.NodeName)
 	if err != nil {
-		return fmt.Errorf("error getting topology: %v", err)
+		return fmt.Errorf("could not get node %s topology: %w", pod.Spec.NodeName, err)
 	}
 
-	_, ok := clusterTopology.Nodes[pod.Spec.NodeName]
-	if !ok {
-		return fmt.Errorf("node %s not found in topology", pod.Spec.NodeName)
-	}
+	p.handleDedicatedGpuPodDeletion(pod, nodeTopology)
 
-	p.handleDedicatedGpuPodDeletion(pod, clusterTopology)
-
-	err = p.handleSharedGpuPodDeletion(pod, clusterTopology)
+	err = p.handleSharedGpuPodDeletion(pod, nodeTopology)
 	if err != nil {
 		return err
 	}
-
-	return topology.UpdateToKube(p.kubeClient, clusterTopology)
+	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
 }
