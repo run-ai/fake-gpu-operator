@@ -47,7 +47,7 @@ func (e *LabelsExporter) export(nodeTopology *topology.Node) error {
 	labels := map[string]string{
 		"nvidia.com/gpu.memory":                       strconv.Itoa(nodeTopology.GpuMemory),
 		"nvidia.com/gpu.product":                      nodeTopology.GpuProduct,
-		"nvidia.com/mig.strategy":                     clusterTopology.MigStrategy,
+		"nvidia.com/mig.strategy":                     nodeTopology.MigStrategy,
 		"nvidia.com/gpu.count":                        strconv.Itoa(len(nodeTopology.Gpus)),
 		"feature.node.kubernetes.io/pci-10de.present": "true",
 	}

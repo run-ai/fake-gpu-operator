@@ -14,9 +14,10 @@ type Cluster struct {
 }
 
 type Node struct {
-	GpuMemory  int          `json:"gpu-memory"`
-	GpuProduct string       `json:"gpu-product"`
-	Gpus       []GpuDetails `json:"gpus"`
+	GpuMemory   int          `json:"gpu-memory"`
+	GpuProduct  string       `json:"gpu-product"`
+	Gpus        []GpuDetails `json:"gpus"`
+	MigStrategy string       `json:"mig-strategy"`
 }
 
 type GpuDetails struct {
