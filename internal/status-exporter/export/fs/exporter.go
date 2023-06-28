@@ -11,17 +11,16 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
-	"github.com/spf13/viper"
 )
 
 type FsExporter struct {
-	topologyChan <-chan *topology.Cluster
+	topologyChan <-chan *topology.Node
 }
 
 var _ export.Interface = &FsExporter{}
 
 func NewFsExporter(watcher watch.Interface) *FsExporter {
-	topologyChan := make(chan *topology.Cluster)
+	topologyChan := make(chan *topology.Node)
 	watcher.Subscribe(topologyChan)
 
 	return &FsExporter{
@@ -32,22 +31,17 @@ func NewFsExporter(watcher watch.Interface) *FsExporter {
 func (e *FsExporter) Run(stopCh <-chan struct{}) {
 	for {
 		select {
-		case clusterTopology := <-e.topologyChan:
-			e.export(clusterTopology)
+		case nodeTopology := <-e.topologyChan:
+			e.export(nodeTopology)
 		case <-stopCh:
 			return
 		}
 	}
 }
 
-func (e *FsExporter) export(clusterTopology *topology.Cluster) {
-	nodeName := viper.GetString("NODE_NAME")
-	node, ok := clusterTopology.Nodes[nodeName]
-	if !ok {
-		panic(fmt.Sprintf("node %s not found", nodeName))
-	}
+func (e *FsExporter) export(nodeTopology *topology.Node) {
 
-	for gpuIdx, gpu := range node.Gpus {
+	for gpuIdx, gpu := range nodeTopology.Gpus {
 		// Ignoring pods that are not supposed to be seen by runai-container-toolkit
 		if gpu.Status.AllocatedBy.Namespace != constants.ReservationNs {
 			continue

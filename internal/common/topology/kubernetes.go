@@ -20,12 +20,12 @@ func GetNodeTopologyFromCM(kubeclient kubernetes.Interface, nodeName string) (*N
 	}
 
 	for _, cm := range cmList.Items {
-		if cm.Name == getNodeTopologyCMName(nodeName) {
+		if cm.Name == GetNodeTopologyCMName(nodeName) {
 			return FromNodeConfigMap(&cm)
 		}
 	}
 
-	return nil, fmt.Errorf("node topology configmap %s not found", getNodeTopologyCMName(nodeName))
+	return nil, fmt.Errorf("node topology configmap %s not found", GetNodeTopologyCMName(nodeName))
 }
 
 func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *Node, nodeName string) error {
@@ -53,7 +53,7 @@ func UpdateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *Node, n
 func DeleteNodeTopologyCM(kubeclient kubernetes.Interface, nodeName string) error {
 
 	err := kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Delete(context.TODO(), getNodeTopologyCMName(nodeName), metav1.DeleteOptions{})
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Delete(context.TODO(), GetNodeTopologyCMName(nodeName), metav1.DeleteOptions{})
 	return err
 }
 
@@ -126,7 +126,7 @@ func ToConfigMap(clusterTopology *Cluster) (*corev1.ConfigMap, error) {
 func ToNodeTopologyConfigMap(nodeTopology *Node, nodeName string) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getNodeTopologyCMName(nodeName),
+			Name:      GetNodeTopologyCMName(nodeName),
 			Namespace: viper.GetString("TOPOLOGY_CM_NAMESPACE"),
 		},
 		Data: make(map[string]string),
@@ -142,6 +142,6 @@ func ToNodeTopologyConfigMap(nodeTopology *Node, nodeName string) (*corev1.Confi
 	return cm, nil
 }
 
-func getNodeTopologyCMName(nodeName string) string {
+func GetNodeTopologyCMName(nodeName string) string {
 	return viper.GetString("TOPOLOGY_CM_NAME") + "-" + nodeName
 }
