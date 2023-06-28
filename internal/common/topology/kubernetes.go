@@ -25,7 +25,7 @@ func GetNodeTopologyFromCM(kubeclient kubernetes.Interface, nodeName string) (*N
 		}
 	}
 
-	return nil, fmt.Errorf("node topology configmap not found")
+	return nil, fmt.Errorf("node topology configmap %s not found", getNodeTopologyCMName(nodeName))
 }
 
 func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *Node, nodeName string) error {
