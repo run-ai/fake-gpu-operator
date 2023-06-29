@@ -13,10 +13,10 @@ import (
 )
 
 type FakeWatcher struct {
-	topologyChan chan<- *topology.Cluster
+	topologyChan chan<- *topology.Node
 }
 
-func (watcher *FakeWatcher) Subscribe(subscriber chan<- *topology.Cluster) {
+func (watcher *FakeWatcher) Subscribe(subscriber chan<- *topology.Node) {
 	watcher.topologyChan = subscriber
 }
 func (watcher *FakeWatcher) Watch(stopCh <-chan struct{}) {}
@@ -33,20 +33,13 @@ func TestExport(t *testing.T) {
 		},
 	}
 
-	topology := &topology.Cluster{
-		MigStrategy: "some strategy",
-		Nodes: map[string]topology.Node{
-			"my_node": *myNode,
-		},
-	}
-
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	kubeClientMock := &kubeclient.KubeClientMock{}
 	kubeClientMock.ActualSetNodeLabels = func(labels map[string]string) {
 		assert.Equal(t, labels["nvidia.com/gpu.memory"], strconv.Itoa(myNode.GpuMemory))
 		assert.Equal(t, labels["nvidia.com/gpu.product"], myNode.GpuProduct)
-		assert.Equal(t, labels["nvidia.com/mig.strategy"], topology.MigStrategy)
+		assert.Equal(t, labels["nvidia.com/mig.strategy"], myNode.MigStrategy)
 		assert.Equal(t, labels["nvidia.com/gpu.count"], strconv.Itoa(len(myNode.Gpus)))
 		wg.Done()
 	}
@@ -60,7 +53,7 @@ func TestExport(t *testing.T) {
 		lablesExporter.Run(stop)
 	}()
 
-	fakeWatcher.topologyChan <- topology
+	fakeWatcher.topologyChan <- myNode
 	stop <- struct{}{}
 	wg.Wait()
 }
