@@ -49,15 +49,9 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		MigStrategy: clusterTopology.MigStrategy,
 	}
 
-	clusterTopology.Nodes[node.Name] = *nodeTopology
 	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology: %w", err)
-	}
-
-	err = topology.UpdateToKube(p.kubeClient, clusterTopology)
-	if err != nil {
-		return fmt.Errorf("failed to update cluster topology: %w", err)
 	}
 
 	return nil
@@ -66,24 +60,12 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	log.Printf("Handling node deletion: %s\n", node.Name)
 
-	clusterTopology, err := topology.GetFromKube(p.kubeClient)
-	if err != nil {
-		return fmt.Errorf("failed to get cluster topology: %w", err)
-	}
-
 	nodeTopology, _ := topology.GetNodeTopologyFromCM(p.kubeClient, node.Name)
-	if nodeTopology != nil {
+	if nodeTopology == nil {
 		return nil
 	}
 
-	delete(clusterTopology.Nodes, node.Name)
-
-	err = topology.UpdateToKube(p.kubeClient, clusterTopology)
-	if err != nil {
-		return fmt.Errorf("failed to update cluster topology: %w", err)
-	}
-
-	err = topology.DeleteNodeTopologyCM(p.kubeClient, node.Name)
+	err := topology.DeleteNodeTopologyCM(p.kubeClient, node.Name)
 	if err != nil {
 		return fmt.Errorf("failed to delete node topology: %w", err)
 	}

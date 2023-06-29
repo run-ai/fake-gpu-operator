@@ -6,7 +6,6 @@ import (
 	"log"
 	"sync"
 
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/util"
 
@@ -73,14 +72,15 @@ func (c *NodeController) Run(stopCh <-chan struct{}) {
 
 func (c *NodeController) pruneTopologyNodes() error {
 	log.Print("Pruning topology nodes...")
-	clusterTopology, err := topology.GetFromKube(c.kubeClient)
-	if err != nil {
-		return fmt.Errorf("failed getting cluster topology: %v", err)
-	}
 
 	gpuNodes, err := c.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.deploy.dcgm-exporter=true,nvidia.com/gpu.deploy.device-plugin=true",
 	})
+	if err != nil {
+		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
+	}
+
+	allNodes, err := c.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
 	}
@@ -90,13 +90,12 @@ func (c *NodeController) pruneTopologyNodes() error {
 		gpuNodesMap[node.Name] = true
 	}
 
-	for nodeName := range clusterTopology.Nodes {
-		if _, ok := gpuNodesMap[nodeName]; !ok {
-			delete(clusterTopology.Nodes, nodeName)
+	for _, node := range allNodes.Items {
+		if _, ok := gpuNodesMap[node.Name]; !ok {
+			c.handler.HandleDelete(&node)
 		}
 	}
 
-	err = topology.UpdateToKube(c.kubeClient, clusterTopology)
 	if err != nil {
 		return fmt.Errorf("failed updating cluster topology: %v", err)
 	}
