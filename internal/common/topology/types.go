@@ -8,9 +8,8 @@ import (
 )
 
 type Cluster struct {
-	MigStrategy string          `json:"mig-strategy"`
-	Nodes       map[string]Node `json:"nodes"`
-	Config      Config          `json:"config"`
+	MigStrategy string `json:"mig-strategy"`
+	Config      Config `json:"config"`
 }
 
 type Node struct {
