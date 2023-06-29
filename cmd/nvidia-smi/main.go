@@ -37,21 +37,16 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	nodeName := os.Getenv("NODE_NAME")
 
 	// Send http request to topology-server to get the topology
-	resp, err := http.Get("http://topology-server.gpu-operator/topology")
+	resp, err := http.Get("http://topology-server.gpu-operator/topology/nodes/" + nodeName)
 	if err != nil {
 		panic(err)
 	}
 
 	// Parse the response
-	var clusterTopology topology.Cluster
-	err = json.NewDecoder(resp.Body).Decode(&clusterTopology)
+	var nodeTopology topology.Node
+	err = json.NewDecoder(resp.Body).Decode(&nodeTopology)
 	if err != nil {
 		panic(err)
-	}
-
-	nodeTopology, ok := clusterTopology.Nodes[nodeName]
-	if !ok {
-		panic("nodeTopology not found")
 	}
 
 	args.GpuProduct = nodeTopology.GpuProduct
@@ -72,11 +67,9 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 		// Whole GPU is used
 		podName := os.Getenv("HOSTNAME")
 		// Search clusterTopology for the podName
-		for _, node := range clusterTopology.Nodes {
-			for idx, gpu := range node.Gpus {
-				if gpu.Status.AllocatedBy.Pod == podName {
-					gpuIdx = idx
-				}
+		for idx, gpu := range nodeTopology.Gpus {
+			if gpu.Status.AllocatedBy.Pod == podName {
+				gpuIdx = idx
 			}
 		}
 	} else {
