@@ -92,7 +92,10 @@ func (c *NodeController) pruneTopologyNodes() error {
 
 	for _, node := range allNodes.Items {
 		if _, ok := gpuNodesMap[node.Name]; !ok {
-			c.handler.HandleDelete(&node)
+			err := c.handler.HandleDelete(&node)
+			if err != nil {
+				log.Printf("Failed to delete topology for node %s: %v", node.Name, err)
+			}
 		}
 	}
 
