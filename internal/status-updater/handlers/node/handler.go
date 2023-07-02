@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -60,13 +61,8 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	log.Printf("Handling node deletion: %s\n", node.Name)
 
-	nodeTopology, _ := topology.GetNodeTopologyFromCM(p.kubeClient, node.Name)
-	if nodeTopology == nil {
-		return nil
-	}
-
 	err := topology.DeleteNodeTopologyCM(p.kubeClient, node.Name)
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete node topology: %w", err)
 	}
 
