@@ -112,6 +112,9 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GetNodeTopologyCMName(nodeName),
 			Namespace: viper.GetString("TOPOLOGY_CM_NAMESPACE"),
+			Labels: map[string]string{
+				"node-topology": "true",
+			},
 		},
 		Data: make(map[string]string),
 	}

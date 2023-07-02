@@ -6,8 +6,10 @@ import (
 	"log"
 	"sync"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/util"
+	"github.com/spf13/viper"
 
 	nodehandler "github.com/run-ai/fake-gpu-operator/internal/status-updater/handlers/node"
 
@@ -80,19 +82,21 @@ func (c *NodeController) pruneTopologyNodes() error {
 		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
 	}
 
-	allNodes, err := c.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	nodeTopologyCms, err := c.kubeClient.CoreV1().ConfigMaps(viper.GetString("TOPOLOGY_CM_NAMESPACE")).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "node-topology=true",
+	})
 	if err != nil {
 		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
 	}
 
-	gpuNodesMap := make(map[string]bool)
+	validNodeTopologyCMMap := make(map[string]bool)
 	for _, node := range gpuNodes.Items {
-		gpuNodesMap[node.Name] = true
+		validNodeTopologyCMMap[topology.GetNodeTopologyCMName(node.Name)] = true
 	}
 
-	for _, node := range allNodes.Items {
-		if _, ok := gpuNodesMap[node.Name]; !ok {
-			util.LogErrorIfExist(c.handler.HandleDelete(&node), fmt.Sprintf("Failed to delete topology for node %s", node.Name))
+	for _, cm := range nodeTopologyCms.Items {
+		if _, ok := validNodeTopologyCMMap[cm.Name]; !ok {
+			util.LogErrorIfExist(c.kubeClient.CoreV1().ConfigMaps(viper.GetString("TOPOLOGY_CM_NAMESPACE")).Delete(context.TODO(), cm.Name, metav1.DeleteOptions{}), fmt.Sprintf("Failed to delete node topology cm %s", cm.Name))
 		}
 	}
 

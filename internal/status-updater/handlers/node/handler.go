@@ -37,7 +37,7 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 
 	baseTopology, err := topology.GetBaseTopologyFromCM(p.kubeClient)
 	if err != nil {
-		return fmt.Errorf("failed to get cluster topology: %w", err)
+		return fmt.Errorf("failed to get base topology: %w", err)
 	}
 
 	nodeAutofillSettings := baseTopology.Config.NodeAutofill

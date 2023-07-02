@@ -20,6 +20,7 @@ rules:
       - get
       - update
       - create
+      - list
   - apiGroups:
       - scheduling.run.ai
     resources:
