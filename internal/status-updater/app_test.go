@@ -17,6 +17,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -370,7 +371,7 @@ var _ = Describe("StatusUpdater", func() {
 
 				_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				Consistently(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(MatchError(fmt.Errorf("node topology configmap %s not found", topology.GetNodeTopologyCMName(node.Name))))
+				Consistently(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(MatchError(errors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, topology.GetNodeTopologyCMName(node.Name))))
 			})
 		})
 
