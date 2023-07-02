@@ -30,8 +30,7 @@ func main() {
 	log.Println("Fake Device Plugin Running")
 	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE", "NODE_NAME"}
 	config.ValidateConfig(requiredEnvVars)
-	viper.SetDefault("TOPOLOGY_CM_NAME", os.Getenv("TOPOLOGY_CM_NAME"))
-	viper.SetDefault("TOPOLOGY_CM_NAMESPACE", os.Getenv("TOPOLOGY_CM_NAMESPACE"))
+	viper.AutomaticEnv()
 
 	topology, err := topology.GetNodeTopologyFromCM(kubeClient, os.Getenv("NODE_NAME"))
 	if err != nil {

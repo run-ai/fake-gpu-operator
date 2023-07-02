@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
@@ -15,8 +14,7 @@ import (
 
 func main() {
 	kubeclient := kubeclient.NewKubeClient(nil, nil)
-	viper.SetDefault("TOPOLOGY_CM_NAME", os.Getenv("TOPOLOGY_CM_NAME"))
-	viper.SetDefault("TOPOLOGY_CM_NAMESPACE", os.Getenv("TOPOLOGY_CM_NAMESPACE"))
+	viper.AutomaticEnv()
 	http.HandleFunc("/topology", func(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
