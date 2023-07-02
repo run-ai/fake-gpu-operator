@@ -8,8 +8,7 @@ import (
 )
 
 type BaseTopology struct {
-	MigStrategy string `json:"mig-strategy"`
-	Config      Config `json:"config"`
+	Config Config `json:"config"`
 }
 
 type NodeTopology struct {
@@ -62,9 +61,10 @@ type Config struct {
 }
 
 type NodeAutofillSettings struct {
-	GpuCount   int    `json:"gpu-count"`
-	GpuMemory  int    `json:"gpu-memory"`
-	GpuProduct string `json:"gpu-product"`
+	GpuCount    int    `json:"gpu-count"`
+	GpuMemory   int    `json:"gpu-memory"`
+	GpuProduct  string `json:"gpu-product"`
+	MigStrategy string `json:"mig-strategy"`
 }
 
 // Errors

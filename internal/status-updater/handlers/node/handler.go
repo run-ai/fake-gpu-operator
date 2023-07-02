@@ -46,7 +46,7 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		GpuMemory:   nodeAutofillSettings.GpuMemory,
 		GpuProduct:  nodeAutofillSettings.GpuProduct,
 		Gpus:        generateGpuDetails(nodeAutofillSettings.GpuCount, node.Name),
-		MigStrategy: baseTopology.MigStrategy,
+		MigStrategy: nodeAutofillSettings.MigStrategy,
 	}
 
 	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)

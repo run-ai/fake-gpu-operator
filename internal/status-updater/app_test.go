@@ -48,9 +48,10 @@ const (
 var (
 	defaultTopologyConfig = topology.Config{
 		NodeAutofill: topology.NodeAutofillSettings{
-			GpuCount:   nodeGpuCount,
-			GpuMemory:  11441,
-			GpuProduct: "Tesla-K80",
+			GpuCount:    nodeGpuCount,
+			GpuMemory:   11441,
+			GpuProduct:  "Tesla-K80",
+			MigStrategy: "mixed",
 		},
 	}
 )
@@ -70,8 +71,7 @@ var _ = Describe("StatusUpdater", func() {
 
 	BeforeEach(func() {
 		baseTopology := &topology.BaseTopology{
-			MigStrategy: "mixed",
-			Config:      defaultTopologyConfig,
+			Config: defaultTopologyConfig,
 		}
 
 		topologyStr, err := json.Marshal(baseTopology)
@@ -356,7 +356,7 @@ var _ = Describe("StatusUpdater", func() {
 				Expect(nodeTopology.GpuMemory).To(Equal(baseTopology.Config.NodeAutofill.GpuMemory))
 				Expect(nodeTopology.GpuProduct).To(Equal(baseTopology.Config.NodeAutofill.GpuProduct))
 				Expect(nodeTopology.Gpus).To(HaveLen(baseTopology.Config.NodeAutofill.GpuCount))
-				Expect(nodeTopology.MigStrategy).To(Equal(baseTopology.MigStrategy))
+				Expect(nodeTopology.MigStrategy).To(Equal(baseTopology.Config.NodeAutofill.MigStrategy))
 			})
 		})
 
