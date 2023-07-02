@@ -100,10 +100,6 @@ func (c *NodeController) pruneTopologyNodes() error {
 		}
 	}
 
-	if err != nil {
-		return fmt.Errorf("failed updating cluster topology: %v", err)
-	}
-
 	return nil
 }
 
