@@ -68,17 +68,6 @@ func GetBaseTopologyFromCM(kubeclient kubernetes.Interface) (*BaseTopology, erro
 	return cluster, nil
 }
 
-func UpdateBaseTopologyCM(kubeclient kubernetes.Interface, baseTopology *BaseTopology) error {
-	topologyCm, err := ToBaseTopologyCM(baseTopology)
-	if err != nil {
-		return err
-	}
-
-	_, err = kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), topologyCm, metav1.UpdateOptions{})
-	return err
-}
-
 func FromBaseTopologyCM(cm *corev1.ConfigMap) (*BaseTopology, error) {
 	var baseTopology BaseTopology
 	err := json.Unmarshal([]byte(cm.Data[CmTopologyKey]), &baseTopology)
