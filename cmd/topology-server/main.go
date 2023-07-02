@@ -18,23 +18,24 @@ func main() {
 	viper.SetDefault("TOPOLOGY_CM_NAME", os.Getenv("TOPOLOGY_CM_NAME"))
 	viper.SetDefault("TOPOLOGY_CM_NAMESPACE", os.Getenv("TOPOLOGY_CM_NAMESPACE"))
 	http.HandleFunc("/topology", func(w http.ResponseWriter, r *http.Request) {
-		cm, ok := kubeclient.GetConfigMap(os.Getenv("TOPOLOGY_CM_NAMESPACE"), os.Getenv("TOPOLOGY_CM_NAME"))
-		if !ok {
-			panic("Can't get topology")
-		}
-		baseTopology, err := topology.FromBaseTopologyCM(cm)
+
+		w.Header().Set("Content-Type", "application/json")
+		baseTopology, err := topology.GetBaseTopologyFromCM(kubeclient.ClientSet)
 		if err != nil {
-			panic(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(err.Error()))
+			return
 		}
 
 		baseTopologyJSON, err := json.Marshal(baseTopology)
 		if err != nil {
-			panic(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(err.Error()))
+			return
 		}
 
 		log.Printf("Returning cluster topology: %s", baseTopologyJSON)
 
-		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(baseTopologyJSON)
 		if err != nil {
 			panic(err)
@@ -46,16 +47,19 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 
 		if nodeName == "" {
-			panic("Can't get node name from url " + r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("Can't get node name from url " + r.URL.Path))
+			return
 		}
+
 		nodeTopology, err := topology.GetNodeTopologyFromCM(kubeclient.ClientSet, nodeName)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("Node topology not found"))
+				_, _ = w.Write([]byte("Node topology not found"))
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
+				_, _ = w.Write([]byte(err.Error()))
 			}
 			return
 		}
@@ -63,7 +67,7 @@ func main() {
 		nodeTopologyJSON, err := json.Marshal(nodeTopology)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 
