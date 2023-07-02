@@ -42,6 +42,9 @@ func main() {
 
 	http.HandleFunc("/topology/nodes/", func(w http.ResponseWriter, r *http.Request) {
 		nodeName := strings.Split(r.URL.Path, "/")[3]
+		if nodeName == "" {
+			panic("Can't get node name from url " + r.URL.Path)
+		}
 		cm, ok := kubeclient.GetConfigMap(os.Getenv("TOPOLOGY_CM_NAMESPACE"), topology.GetNodeTopologyCMName(nodeName))
 		if !ok {
 			panic("Can't get node topology for node " + nodeName)
