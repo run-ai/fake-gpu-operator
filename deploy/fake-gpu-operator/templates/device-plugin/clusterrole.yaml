@@ -8,4 +8,4 @@ rules:
     resources:
       - configmaps
     verbs:
-      - list
+      - get

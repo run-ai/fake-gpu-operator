@@ -43,7 +43,7 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	// Parse the response
-	var nodeTopology topology.Node
+	var nodeTopology topology.NodeTopology
 	err = json.NewDecoder(resp.Body).Decode(&nodeTopology)
 	if err != nil {
 		panic(err)
@@ -66,7 +66,7 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	if os.Getenv("NVIDIA_VISIBLE_DEVICES") == "" {
 		// Whole GPU is used
 		podName := os.Getenv("HOSTNAME")
-		// Search clusterTopology for the podName
+		// Search gpu for the podName
 		for idx, gpu := range nodeTopology.Gpus {
 			if gpu.Status.AllocatedBy.Pod == podName {
 				gpuIdx = idx

@@ -69,12 +69,12 @@ var _ = Describe("StatusUpdater", func() {
 	)
 
 	BeforeEach(func() {
-		clusterTopology := &topology.Cluster{
+		baseTopology := &topology.BaseTopology{
 			MigStrategy: "mixed",
 			Config:      defaultTopologyConfig,
 		}
 
-		topologyStr, err := json.Marshal(clusterTopology)
+		topologyStr, err := json.Marshal(baseTopology)
 		Expect(err).ToNot(HaveOccurred())
 		topologyConfigMap := &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -253,7 +253,7 @@ var _ = Describe("StatusUpdater", func() {
 
 		When("informed of a shared GPU pod", func() {
 			var (
-				expectedTopology *topology.Node
+				expectedTopology *topology.NodeTopology
 			)
 
 			var (
@@ -345,18 +345,18 @@ var _ = Describe("StatusUpdater", func() {
 
 				Eventually(getTopologyNodeFromKube(kubeclient, node.Name)).Should(Not(BeNil()))
 
-				clusterTopology, err := getTopologyFromKube(kubeclient)()
+				baseTopology, err := getTopologyFromKube(kubeclient)()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(clusterTopology).ToNot(BeNil())
+				Expect(baseTopology).ToNot(BeNil())
 
 				nodeTopology, err := getTopologyNodeFromKube(kubeclient, node.Name)()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(nodeTopology).ToNot(BeNil())
 
-				Expect(nodeTopology.GpuMemory).To(Equal(clusterTopology.Config.NodeAutofill.GpuMemory))
-				Expect(nodeTopology.GpuProduct).To(Equal(clusterTopology.Config.NodeAutofill.GpuProduct))
-				Expect(nodeTopology.Gpus).To(HaveLen(clusterTopology.Config.NodeAutofill.GpuCount))
-				Expect(nodeTopology.MigStrategy).To(Equal(clusterTopology.MigStrategy))
+				Expect(nodeTopology.GpuMemory).To(Equal(baseTopology.Config.NodeAutofill.GpuMemory))
+				Expect(nodeTopology.GpuProduct).To(Equal(baseTopology.Config.NodeAutofill.GpuProduct))
+				Expect(nodeTopology.Gpus).To(HaveLen(baseTopology.Config.NodeAutofill.GpuCount))
+				Expect(nodeTopology.MigStrategy).To(Equal(baseTopology.MigStrategy))
 			})
 		})
 
@@ -401,15 +401,15 @@ var _ = Describe("StatusUpdater", func() {
 	})
 })
 
-func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.Cluster, error) {
-	return func() (*topology.Cluster, error) {
-		ret, err := topology.GetFromKube(kubeclient)
+func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.BaseTopology, error) {
+	return func() (*topology.BaseTopology, error) {
+		ret, err := topology.GetBaseTopologyFromCM(kubeclient)
 		return ret, err
 	}
 }
 
-func getTopologyNodeFromKube(kubeclient kubernetes.Interface, nodeName string) func() (*topology.Node, error) {
-	return func() (*topology.Node, error) {
+func getTopologyNodeFromKube(kubeclient kubernetes.Interface, nodeName string) func() (*topology.NodeTopology, error) {
+	return func() (*topology.NodeTopology, error) {
 		topology, err := topology.GetNodeTopologyFromCM(kubeclient, nodeName)
 		if err != nil {
 			return nil, err
@@ -451,7 +451,7 @@ func setupEnvs() {
 	os.Setenv("TOPOLOGY_CM_NAMESPACE", "fake-cm-namespace")
 }
 
-func createTopology(gpuCount int64, nodeName string) *topology.Node {
+func createTopology(gpuCount int64, nodeName string) *topology.NodeTopology {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for i := int64(0); i < gpuCount; i++ {
 		gpus[i] = topology.GpuDetails{
@@ -462,7 +462,7 @@ func createTopology(gpuCount int64, nodeName string) *topology.Node {
 		}
 	}
 
-	return &topology.Node{
+	return &topology.NodeTopology{
 		MigStrategy: "mixed",
 		GpuMemory:   11441,
 		GpuProduct:  "Tesla-K80",

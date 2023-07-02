@@ -7,12 +7,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type Cluster struct {
+type BaseTopology struct {
 	MigStrategy string `json:"mig-strategy"`
 	Config      Config `json:"config"`
 }
 
-type Node struct {
+type NodeTopology struct {
 	GpuMemory   int          `json:"gpu-memory"`
 	GpuProduct  string       `json:"gpu-product"`
 	Gpus        []GpuDetails `json:"gpus"`

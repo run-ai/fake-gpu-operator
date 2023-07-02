@@ -17,13 +17,13 @@ import (
 )
 
 type MetricsExporter struct {
-	topologyChan <-chan *topology.Node
+	topologyChan <-chan *topology.NodeTopology
 }
 
 var _ export.Interface = &MetricsExporter{}
 
 func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
-	topologyChan := make(chan *topology.Node)
+	topologyChan := make(chan *topology.NodeTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &MetricsExporter{
@@ -37,7 +37,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	// Republish the metrics every 10 seconds to refresh utilization ranges
 	// TODO: make this configurable?
 	ticker := time.NewTicker(time.Second * 10)
-	var nodeTopologyCache *topology.Node
+	var nodeTopologyCache *topology.NodeTopology
 
 	for {
 		select {
@@ -60,7 +60,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *MetricsExporter) export(nodeTopology *topology.Node) error {
+func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
 	nodeName := viper.GetString("NODE_NAME")
 
 	gpuUtilization.Reset()

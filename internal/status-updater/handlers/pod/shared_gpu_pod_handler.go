@@ -19,7 +19,7 @@ const (
 	runaiReservationNs = constants.ReservationNs
 )
 
-func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.Node) error {
+func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
@@ -27,7 +27,7 @@ func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, nodeTopology *topol
 	return p.calculateAndSetPodGpuUsageStatus(pod, nodeTopology)
 }
 
-func (p *PodHandler) handleSharedGpuPodUpdate(pod *v1.Pod, nodeTopology *topology.Node) error {
+func (p *PodHandler) handleSharedGpuPodUpdate(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
@@ -36,7 +36,7 @@ func (p *PodHandler) handleSharedGpuPodUpdate(pod *v1.Pod, nodeTopology *topolog
 	return p.calculateAndSetPodGpuUsageStatus(pod, nodeTopology)
 }
 
-func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, nodeTopology *topology.Node) error {
+func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
 	}
@@ -50,7 +50,7 @@ func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, nodeTopology *topol
 	return nil
 }
 
-func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, nodeTopology *topology.Node) error {
+func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 
 	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, nodeTopology)
 	if err != nil {
@@ -61,7 +61,7 @@ func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, nodeTopology 
 	return nil
 }
 
-func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Pod, nodeTopology *topology.Node) (int, error) {
+func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Pod, nodeTopology *topology.NodeTopology) (int, error) {
 	reservationPodName, err := getMatchingReservationPodName(kubeclient, pod)
 	if err != nil {
 		return -1, err

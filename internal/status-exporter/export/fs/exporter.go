@@ -14,13 +14,13 @@ import (
 )
 
 type FsExporter struct {
-	topologyChan <-chan *topology.Node
+	topologyChan <-chan *topology.NodeTopology
 }
 
 var _ export.Interface = &FsExporter{}
 
 func NewFsExporter(watcher watch.Interface) *FsExporter {
-	topologyChan := make(chan *topology.Node)
+	topologyChan := make(chan *topology.NodeTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &FsExporter{
@@ -39,7 +39,7 @@ func (e *FsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *FsExporter) export(nodeTopology *topology.Node) {
+func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
 
 	for gpuIdx, gpu := range nodeTopology.Gpus {
 		// Ignoring pods that are not supposed to be seen by runai-container-toolkit

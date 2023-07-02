@@ -35,18 +35,18 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return nil
 	}
 
-	clusterTopology, err := topology.GetFromKube(p.kubeClient)
+	baseTopology, err := topology.GetBaseTopologyFromCM(p.kubeClient)
 	if err != nil {
 		return fmt.Errorf("failed to get cluster topology: %w", err)
 	}
 
-	nodeAutofillSettings := clusterTopology.Config.NodeAutofill
+	nodeAutofillSettings := baseTopology.Config.NodeAutofill
 
-	nodeTopology = &topology.Node{
+	nodeTopology = &topology.NodeTopology{
 		GpuMemory:   nodeAutofillSettings.GpuMemory,
 		GpuProduct:  nodeAutofillSettings.GpuProduct,
 		Gpus:        generateGpuDetails(nodeAutofillSettings.GpuCount, node.Name),
-		MigStrategy: clusterTopology.MigStrategy,
+		MigStrategy: baseTopology.MigStrategy,
 	}
 
 	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)

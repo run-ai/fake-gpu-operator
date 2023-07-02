@@ -21,20 +21,20 @@ func main() {
 		if !ok {
 			panic("Can't get topology")
 		}
-		clusterTopology, err := topology.FromConfigMap(cm)
+		baseTopology, err := topology.FromBaseTopologyCM(cm)
 		if err != nil {
 			panic(err)
 		}
 
-		clusterTopologyJSON, err := json.Marshal(clusterTopology)
+		baseTopologyJSON, err := json.Marshal(baseTopology)
 		if err != nil {
 			panic(err)
 		}
 
-		log.Printf("Returning cluster topology: %s", clusterTopologyJSON)
+		log.Printf("Returning cluster topology: %s", baseTopologyJSON)
 
 		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(clusterTopologyJSON)
+		_, err = w.Write(baseTopologyJSON)
 		if err != nil {
 			panic(err)
 		}
@@ -49,7 +49,7 @@ func main() {
 		if !ok {
 			panic("Can't get node topology for node " + nodeName)
 		}
-		nodeTopology, err := topology.FromNodeConfigMap(cm)
+		nodeTopology, err := topology.FromNodeTopologyCM(cm)
 		if err != nil {
 			panic(err)
 		}

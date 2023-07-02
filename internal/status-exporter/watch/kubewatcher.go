@@ -14,7 +14,7 @@ const defaultMaxExportInterval = 10 * time.Second
 // type kubewatcher
 type KubeWatcher struct {
 	kubeclient  kubeclient.KubeClientInterface
-	subscribers []chan<- *topology.Node
+	subscribers []chan<- *topology.NodeTopology
 }
 
 func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface) *KubeWatcher {
@@ -23,7 +23,7 @@ func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface) *KubeWatcher {
 	}
 }
 
-func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.Node) {
+func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.NodeTopology) {
 	w.subscribers = append(w.subscribers, subscriber)
 }
 
@@ -42,7 +42,7 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
 		case cm := <-cmChan:
 			ticker.Reset(maxInterval)
 			log.Printf("Got topology update, publishing...\n")
-			nodeTopology, err := topology.FromNodeConfigMap(cm)
+			nodeTopology, err := topology.FromNodeTopologyCM(cm)
 			if err != nil {
 				panic(err)
 			}
@@ -54,7 +54,7 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
 			if !ok {
 				break
 			}
-			nodeTopology, err := topology.FromNodeConfigMap(cm)
+			nodeTopology, err := topology.FromNodeTopologyCM(cm)
 			if err != nil {
 				panic(err)
 			}
@@ -66,7 +66,7 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
 	}
 }
 
-func (w *KubeWatcher) publishTopology(nodeTopology *topology.Node) {
+func (w *KubeWatcher) publishTopology(nodeTopology *topology.NodeTopology) {
 	for _, subscriber := range w.subscribers {
 		subscriber <- nodeTopology
 	}

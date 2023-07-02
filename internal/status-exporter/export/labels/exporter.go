@@ -12,14 +12,14 @@ import (
 )
 
 type LabelsExporter struct {
-	topologyChan <-chan *topology.Node
+	topologyChan <-chan *topology.NodeTopology
 	kubeclient   kubeclient.KubeClientInterface
 }
 
 var _ export.Interface = &LabelsExporter{}
 
 func NewLabelsExporter(watcher watch.Interface, kubeclient kubeclient.KubeClientInterface) *LabelsExporter {
-	topologyChan := make(chan *topology.Node)
+	topologyChan := make(chan *topology.NodeTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &LabelsExporter{
@@ -42,7 +42,7 @@ func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *LabelsExporter) export(nodeTopology *topology.Node) error {
+func (e *LabelsExporter) export(nodeTopology *topology.NodeTopology) error {
 
 	labels := map[string]string{
 		"nvidia.com/gpu.memory":                       strconv.Itoa(nodeTopology.GpuMemory),

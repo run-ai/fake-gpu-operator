@@ -10,7 +10,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.Node) error {
+func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsDedicatedGpuPod(pod) {
 		return nil
 	}
@@ -53,7 +53,7 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *to
 	return nil
 }
 
-func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, nodeTopology *topology.Node) error {
+func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsDedicatedGpuPod(pod) {
 		return nil
 	}
@@ -75,7 +75,7 @@ func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, nodeTopology *topo
 	return nil
 }
 
-func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, nodeTopology *topology.Node) {
+func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, nodeTopology *topology.NodeTopology) {
 	if !util.IsDedicatedGpuPod(pod) {
 		return
 	}
@@ -90,7 +90,7 @@ func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, nodeTopology *to
 	}
 }
 
-func isAlreadyAllocated(pod *v1.Pod, nodeTopology *topology.Node) bool {
+func isAlreadyAllocated(pod *v1.Pod, nodeTopology *topology.NodeTopology) bool {
 	for _, gpu := range nodeTopology.Gpus {
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&
