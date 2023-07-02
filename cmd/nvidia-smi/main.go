@@ -70,6 +70,7 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 		for idx, gpu := range nodeTopology.Gpus {
 			if gpu.Status.AllocatedBy.Pod == podName {
 				gpuIdx = idx
+				break
 			}
 		}
 	} else {
