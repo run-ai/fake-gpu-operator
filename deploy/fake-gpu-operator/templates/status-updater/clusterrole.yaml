@@ -21,6 +21,7 @@ rules:
       - update
       - create
       - list
+      - delete
   - apiGroups:
       - scheduling.run.ai
     resources:
