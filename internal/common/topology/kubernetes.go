@@ -2,8 +2,9 @@ package topology
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
@@ -70,7 +71,7 @@ func GetBaseTopologyFromCM(kubeclient kubernetes.Interface) (*BaseTopology, erro
 
 func FromBaseTopologyCM(cm *corev1.ConfigMap) (*BaseTopology, error) {
 	var baseTopology BaseTopology
-	err := json.Unmarshal([]byte(cm.Data[CmTopologyKey]), &baseTopology)
+	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &baseTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +81,7 @@ func FromBaseTopologyCM(cm *corev1.ConfigMap) (*BaseTopology, error) {
 
 func FromNodeTopologyCM(cm *corev1.ConfigMap) (*NodeTopology, error) {
 	var nodeTopology NodeTopology
-	err := json.Unmarshal([]byte(cm.Data[CmTopologyKey]), &nodeTopology)
+	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &nodeTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func ToBaseTopologyCM(baseTopology *BaseTopology) (*corev1.ConfigMap, error) {
 		Data: make(map[string]string),
 	}
 
-	topologyData, err := json.Marshal(baseTopology)
+	topologyData, err := yaml.Marshal(baseTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +120,7 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 		Data: make(map[string]string),
 	}
 
-	topologyData, err := json.Marshal(nodeTopology)
+	topologyData, err := yaml.Marshal(nodeTopology)
 	if err != nil {
 		return nil, err
 	}

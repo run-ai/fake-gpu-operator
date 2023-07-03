@@ -2,13 +2,14 @@ package status_updater_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -75,7 +76,7 @@ var _ = Describe("StatusUpdater", func() {
 			Config: defaultTopologyConfig,
 		}
 
-		topologyStr, err := json.Marshal(baseTopology)
+		topologyStr, err := yaml.Marshal(baseTopology)
 		Expect(err).ToNot(HaveOccurred())
 		topologyConfigMap := &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
