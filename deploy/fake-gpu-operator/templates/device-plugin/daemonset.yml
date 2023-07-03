@@ -31,8 +31,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: TOPOLOGY_PATH
-              value: /etc/config/topology.yml
+            - name: TOPOLOGY_CM_NAME
+              value: topology
+            - name: TOPOLOGY_CM_NAMESPACE
+              value: "{{ .Release.Namespace }}"
           imagePullPolicy: Always
           name: nvidia-device-plugin-ctr
           securityContext:
@@ -46,8 +48,6 @@ spec:
               name: runai-shared-directory              
             - mountPath: /var/lib/kubelet/device-plugins
               name: device-plugin
-            - mountPath: /etc/config/
-              name: topology
       dnsPolicy: ClusterFirst
       nodeSelector:
         nvidia.com/gpu.deploy.device-plugin: "true"
@@ -65,9 +65,6 @@ spec:
             path: /var/lib/kubelet/device-plugins
             type: ""
           name: device-plugin
-        - configMap:
-            name: topology
-          name: topology
         - hostPath:
             path: /var/lib/runai/bin
             type: DirectoryOrCreate

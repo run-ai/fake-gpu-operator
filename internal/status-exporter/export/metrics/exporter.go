@@ -17,13 +17,13 @@ import (
 )
 
 type MetricsExporter struct {
-	topologyChan <-chan *topology.Cluster
+	topologyChan <-chan *topology.NodeTopology
 }
 
 var _ export.Interface = &MetricsExporter{}
 
 func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
-	topologyChan := make(chan *topology.Cluster)
+	topologyChan := make(chan *topology.NodeTopology)
 	watcher.Subscribe(topologyChan)
 
 	return &MetricsExporter{
@@ -37,19 +37,19 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	// Republish the metrics every 10 seconds to refresh utilization ranges
 	// TODO: make this configurable?
 	ticker := time.NewTicker(time.Second * 10)
-	var clusterTopologyCache *topology.Cluster
+	var nodeTopologyCache *topology.NodeTopology
 
 	for {
 		select {
-		case clusterTopology := <-e.topologyChan:
-			err := e.export(clusterTopology)
+		case nodeTopology := <-e.topologyChan:
+			err := e.export(nodeTopology)
 			if err != nil {
 				log.Printf("Failed to export metrics: %v", err)
 			}
-			clusterTopologyCache = clusterTopology
+			nodeTopologyCache = nodeTopology
 		case <-ticker.C:
-			if clusterTopologyCache != nil {
-				err := e.export(clusterTopologyCache)
+			if nodeTopologyCache != nil {
+				err := e.export(nodeTopologyCache)
 				if err != nil {
 					log.Printf("Failed to export metrics: %v", err)
 				}
@@ -60,24 +60,20 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (e *MetricsExporter) export(clusterTopology *topology.Cluster) error {
+func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
 	nodeName := viper.GetString("NODE_NAME")
-	node, ok := clusterTopology.Nodes[nodeName]
-	if !ok {
-		return fmt.Errorf("node %s not found on topology", nodeName)
-	}
 
 	gpuUtilization.Reset()
 	gpuFbUsed.Reset()
 	gpuFbFree.Reset()
 
-	for gpuIdx, gpu := range node.Gpus {
+	for gpuIdx, gpu := range nodeTopology.Gpus {
 		log.Printf("Exporting metrics for node %v, gpu %v\n", nodeName, gpu.ID)
 		labels := prometheus.Labels{
 			"gpu":       strconv.Itoa(gpuIdx),
 			"UUID":      gpu.ID,
 			"device":    "nvidia" + strconv.Itoa(gpuIdx),
-			"modelName": node.GpuProduct,
+			"modelName": nodeTopology.GpuProduct,
 			"Hostname":  generateFakeHostname(nodeName),
 			"namespace": gpu.Status.AllocatedBy.Namespace,
 			"pod":       gpu.Status.AllocatedBy.Pod,
@@ -85,11 +81,11 @@ func (e *MetricsExporter) export(clusterTopology *topology.Cluster) error {
 		}
 
 		utilization := gpu.Status.PodGpuUsageStatus.Utilization()
-		fbUsed := gpu.Status.PodGpuUsageStatus.FbUsed(node.GpuMemory)
+		fbUsed := gpu.Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)
 
 		gpuUtilization.With(labels).Set(float64(utilization))
 		gpuFbUsed.With(labels).Set(float64(fbUsed))
-		gpuFbFree.With(labels).Set(float64(node.GpuMemory - fbUsed))
+		gpuFbFree.With(labels).Set(float64(nodeTopology.GpuMemory - fbUsed))
 	}
 
 	return nil

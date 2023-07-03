@@ -9,6 +9,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/util"
+	"github.com/spf13/viper"
 
 	nodehandler "github.com/run-ai/fake-gpu-operator/internal/status-updater/handlers/node"
 
@@ -73,10 +74,6 @@ func (c *NodeController) Run(stopCh <-chan struct{}) {
 
 func (c *NodeController) pruneTopologyNodes() error {
 	log.Print("Pruning topology nodes...")
-	clusterTopology, err := topology.GetFromKube(c.kubeClient)
-	if err != nil {
-		return fmt.Errorf("failed getting cluster topology: %v", err)
-	}
 
 	gpuNodes, err := c.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.deploy.dcgm-exporter=true,nvidia.com/gpu.deploy.device-plugin=true",
@@ -85,20 +82,22 @@ func (c *NodeController) pruneTopologyNodes() error {
 		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
 	}
 
-	gpuNodesMap := make(map[string]bool)
-	for _, node := range gpuNodes.Items {
-		gpuNodesMap[node.Name] = true
-	}
-
-	for nodeName := range clusterTopology.Nodes {
-		if _, ok := gpuNodesMap[nodeName]; !ok {
-			delete(clusterTopology.Nodes, nodeName)
-		}
-	}
-
-	err = topology.UpdateToKube(c.kubeClient, clusterTopology)
+	nodeTopologyCms, err := c.kubeClient.CoreV1().ConfigMaps(viper.GetString("TOPOLOGY_CM_NAMESPACE")).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "node-topology=true",
+	})
 	if err != nil {
-		return fmt.Errorf("failed updating cluster topology: %v", err)
+		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
+	}
+
+	validNodeTopologyCMMap := make(map[string]bool)
+	for _, node := range gpuNodes.Items {
+		validNodeTopologyCMMap[topology.GetNodeTopologyCMName(node.Name)] = true
+	}
+
+	for _, cm := range nodeTopologyCms.Items {
+		if _, ok := validNodeTopologyCMMap[cm.Name]; !ok {
+			util.LogErrorIfExist(c.kubeClient.CoreV1().ConfigMaps(viper.GetString("TOPOLOGY_CM_NAMESPACE")).Delete(context.TODO(), cm.Name, metav1.DeleteOptions{}), fmt.Sprintf("Failed to delete node topology cm %s", cm.Name))
+		}
 	}
 
 	return nil

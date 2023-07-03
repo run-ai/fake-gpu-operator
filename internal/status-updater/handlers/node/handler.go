@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -30,26 +31,28 @@ func NewNodeHandler(kubeClient kubernetes.Interface) *NodeHandler {
 func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 	log.Printf("Handling node addition: %s\n", node.Name)
 
-	clusterTopology, err := topology.GetFromKube(p.kubeClient)
-	if err != nil {
-		return fmt.Errorf("failed to get cluster topology: %w", err)
-	}
-
-	if _, ok := clusterTopology.Nodes[node.Name]; ok {
+	nodeTopology, _ := topology.GetNodeTopologyFromCM(p.kubeClient, node.Name)
+	if nodeTopology != nil {
 		return nil
 	}
 
-	nodeAutofillSettings := clusterTopology.Config.NodeAutofill
-
-	clusterTopology.Nodes[node.Name] = topology.Node{
-		GpuMemory:  nodeAutofillSettings.GpuMemory,
-		GpuProduct: nodeAutofillSettings.GpuProduct,
-		Gpus:       generateGpuDetails(nodeAutofillSettings.GpuCount, node.Name),
+	baseTopology, err := topology.GetBaseTopologyFromCM(p.kubeClient)
+	if err != nil {
+		return fmt.Errorf("failed to get base topology: %w", err)
 	}
 
-	err = topology.UpdateToKube(p.kubeClient, clusterTopology)
+	nodeAutofillSettings := baseTopology.Config.NodeAutofill
+
+	nodeTopology = &topology.NodeTopology{
+		GpuMemory:   nodeAutofillSettings.GpuMemory,
+		GpuProduct:  nodeAutofillSettings.GpuProduct,
+		Gpus:        generateGpuDetails(nodeAutofillSettings.GpuCount, node.Name),
+		MigStrategy: nodeAutofillSettings.MigStrategy,
+	}
+
+	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)
 	if err != nil {
-		return fmt.Errorf("failed to update cluster topology: %w", err)
+		return fmt.Errorf("failed to create node topology: %w", err)
 	}
 
 	return nil
@@ -58,20 +61,9 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	log.Printf("Handling node deletion: %s\n", node.Name)
 
-	clusterTopology, err := topology.GetFromKube(p.kubeClient)
-	if err != nil {
-		return fmt.Errorf("failed to get cluster topology: %w", err)
-	}
-
-	if _, ok := clusterTopology.Nodes[node.Name]; !ok {
-		return nil
-	}
-
-	delete(clusterTopology.Nodes, node.Name)
-
-	err = topology.UpdateToKube(p.kubeClient, clusterTopology)
-	if err != nil {
-		return fmt.Errorf("failed to update cluster topology: %w", err)
+	err := topology.DeleteNodeTopologyCM(p.kubeClient, node.Name)
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete node topology: %w", err)
 	}
 
 	return nil

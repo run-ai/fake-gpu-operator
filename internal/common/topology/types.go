@@ -7,16 +7,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type Cluster struct {
-	MigStrategy string          `json:"mig-strategy"`
-	Nodes       map[string]Node `json:"nodes"`
-	Config      Config          `json:"config"`
+type BaseTopology struct {
+	Config Config `json:"config"`
 }
 
-type Node struct {
-	GpuMemory  int          `json:"gpu-memory"`
-	GpuProduct string       `json:"gpu-product"`
-	Gpus       []GpuDetails `json:"gpus"`
+type NodeTopology struct {
+	GpuMemory   int          `json:"gpu-memory"`
+	GpuProduct  string       `json:"gpu-product"`
+	Gpus        []GpuDetails `json:"gpus"`
+	MigStrategy string       `json:"mig-strategy"`
 }
 
 type GpuDetails struct {
@@ -62,9 +61,10 @@ type Config struct {
 }
 
 type NodeAutofillSettings struct {
-	GpuCount   int    `json:"gpu-count"`
-	GpuMemory  int    `json:"gpu-memory"`
-	GpuProduct string `json:"gpu-product"`
+	GpuCount    int    `json:"gpu-count"`
+	GpuMemory   int    `json:"gpu-memory"`
+	GpuProduct  string `json:"gpu-product"`
+	MigStrategy string `json:"mig-strategy"`
 }
 
 // Errors

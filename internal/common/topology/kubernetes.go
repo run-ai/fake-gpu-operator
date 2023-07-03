@@ -11,7 +11,48 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetFromKube(kubeclient kubernetes.Interface) (*Cluster, error) {
+func GetNodeTopologyFromCM(kubeclient kubernetes.Interface, nodeName string) (*NodeTopology, error) {
+	cmName := GetNodeTopologyCMName(nodeName)
+	cm, err := kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
+		context.TODO(), cmName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return FromNodeTopologyCM(cm)
+}
+
+func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTopology, nodeName string) error {
+	cm, err := ToNodeTopologyCM(nodeTopology, nodeName)
+	if err != nil {
+		return err
+	}
+
+	_, err = kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Create(context.TODO(), cm, metav1.CreateOptions{})
+	return err
+}
+
+func UpdateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTopology, nodeName string) error {
+	cm, err := ToNodeTopologyCM(nodeTopology, nodeName)
+	if err != nil {
+		return err
+	}
+
+	_, err = kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	return err
+}
+
+func DeleteNodeTopologyCM(kubeclient kubernetes.Interface, nodeName string) error {
+
+	err := kubeclient.CoreV1().ConfigMaps(
+		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Delete(context.TODO(), GetNodeTopologyCMName(nodeName), metav1.DeleteOptions{})
+	return err
+}
+
+func GetBaseTopologyFromCM(kubeclient kubernetes.Interface) (*BaseTopology, error) {
 	topologyCm, err := kubeclient.CoreV1().ConfigMaps(
 		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
 		context.TODO(), viper.GetString("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
@@ -19,7 +60,7 @@ func GetFromKube(kubeclient kubernetes.Interface) (*Cluster, error) {
 		return nil, fmt.Errorf("failed to get topology configmap: %v", err)
 	}
 
-	cluster, err := FromConfigMap(topologyCm)
+	cluster, err := FromBaseTopologyCM(topologyCm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse topology configmap: %v", err)
 	}
@@ -27,28 +68,27 @@ func GetFromKube(kubeclient kubernetes.Interface) (*Cluster, error) {
 	return cluster, nil
 }
 
-func UpdateToKube(kubeclient kubernetes.Interface, clusterTopology *Cluster) error {
-	topologyCm, err := ToConfigMap(clusterTopology)
-	if err != nil {
-		return err
-	}
-
-	_, err = kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), topologyCm, metav1.UpdateOptions{})
-	return err
-}
-
-func FromConfigMap(cm *corev1.ConfigMap) (*Cluster, error) {
-	var clusterTopology Cluster
-	err := json.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)
+func FromBaseTopologyCM(cm *corev1.ConfigMap) (*BaseTopology, error) {
+	var baseTopology BaseTopology
+	err := json.Unmarshal([]byte(cm.Data[CmTopologyKey]), &baseTopology)
 	if err != nil {
 		return nil, err
 	}
 
-	return &clusterTopology, nil
+	return &baseTopology, nil
 }
 
-func ToConfigMap(clusterTopology *Cluster) (*corev1.ConfigMap, error) {
+func FromNodeTopologyCM(cm *corev1.ConfigMap) (*NodeTopology, error) {
+	var nodeTopology NodeTopology
+	err := json.Unmarshal([]byte(cm.Data[CmTopologyKey]), &nodeTopology)
+	if err != nil {
+		return nil, err
+	}
+
+	return &nodeTopology, nil
+}
+
+func ToBaseTopologyCM(baseTopology *BaseTopology) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      viper.GetString("TOPOLOGY_CM_NAME"),
@@ -57,7 +97,7 @@ func ToConfigMap(clusterTopology *Cluster) (*corev1.ConfigMap, error) {
 		Data: make(map[string]string),
 	}
 
-	topologyData, err := json.Marshal(clusterTopology)
+	topologyData, err := json.Marshal(baseTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -65,4 +105,30 @@ func ToConfigMap(clusterTopology *Cluster) (*corev1.ConfigMap, error) {
 	cm.Data[CmTopologyKey] = string(topologyData)
 
 	return cm, nil
+}
+
+func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.ConfigMap, error) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      GetNodeTopologyCMName(nodeName),
+			Namespace: viper.GetString("TOPOLOGY_CM_NAMESPACE"),
+			Labels: map[string]string{
+				"node-topology": "true",
+			},
+		},
+		Data: make(map[string]string),
+	}
+
+	topologyData, err := json.Marshal(nodeTopology)
+	if err != nil {
+		return nil, err
+	}
+
+	cm.Data[CmTopologyKey] = string(topologyData)
+
+	return cm, nil
+}
+
+func GetNodeTopologyCMName(nodeName string) string {
+	return viper.GetString("TOPOLOGY_CM_NAME") + "-" + nodeName
 }

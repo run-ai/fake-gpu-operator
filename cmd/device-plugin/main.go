@@ -11,14 +11,28 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/config"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/deviceplugin"
+	"github.com/spf13/viper"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func main() {
-	log.Println("Fake Device Plugin Running")
-	requiredEnvVars := []string{"TOPOLOGY_PATH", "NODE_NAME"}
-	config.ValidateConfig(requiredEnvVars)
+var InClusterConfigFn = ctrl.GetConfigOrDie
+var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
+	return kubernetes.NewForConfigOrDie(c)
+}
 
-	topology, err := topology.GetNodeTopologyFromFs(os.Getenv("TOPOLOGY_PATH"), os.Getenv("NODE_NAME"))
+func main() {
+	clusterConfig := InClusterConfigFn()
+	kubeClient := KubeClientFn(clusterConfig)
+
+	log.Println("Fake Device Plugin Running")
+	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE", "NODE_NAME"}
+	config.ValidateConfig(requiredEnvVars)
+	viper.AutomaticEnv()
+
+	topology, err := topology.GetNodeTopologyFromCM(kubeClient, os.Getenv("NODE_NAME"))
 	if err != nil {
 		log.Printf("Failed to get topology: %s\n", err)
 		os.Exit(1)

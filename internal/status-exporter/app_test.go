@@ -24,7 +24,7 @@ import (
 )
 
 type testCase struct {
-	clusterTopology *topology.Cluster
+	nodeTopologies  map[string]*topology.NodeTopology
 	expectedLabels  map[string]string
 	expectedMetrics []*dto.MetricFamily
 }
@@ -72,8 +72,8 @@ var _ = Describe("StatusExporter", func() {
 	// Wait for the status exporter to initialize
 	time.Sleep(1000 * time.Millisecond)
 
-	initialTopology := createInitialTopology()
-	cm, err := topology.ToConfigMap(initialTopology)
+	initialTopology := createNodeTopology()
+	cm, err := topology.ToNodeTopologyCM(initialTopology, nodeName)
 	Expect(err).To(Not(HaveOccurred()))
 	_, err = clientset.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 	Expect(err).To(Not(HaveOccurred()))
@@ -85,7 +85,7 @@ var _ = Describe("StatusExporter", func() {
 		caseDetails := caseDetails
 
 		It(caseName, func() {
-			cm, err := topology.ToConfigMap(caseDetails.clusterTopology)
+			cm, err := topology.ToNodeTopologyCM(caseDetails.nodeTopologies[nodeName], nodeName)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = clientset.CoreV1().ConfigMaps(topologyCmNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
@@ -152,29 +152,27 @@ func createPtr[T any](val T) *T {
 func getTestCases() map[string]testCase {
 	return map[string]testCase{
 		"Single GPU": {
-			clusterTopology: &topology.Cluster{
-				MigStrategy: "mixed",
-				Nodes: map[string]topology.Node{
-					nodeName: {
-						GpuMemory:  20000,
-						GpuProduct: "Tesla P100",
-						Gpus: []topology.GpuDetails{
-							{
-								ID: "fake-gpu-id-1",
-								Status: topology.GpuStatus{
-									AllocatedBy: topology.ContainerDetails{
-										Namespace: podNamespace,
-										Pod:       podName,
-										Container: containerName,
-									},
-									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
-										podName: topology.GpuUsageStatus{
-											Utilization: topology.Range{
-												Min: 80,
-												Max: 80,
-											},
-											FbUsed: 20000,
+			nodeTopologies: map[string]*topology.NodeTopology{
+				nodeName: {
+					MigStrategy: "mixed",
+					GpuMemory:   20000,
+					GpuProduct:  "Tesla P100",
+					Gpus: []topology.GpuDetails{
+						{
+							ID: "fake-gpu-id-1",
+							Status: topology.GpuStatus{
+								AllocatedBy: topology.ContainerDetails{
+									Namespace: podNamespace,
+									Pod:       podName,
+									Container: containerName,
+								},
+								PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+									podName: topology.GpuUsageStatus{
+										Utilization: topology.Range{
+											Min: 80,
+											Max: 80,
 										},
+										FbUsed: 20000,
 									},
 								},
 							},
@@ -259,48 +257,46 @@ func getTestCases() map[string]testCase {
 			},
 		},
 		"Multiple GPUs": {
-			clusterTopology: &topology.Cluster{
-				MigStrategy: "mixed",
-				Nodes: map[string]topology.Node{
-					nodeName: {
-						GpuMemory:  20000,
-						GpuProduct: "Tesla P100",
-						Gpus: []topology.GpuDetails{
-							{
-								ID: "fake-gpu-id-1",
-								Status: topology.GpuStatus{
-									AllocatedBy: topology.ContainerDetails{
-										Namespace: podNamespace,
-										Pod:       podName,
-										Container: containerName,
-									},
-									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
-										podName: topology.GpuUsageStatus{
-											Utilization: topology.Range{
-												Min: 100,
-												Max: 100,
-											},
-											FbUsed: 20000,
+			nodeTopologies: map[string]*topology.NodeTopology{
+				nodeName: {
+					MigStrategy: "mixed",
+					GpuMemory:   20000,
+					GpuProduct:  "Tesla P100",
+					Gpus: []topology.GpuDetails{
+						{
+							ID: "fake-gpu-id-1",
+							Status: topology.GpuStatus{
+								AllocatedBy: topology.ContainerDetails{
+									Namespace: podNamespace,
+									Pod:       podName,
+									Container: containerName,
+								},
+								PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+									podName: topology.GpuUsageStatus{
+										Utilization: topology.Range{
+											Min: 100,
+											Max: 100,
 										},
+										FbUsed: 20000,
 									},
 								},
 							},
-							{
-								ID: "fake-gpu-id-2",
-								Status: topology.GpuStatus{
-									AllocatedBy: topology.ContainerDetails{
-										Namespace: podNamespace,
-										Pod:       podName,
-										Container: containerName,
-									},
-									PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
-										podName: topology.GpuUsageStatus{
-											Utilization: topology.Range{
-												Min: 100,
-												Max: 100,
-											},
-											FbUsed: 20000,
+						},
+						{
+							ID: "fake-gpu-id-2",
+							Status: topology.GpuStatus{
+								AllocatedBy: topology.ContainerDetails{
+									Namespace: podNamespace,
+									Pod:       podName,
+									Container: containerName,
+								},
+								PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+									podName: topology.GpuUsageStatus{
+										Utilization: topology.Range{
+											Min: 100,
+											Max: 100,
 										},
+										FbUsed: 20000,
 									},
 								},
 							},
@@ -395,31 +391,27 @@ func getTestCases() map[string]testCase {
 	}
 }
 
-func createInitialTopology() *topology.Cluster {
-	return &topology.Cluster{
+func createNodeTopology() *topology.NodeTopology {
+	return &topology.NodeTopology{
 		MigStrategy: "mixed",
-		Nodes: map[string]topology.Node{
-			nodeName: {
-				GpuMemory:  20000,
-				GpuProduct: "Tesla P100",
-				Gpus: []topology.GpuDetails{
-					{
-						ID: "fake-gpu-id-1",
-						Status: topology.GpuStatus{
-							AllocatedBy: topology.ContainerDetails{
-								Namespace: podNamespace,
-								Pod:       podName,
-								Container: containerName,
+		GpuMemory:   20000,
+		GpuProduct:  "Tesla P100",
+		Gpus: []topology.GpuDetails{
+			{
+				ID: "fake-gpu-id-1",
+				Status: topology.GpuStatus{
+					AllocatedBy: topology.ContainerDetails{
+						Namespace: podNamespace,
+						Pod:       podName,
+						Container: containerName,
+					},
+					PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
+						podName: topology.GpuUsageStatus{
+							Utilization: topology.Range{
+								Min: 100,
+								Max: 100,
 							},
-							PodGpuUsageStatus: topology.PodGpuUsageStatusMap{
-								podName: topology.GpuUsageStatus{
-									Utilization: topology.Range{
-										Min: 100,
-										Max: 100,
-									},
-									FbUsed: 20000,
-								},
-							},
+							FbUsed: 20000,
 						},
 					},
 				},

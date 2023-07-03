@@ -8,6 +8,6 @@ import (
 )
 
 type Interface interface {
-	Subscribe(subscriber chan<- *topology.Cluster)
+	Subscribe(subscriber chan<- *topology.NodeTopology)
 	Watch(stopCh <-chan struct{})
 }

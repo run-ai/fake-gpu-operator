@@ -17,6 +17,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -48,9 +49,10 @@ const (
 var (
 	defaultTopologyConfig = topology.Config{
 		NodeAutofill: topology.NodeAutofillSettings{
-			GpuCount:   nodeGpuCount,
-			GpuMemory:  11441,
-			GpuProduct: "Tesla-K80",
+			GpuCount:    nodeGpuCount,
+			GpuMemory:   11441,
+			GpuProduct:  "Tesla-K80",
+			MigStrategy: "mixed",
 		},
 	}
 )
@@ -69,13 +71,11 @@ var _ = Describe("StatusUpdater", func() {
 	)
 
 	BeforeEach(func() {
-		clusterTopology := &topology.Cluster{
-			MigStrategy: "mixed",
-			Nodes:       map[string]topology.Node{},
-			Config:      defaultTopologyConfig,
+		baseTopology := &topology.BaseTopology{
+			Config: defaultTopologyConfig,
 		}
 
-		topologyStr, err := json.Marshal(clusterTopology)
+		topologyStr, err := json.Marshal(baseTopology)
 		Expect(err).ToNot(HaveOccurred())
 		topologyConfigMap := &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -131,7 +131,7 @@ var _ = Describe("StatusUpdater", func() {
 
 	When("the status updater is started", func() {
 		It("should initialize the topology nodes", func() {
-			Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount, node)))
+			Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(createTopology(nodeGpuCount, node)))
 		})
 	})
 
@@ -187,25 +187,25 @@ var _ = Describe("StatusUpdater", func() {
 					if caseDetails.podPhase == v1.PodRunning ||
 						((caseDetails.podPhase == v1.PodPending || caseDetails.podPhase == v1.PodUnknown) && isPodScheduledConditionTrue) {
 						for i := 0; i < int(caseDetails.podGpuCount); i++ {
-							expectedTopology.Nodes[node].Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+							expectedTopology.Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 								podUID: topology.GpuUsageStatus{
 									Utilization:           getExpectedUtilization(caseDetails.workloadType, caseDetails.podPhase),
-									FbUsed:                expectedTopology.Nodes[node].GpuMemory,
+									FbUsed:                expectedTopology.GpuMemory,
 									UseKnativeUtilization: caseDetails.workloadType == "inference" && caseDetails.podPhase == v1.PodRunning,
 								},
 							}
-							expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Pod = podName
-							expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Container = containerName
-							expectedTopology.Nodes[node].Gpus[i].Status.AllocatedBy.Namespace = podNamespace
+							expectedTopology.Gpus[i].Status.AllocatedBy.Pod = podName
+							expectedTopology.Gpus[i].Status.AllocatedBy.Container = containerName
+							expectedTopology.Gpus[i].Status.AllocatedBy.Namespace = podNamespace
 						}
 					}
 
-					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
+					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
 
 					By("deleting the pod")
 					err = kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 					Expect(err).ToNot(HaveOccurred())
-					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(createTopology(nodeGpuCount, node)))
+					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(createTopology(nodeGpuCount, node)))
 				})
 			}
 		})
@@ -223,16 +223,16 @@ var _ = Describe("StatusUpdater", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					expectedTopology := createTopology(nodeGpuCount, node)
-					expectedTopology.Nodes[node].Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+					expectedTopology.Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 						podUID: topology.GpuUsageStatus{
 							Utilization:           getExpectedUtilization(workloadType, v1.PodPending),
-							FbUsed:                expectedTopology.Nodes[node].GpuMemory,
+							FbUsed:                expectedTopology.GpuMemory,
 							UseKnativeUtilization: false,
 						},
 					}
 
 					By("creating the pod with pending phase")
-					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
+					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
 
 					By("updating the pod phase to running")
 					pod, err = kubeclient.CoreV1().Pods(podNamespace).Get(context.TODO(), podName, metav1.GetOptions{})
@@ -241,42 +241,42 @@ var _ = Describe("StatusUpdater", func() {
 					_, err = kubeclient.CoreV1().Pods(podNamespace).UpdateStatus(context.TODO(), pod, metav1.UpdateOptions{})
 					Expect(err).ToNot(HaveOccurred())
 
-					expectedTopology.Nodes[node].Gpus[0].Status.PodGpuUsageStatus[podUID] = topology.GpuUsageStatus{
+					expectedTopology.Gpus[0].Status.PodGpuUsageStatus[podUID] = topology.GpuUsageStatus{
 						Utilization:           getExpectedUtilization(workloadType, v1.PodRunning),
-						FbUsed:                expectedTopology.Nodes[node].GpuMemory,
+						FbUsed:                expectedTopology.GpuMemory,
 						UseKnativeUtilization: false,
 					}
 
-					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
+					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
 				})
 			})
 		})
 
 		When("informed of a shared GPU pod", func() {
 			var (
-				expectedTopology *topology.Cluster
+				expectedTopology *topology.NodeTopology
 			)
 
 			var (
 				expectTopologyToBeUpdatedWithReservationPod = func() {
 					expectedTopology = createTopology(nodeGpuCount, node)
-					expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Pod = reservationPodName
-					expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
-					expectedTopology.Nodes[node].Gpus[0].Status.AllocatedBy.Namespace = constants.ReservationNs
-					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
+					expectedTopology.Gpus[0].Status.AllocatedBy.Pod = reservationPodName
+					expectedTopology.Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
+					expectedTopology.Gpus[0].Status.AllocatedBy.Namespace = constants.ReservationNs
+					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
 				}
 				expectTopologyToBeUpdatedWithSharedGpuPod = func() {
-					expectedTopology.Nodes[node].Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+					expectedTopology.Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
 						podUID: topology.GpuUsageStatus{
 							Utilization: topology.Range{
 								Min: 80,
 								Max: 100,
 							},
-							FbUsed: int(float64(expectedTopology.Nodes[node].GpuMemory) * 0.5),
+							FbUsed: int(float64(expectedTopology.GpuMemory) * 0.5),
 						},
 					}
 
-					Eventually(getTopologyFromKube(kubeclient)).Should(Equal(expectedTopology))
+					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
 				}
 			)
 
@@ -330,7 +330,7 @@ var _ = Describe("StatusUpdater", func() {
 		})
 
 		When("informed of a GPU node", func() {
-			It("should add the node to the cluster topology", func() {
+			It("should create a new now topology", func() {
 				node := &v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "node1",
@@ -344,15 +344,20 @@ var _ = Describe("StatusUpdater", func() {
 				_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(getTopologyNodesFromKube(kubeclient)).Should(HaveKey("node1"))
+				Eventually(getTopologyNodeFromKube(kubeclient, node.Name)).Should(Not(BeNil()))
 
-				clusterTopology, err := getTopologyFromKube(kubeclient)()
+				baseTopology, err := getTopologyFromKube(kubeclient)()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(clusterTopology).ToNot(BeNil())
+				Expect(baseTopology).ToNot(BeNil())
 
-				Expect(clusterTopology.Nodes["node1"].GpuMemory).To(Equal(clusterTopology.Config.NodeAutofill.GpuMemory))
-				Expect(clusterTopology.Nodes["node1"].GpuProduct).To(Equal(clusterTopology.Config.NodeAutofill.GpuProduct))
-				Expect(clusterTopology.Nodes["node1"].Gpus).To(HaveLen(clusterTopology.Config.NodeAutofill.GpuCount))
+				nodeTopology, err := getTopologyNodeFromKube(kubeclient, node.Name)()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(nodeTopology).ToNot(BeNil())
+
+				Expect(nodeTopology.GpuMemory).To(Equal(baseTopology.Config.NodeAutofill.GpuMemory))
+				Expect(nodeTopology.GpuProduct).To(Equal(baseTopology.Config.NodeAutofill.GpuProduct))
+				Expect(nodeTopology.Gpus).To(HaveLen(baseTopology.Config.NodeAutofill.GpuCount))
+				Expect(nodeTopology.MigStrategy).To(Equal(baseTopology.Config.NodeAutofill.MigStrategy))
 			})
 		})
 
@@ -366,8 +371,7 @@ var _ = Describe("StatusUpdater", func() {
 
 				_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
-
-				Consistently(getTopologyNodesFromKube(kubeclient)).ShouldNot(HaveKey("node1"))
+				Consistently(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(MatchError(errors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, topology.GetNodeTopologyCMName(node.Name))))
 			})
 		})
 
@@ -387,32 +391,43 @@ var _ = Describe("StatusUpdater", func() {
 				_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(getTopologyNodesFromKube(kubeclient)).Should(HaveKey("node1"))
+				Eventually(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(BeNil())
 
-				err = kubeclient.CoreV1().Nodes().Delete(context.TODO(), "node1", metav1.DeleteOptions{})
+				err = kubeclient.CoreV1().Nodes().Delete(context.TODO(), node.Name, metav1.DeleteOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(getTopologyNodesFromKube(kubeclient)).ShouldNot(HaveKey("node1"))
+				Eventually(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(Not(BeNil()))
 			})
 		})
 	})
 })
 
-func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.Cluster, error) {
-	return func() (*topology.Cluster, error) {
-		ret, err := topology.GetFromKube(kubeclient)
+func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.BaseTopology, error) {
+	return func() (*topology.BaseTopology, error) {
+		ret, err := topology.GetBaseTopologyFromCM(kubeclient)
 		return ret, err
 	}
 }
 
-func getTopologyNodesFromKube(kubeclient kubernetes.Interface) func() (map[string]topology.Node, error) {
-	return func() (map[string]topology.Node, error) {
-		topology, err := topology.GetFromKube(kubeclient)
+func getTopologyNodeFromKube(kubeclient kubernetes.Interface, nodeName string) func() (*topology.NodeTopology, error) {
+	return func() (*topology.NodeTopology, error) {
+		topology, err := topology.GetNodeTopologyFromCM(kubeclient, nodeName)
 		if err != nil {
 			return nil, err
 		}
 
-		return topology.Nodes, nil
+		return topology, nil
+	}
+}
+
+func getTopologyNodeFromKubeErrorOrNil(kubeclient kubernetes.Interface, nodeName string) func() error {
+	return func() error {
+		_, err := topology.GetNodeTopologyFromCM(kubeclient, nodeName)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
@@ -437,7 +452,7 @@ func setupEnvs() {
 	os.Setenv("TOPOLOGY_CM_NAMESPACE", "fake-cm-namespace")
 }
 
-func createTopology(gpuCount int64, nodeName string) *topology.Cluster {
+func createTopology(gpuCount int64, nodeName string) *topology.NodeTopology {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for i := int64(0); i < gpuCount; i++ {
 		gpus[i] = topology.GpuDetails{
@@ -448,16 +463,11 @@ func createTopology(gpuCount int64, nodeName string) *topology.Cluster {
 		}
 	}
 
-	return &topology.Cluster{
+	return &topology.NodeTopology{
 		MigStrategy: "mixed",
-		Nodes: map[string]topology.Node{
-			nodeName: {
-				GpuMemory:  11441,
-				GpuProduct: "Tesla-K80",
-				Gpus:       gpus,
-			},
-		},
-		Config: defaultTopologyConfig,
+		GpuMemory:   11441,
+		GpuProduct:  "Tesla-K80",
+		Gpus:        gpus,
 	}
 }
 

@@ -10,14 +10,14 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsDedicatedGpuPod(pod) {
 		return nil
 	}
 
 	// This can happen when the status updater is restarted.
 	// (If that will affect performance, we should construct a helper map of allocated pods)
-	if isAlreadyAllocated(pod, clusterTopology) {
+	if isAlreadyAllocated(pod, nodeTopology) {
 		log.Printf("Pod %s is already allocated, skipping...\n", pod.Name)
 		return nil
 	}
@@ -29,8 +29,8 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 
 	requestedGpusCount := requestedGpus.Value()
 	log.Printf("Requested GPUs: %d\n", requestedGpusCount)
-	for idx := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
-		gpu := &clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx]
+	for idx := range nodeTopology.Gpus {
+		gpu := &nodeTopology.Gpus[idx]
 
 		if requestedGpusCount <= 0 {
 			break
@@ -43,7 +43,7 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 			gpu.Status.AllocatedBy.Container = pod.Spec.Containers[0].Name
 
 			if pod.Namespace != constants.ReservationNs {
-				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
+				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
 			}
 
 			requestedGpusCount--
@@ -53,13 +53,13 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, clusterTopology 
 	return nil
 }
 
-func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, clusterTopology *topology.Cluster) error {
+func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsDedicatedGpuPod(pod) {
 		return nil
 	}
 
-	for idx := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
-		gpu := &clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx]
+	for idx := range nodeTopology.Gpus {
+		gpu := &nodeTopology.Gpus[idx]
 
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&
@@ -67,7 +67,7 @@ func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, clusterTopology *t
 		if isGpuOccupiedByPod {
 			if pod.Namespace != constants.ReservationNs {
 				gpu.Status.PodGpuUsageStatus[pod.UID] =
-					calculateUsage(p.dynamicClient, pod, clusterTopology.Nodes[pod.Spec.NodeName].GpuMemory)
+					calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
 			}
 		}
 	}
@@ -75,23 +75,23 @@ func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, clusterTopology *t
 	return nil
 }
 
-func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, clusterTopology *topology.Cluster) {
+func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, nodeTopology *topology.NodeTopology) {
 	if !util.IsDedicatedGpuPod(pod) {
 		return
 	}
 
-	for idx, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
+	for idx, gpu := range nodeTopology.Gpus {
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&
 			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
 		if isGpuOccupiedByPod {
-			clusterTopology.Nodes[pod.Spec.NodeName].Gpus[idx].Status = topology.GpuStatus{}
+			nodeTopology.Gpus[idx].Status = topology.GpuStatus{}
 		}
 	}
 }
 
-func isAlreadyAllocated(pod *v1.Pod, clusterTopology *topology.Cluster) bool {
-	for _, gpu := range clusterTopology.Nodes[pod.Spec.NodeName].Gpus {
+func isAlreadyAllocated(pod *v1.Pod, nodeTopology *topology.NodeTopology) bool {
+	for _, gpu := range nodeTopology.Gpus {
 		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
 			gpu.Status.AllocatedBy.Pod == pod.Name &&
 			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
