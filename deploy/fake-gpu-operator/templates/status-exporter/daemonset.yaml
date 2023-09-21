@@ -4,6 +4,7 @@ metadata:
   labels:
     app: nvidia-dcgm-exporter
     component: status-exporter
+    app.kubernetes.io/name: nvidia-container-toolkit
   name: nvidia-dcgm-exporter
 
 spec:
@@ -15,6 +16,7 @@ spec:
       creationTimestamp: null
       labels:
         app: nvidia-dcgm-exporter
+        app.kubernetes.io/name: nvidia-container-toolkit
     spec:
       containers:
         - image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag }}"
