@@ -181,11 +181,11 @@ func getTestCases() map[string]testCase {
 				},
 			},
 			expectedLabels: map[string]string{
-				"feature.node.kubernetes.io/pci-10de.present": "true",
-				"nvidia.com/gpu.memory":                       "20000",
-				"nvidia.com/gpu.count":                        "1",
-				"nvidia.com/mig.strategy":                     "mixed",
-				"nvidia.com/gpu.product":                      "Tesla P100",
+				"nvidia.com/gpu.present":  "true",
+				"nvidia.com/gpu.memory":   "20000",
+				"nvidia.com/gpu.count":    "1",
+				"nvidia.com/mig.strategy": "mixed",
+				"nvidia.com/gpu.product":  "Tesla P100",
 			},
 			expectedMetrics: []*dto.MetricFamily{
 				{
@@ -305,11 +305,11 @@ func getTestCases() map[string]testCase {
 				},
 			},
 			expectedLabels: map[string]string{
-				"feature.node.kubernetes.io/pci-10de.present": "true",
-				"nvidia.com/gpu.memory":                       "20000",
-				"nvidia.com/gpu.count":                        "2",
-				"nvidia.com/mig.strategy":                     "mixed",
-				"nvidia.com/gpu.product":                      "Tesla P100",
+				"nvidia.com/gpu.present":  "true",
+				"nvidia.com/gpu.memory":   "20000",
+				"nvidia.com/gpu.count":    "2",
+				"nvidia.com/mig.strategy": "mixed",
+				"nvidia.com/gpu.product":  "Tesla P100",
 			},
 			expectedMetrics: []*dto.MetricFamily{
 				{
