@@ -39,7 +39,7 @@ Run any image that does not require a GPU. For example, the Run:ai quickstart fa
 
 ## Troubleshooting
 
-Pod Security Admissions should be disabled on the gpu-operator namespace 
+[Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) should be disabled on the gpu-operator namespace 
 
 ```
 kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
@@ -58,13 +58,13 @@ To control the GPUs for each node, use the following values file:
 ```
 initialTopology:
   nodes:
-    __node_name__:
+    NODE-NAME:
       gpu-memory: 11441
       gpu-product: Tesla-K80
       gpu-count: 16
 ```
 
-* Replace __node_name__ with the actual node name that you want to add fake GPUs to
+* Replace __NODE-NAME__ with the actual node name that you want to add fake GPUs to
 * Change the other values as required. 
 
 ### Same GPU Configuration for all nodes
@@ -73,11 +73,15 @@ initialTopology:
 
 if you want all nodes the same, then you can use:
 
- config: node-autofill: enabled: true
+ config: 
+   node-autofill: 
+     enabled: true
 
 if you want custom topology per-node, make sure that:
 
- config: node-autofill: enabled: false
+ config: 
+   node-autofill: 
+     enabled: false
 
 under “data: topology.yml: | nodes:”, it should look as described above (__node_name__:, etc..)
 
