@@ -73,16 +73,18 @@ initialTopology:
 
 if you want all nodes the same, then you can use:
 
+```
  config: 
    node-autofill: 
      enabled: true
+```
 
 if you want custom topology per-node, make sure that:
-
+```
  config: 
    node-autofill: 
      enabled: false
-
+```
 under “data: topology.yml: | nodes:”, it should look as described above (__node_name__:, etc..)
 
 
