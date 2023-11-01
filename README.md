@@ -16,13 +16,13 @@ The real Nvidia GPU Operator should not exist in the Kubernetes cluster
 
 ## Installation
 
-Label the nodes you wish to have fake GPUs with the following labels:
+Label the nodes you wish to have fake GPUs on, with the following labels:
 
 ```
 kubectl label node <node-name> nvidia.com/gpu.deploy.device-plugin=true nvidia.com/gpu.deploy.dcgm-exporter=true --overwrite
 ```
 
-By default, the operator creates a GPU topology of 2 Tesla K80 GPUs for each node. To create a different GPU topology, see the __customization__ section below.
+By default, the operator creates a GPU topology of 2 Tesla K80 GPUs for each node in the cluster. To create a different GPU topology, see the __customization__ section below.
 
 
 Install the operator:
@@ -35,7 +35,7 @@ helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator --namespace gpu
 
 ## Usage
 
-Submit any workload that requests an NVIDIA GPU 
+Submit any workload with a request for NVIDIA GPU: 
 
 ```
 resources:
@@ -43,9 +43,9 @@ resources:
     nvidia.com/gpu: 1
 ```
 
-Verify that it schedules on one of the CPU nodes 
+Verify that it has been scheduled on one of the __CPU__ nodes. 
 
-You can also test by running the example deployment under the `example` folder
+You can also test by running the example deployment YAML under the `example` folder
 
 ## Troubleshooting
 
@@ -59,7 +59,7 @@ kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
 
 The base GPU topology is defined using a Kubernetes configmap named `topology`.
 
-To customize the GPU topology, edit the configmap:
+To customize the GPU topology, edit the Kubernetes configmap by running:
 
 ```
 kubectl edit cm topology -n gpu-operator
@@ -79,7 +79,7 @@ data:
     mig-strategy: mixed
 ```
 
-This configmap defines the GPU topology for all nodes.
+The configmap defines the GPU topology for all nodes.
 
 * __gpu-count__ - number of GPUs per node.
 * __gpu-memory__ - amount of GPU memory per GPU.
