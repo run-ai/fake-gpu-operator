@@ -35,7 +35,17 @@ helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator --namespace gpu
 
 ## Usage
 
-Run any image that does not require a GPU. For example, the Run:ai quickstart fake image - `gcr.io/run-ai-demo/quickstart-demo`
+Submit any pod and require an NVIDIA GPU 
+
+```
+resources:
+  limits:
+    nvidia.com/gpu: 1
+```
+
+Verify that it schedules on one of the CPU nodes 
+
+You can also test by running the example deployment under the `example` folder
 
 ## Troubleshooting
 
