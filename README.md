@@ -35,7 +35,7 @@ helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator --namespace gpu
 
 ## Usage
 
-Submit any pod and require an NVIDIA GPU 
+Submit any workload that requests an NVIDIA GPU 
 
 ```
 resources:
@@ -57,60 +57,43 @@ kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
 
 ## Customization
 
-The GPU topology is defined using a Kubernetes configmap named `topology`. The configmap is defined in the values file of the chart under the initialTopology section.
+The base GPU topology is defined using a Kubernetes configmap named `topology`.
 
-To customize, create a file `values.yaml` and use it when installing the helm chart by adding as with `-f values.yaml`
-
-### Node specific customization
-
-To control the GPUs for each node, use the following values file:
-
-```
-initialTopology:
-  nodes:
-    NODE-NAME:
-      gpu-memory: 11441
-      gpu-product: Tesla-K80
-      gpu-count: 16
-```
-
-* Replace __NODE-NAME__ with the actual node name that you want to add fake GPUs to
-* Change the other values as required. 
-
-### Same GPU Configuration for all nodes
-
-
-
-if you want all nodes the same, then you can use:
-
-```
- config: 
-   node-autofill: 
-     enabled: true
-```
-
-if you want custom topology per-node, make sure that:
-```
- config: 
-   node-autofill: 
-     enabled: false
-```
-under “data: topology.yml: | nodes:”, it should look as described above (__node_name__:, etc..)
-
-
-
-
-### Customizate an existing installation
-
-If you already have fake-gpu-operator installed, run:
+To customize the GPU topology, edit the configmap:
 
 ```
 kubectl edit cm topology -n gpu-operator
 ```
 
-Change the configmap and save. Then run:
+The configmap should look like this:
 
 ```
-kubectl delete pods -n gpu-operator --all --force
+apiVersion: v1
+data:
+  topology.yml: |
+    config:
+      node-autofill:
+        gpu-count: 16
+        gpu-memory: 11441
+        gpu-product: Tesla-K80
+    mig-strategy: mixed
 ```
 
+This configmap defines the GPU topology for all nodes.
+
+* __gpu-count__ - number of GPUs per node.
+* __gpu-memory__ - amount of GPU memory per GPU.
+* __gpu-product__ - GPU type. For example: `Tesla-K80`, `Tesla-V100`, etc.
+* __mig-strategy__ - MIG strategy. Can be `none`, `mixed` or `single`.
+
+### Node specific customization
+
+Each node can have a different GPU topology. To customize a specific node, edit the configmap named `<node-name>-topology` in the `gpu-operator` namespace.
+
+
+### GPU metrics
+
+By default, dcgm exporter will export maximum GPU utilization for every pod that requests GPUs.
+
+If you want to customize the GPU utilization, add a `run.ai/simulated-gpu-utilization` annotation to the pod with a value that represents the range of the GPU utilization that should be simulated.
+For example, add `run.ai/simulated-gpu-utilization: 10-30` annotation to simulate a pod that utilizes the GPU between 10% to 30%.
