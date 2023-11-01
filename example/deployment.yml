@@ -21,7 +21,8 @@ spec:
     spec:
       containers:
         - name: sleep
-          image: local-registry:5000/gshaibi/sleep
+          image: alpine
+          command: ["sleep", "3600"]
           imagePullPolicy: IfNotPresent
           resources:
             limits:
