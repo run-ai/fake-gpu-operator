@@ -96,4 +96,4 @@ Each node can have a different GPU topology. To customize a specific node, edit 
 By default, dcgm exporter will export maximum GPU utilization for every pod that requests GPUs.
 
 If you want to customize the GPU utilization, add a `run.ai/simulated-gpu-utilization` annotation to the pod with a value that represents the range of the GPU utilization that should be simulated.
-For example, 
+For example, add `run.ai/simulated-gpu-utilization: 10-30` annotation to simulate a pod that utilizes the GPU between 10% to 30%.
