@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-operator
+  labels:
+    app: gpu-operator
+spec:
+  selector:
+    matchLabels:
+      app: gpu-operator
+      component: gpu-operator
+  replicas: 0
+  template:
+    metadata:
+      labels:
+        app: gpu-operator
+        component: gpu-operator
+    spec:
+      containers:
+        - name: gpu-operator
+          image: ubuntu:22.04
+          args:
+            - sleep
+            - infinity
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: gcr-secret
