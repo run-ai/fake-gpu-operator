@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app: gpu-operator
       component: gpu-operator
-  replicas: 1
+  replicas: 0
   template:
     metadata:
       labels:
