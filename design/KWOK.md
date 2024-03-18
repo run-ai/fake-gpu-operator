@@ -22,7 +22,7 @@ This initiative aims to extend support for our system to operate seamlessly with
   - The current deployment as a DaemonSet is incompatible with fake nodes. We might want to not supoprt it on fake nodes and require manual node resources update.
 
 ## Design
-- [ ] Implement a single monolithic service named status-exporter to handle all exportation logic when GPU nodes are fake. This service will encompass the following:
+- [ ] Implement a single monolithic service named `status-exporter` to handle all exportation logic when GPU nodes are fake. This service will be disabled be default, and will be manually enabled when running on kwok cluster. This service will encompass the following:
   - [ ] Metrics
     - [ ] Export the same as today, with the following label enrichments (<pod> refers to the dcgm-exporter fake pod):
       - [ ] `container="nvidia-dcgm-exporter"`
