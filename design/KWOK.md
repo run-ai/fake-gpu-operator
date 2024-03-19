@@ -43,6 +43,8 @@ In order to do that, we'll need to set `honorLabels: true` on the ServiceMonitor
       - [ ] `runai_pod_gpu_memory_used_bytes` with labels `pod_uuid` and `gpu`
   - [ ] Labels
     - [ ] Ensure consistent label exportation.
+  - [ ] Node Devices
+    - [ ] Ensure consistent device exportation.
 - [ ] Add a ServiceMonitor for the new service, and set `honorLabels: true` on it (so we can fake multiple exporters).
 
 ## Limitations
