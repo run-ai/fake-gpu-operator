@@ -29,7 +29,7 @@ The metrics that will be exported from the new service will need to contain the 
 In order to do that, we'll need to set `honorLabels: true` on the ServiceMonitor for the new service.
 
 ## Action Items
-- [ ] Implement a single monolithic service named `status-exporter` to handle all exportation logic when GPU nodes are fake. This service will be disabled by default, and will be manually enabled when running on kwok cluster. This service will encompass the following:
+- [ ] Implement a single monolithic service named `centralized-status-exporter` to handle all exportation logic when GPU nodes are fake. This service will be disabled by default, and will be manually enabled when running on kwok cluster. This service will encompass the following:
   - [ ] Metrics
     - [ ] Export the same as today, with the following label enrichments (<pod> refers to the dcgm-exporter fake pod):
       - [ ] `container="nvidia-dcgm-exporter"`
