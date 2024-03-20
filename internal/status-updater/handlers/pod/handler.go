@@ -38,6 +38,11 @@ func (p *PodHandler) HandleAdd(pod *v1.Pod) error {
 		return fmt.Errorf("could not get node %s topology: %w", pod.Spec.NodeName, err)
 	}
 
+	err = p.handleGpuReservationPodAddition(pod)
+	if err != nil {
+		return err
+	}
+
 	err = p.handleDedicatedGpuPodAddition(pod, nodeTopology)
 	if err != nil {
 		return err
