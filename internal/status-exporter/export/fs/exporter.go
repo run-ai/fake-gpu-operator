@@ -48,17 +48,27 @@ func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
 		}
 
 		for podUuid, gpuUsageStatus := range gpu.Status.PodGpuUsageStatus {
-			log.Printf("Exporting pod %s gpu utilization to filesystem", podUuid)
-			utilization := gpuUsageStatus.Utilization.Random()
+			log.Printf("Exporting pod %s gpu stats to filesystem", podUuid)
 
-			path := fmt.Sprintf("runai/proc/pod/%s/metrics/gpu/%d/utilization.sm", podUuid, gpuIdx)
+			path := fmt.Sprintf("runai/proc/pod/%s/metrics/gpu/%d", podUuid, gpuIdx)
 			if err := os.MkdirAll(filepath.Dir(path), 0644); err != nil {
 				log.Printf("Failed creating directory for pod %s: %s", podUuid, err.Error())
 			}
 
-			if err := os.WriteFile(path, []byte(strconv.Itoa(utilization)), 0644); err != nil {
-				log.Printf("Failed exporting pod %s to filesystem: %s", podUuid, err.Error())
+			if err := writeFile(filepath.Join(path, "utilization.sm"), []byte(strconv.Itoa(gpuUsageStatus.Utilization.Random()))); err != nil {
+				log.Printf("Failed exporting utilization for pod %s: %s", podUuid, err.Error())
+			}
+
+			if err := writeFile(filepath.Join(path, "memory.allocated"), []byte(strconv.Itoa(gpuUsageStatus.FbUsed))); err != nil {
+				log.Printf("Failed exporting memory for pod %s: %s", podUuid, err.Error())
 			}
 		}
 	}
+}
+
+func writeFile(path string, content []byte) error {
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		return fmt.Errorf("failed writing file %s: %w", path, err)
+	}
+	return nil
 }
