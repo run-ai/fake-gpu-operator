@@ -17,6 +17,8 @@ type KubeWatcher struct {
 	subscribers []chan<- *topology.NodeTopology
 }
 
+// GuyTodo: Add FieldSelector and LabelSelector to watch on.
+// Will be a single as today for distributed and field selector of {"node-topology": true} for centralized.
 func NewKubeWatcher(kubeclient kubeclient.KubeClientInterface) *KubeWatcher {
 	return &KubeWatcher{
 		kubeclient: kubeclient,
