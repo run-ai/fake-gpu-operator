@@ -41,7 +41,7 @@ func main() {
 	initNvidiaSmi()
 	initPreloaders()
 
-	devicePlugin := deviceplugin.NewDevicePlugin(topology)
+	devicePlugin := deviceplugin.NewDevicePlugin(topology, kubeClient)
 	if err = devicePlugin.Serve(); err != nil {
 		log.Printf("Failed to serve device plugin: %s\n", err)
 		os.Exit(1)

@@ -14,4 +14,10 @@ const (
 	ReservationNs = "runai-reservation"
 
 	GpuResourceName = "nvidia.com/gpu"
+
+	// GuyTodo: Replace all references to this
+	EnvFakeNode            = "FAKE_NODE"
+	EnvNodeName            = "NODE_NAME"
+	EnvTopologyCmName      = "TOPOLOGY_CM_NAME"
+	EnvTopologyCmNamespace = "TOPOLOGY_CM_NAMESPACE"
 )
