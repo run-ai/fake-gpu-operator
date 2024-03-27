@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type KubeClientInterface interface {
@@ -28,11 +30,12 @@ type KubeClient struct {
 func NewKubeClient(config *rest.Config, stop chan struct{}) *KubeClient {
 	if config == nil {
 		var err error
-		config, err = rest.InClusterConfig()
+		config, err = ctrl.GetConfig()
 		if err != nil {
 			log.Fatalf("Error getting in cluster config to init kubeclient: %e", err)
 		}
 	}
+
 	clientset := kubernetes.NewForConfigOrDie(config)
 	return &KubeClient{
 		ClientSet: clientset,
