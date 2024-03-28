@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-    name: fake-node-deployments
-data:
-    status-exporter.yaml: |
-        {{- include "fake-gpu-operator.status-exporter.deployment" . | nindent 8 }}
-    device-plugin.yaml: |
-        {{- include "fake-gpu-operator.device-plugin.deployment" . | nindent 8 }}

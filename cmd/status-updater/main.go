@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE", "FAKE_NODE_DEPLOYMENTS_PATH"}
+	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE", "FAKE_GPU_OPERATOR_NAMESPACE"}
 	config.ValidateConfig(requiredEnvVars)
 
 	appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})

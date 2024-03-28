@@ -35,9 +35,9 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return fmt.Errorf("failed to create node topology ConfigMap: %w", err)
 	}
 
-	err = p.createFakeNodeDeployments(node)
+	err = p.applyFakeNodeDeployments(node)
 	if err != nil {
-		return fmt.Errorf("failed to create fake node deployments: %w", err)
+		return fmt.Errorf("failed to apply fake node deployments: %w", err)
 	}
 
 	return nil
@@ -49,6 +49,11 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	err := topology.DeleteNodeTopologyCM(p.kubeClient, node.Name)
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete node topology: %w", err)
+	}
+
+	err = p.deleteFakeNodeDeployments(node)
+	if err != nil {
+		return fmt.Errorf("failed to delete fake node deployments: %w", err)
 	}
 
 	return nil

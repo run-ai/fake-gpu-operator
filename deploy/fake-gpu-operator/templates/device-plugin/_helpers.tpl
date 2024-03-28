@@ -1,32 +1,30 @@
-{{- define "fake-gpu-operator.device-plugin.metadata" }}
-metadata:
-  {{- if .Values.environment.openshift }}
-  annotations:
-    openshift.io/scc: hostmount-anyuid
-  {{- end }}
-  labels:
-    app: device-plugin
-  name: device-plugin
-  namespace: {{ .Release.Namespace }}
+{{- define "fake-gpu-operator.device-plugin.common.metadata.labels" -}}
+app: device-plugin
+{{- end -}}
+
+{{- define "fake-gpu-operator.device-plugin.common.metadata.annotations" -}}
+openshift.io/scc: hostmount-anyuid
+{{- end -}}
+
+{{- define "fake-gpu-operator.device-plugin.common.metadata.name" -}}
+device-plugin
+{{- end -}}
+
+{{- define "fake-gpu-operator.device-plugin.common.podSelector" }}
+matchLabels:
+  app: device-plugin
+  component: device-plugin
 {{- end }}
 
-{{- define "fake-gpu-operator.device-plugin.podSelector" }}
-selector:
-  matchLabels:
-    app: device-plugin
-    component: device-plugin
+{{- define "fake-gpu-operator.device-plugin.common.podTemplate.metadata" }}
+annotations:
+  checksum/initialTopology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+labels:
+  app: device-plugin
+  component: device-plugin
 {{- end }}
 
-{{- define "fake-gpu-operator.device-plugin.podTemplate.metadata" }}
-metadata:
-  annotations:
-    checksum/initialTopology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
-  labels:
-    app: device-plugin
-    component: device-plugin
-{{- end }}
-
-{{- define "fake-gpu-operator.device-plugin.podTemplate.spec.common" }}
+{{- define "fake-gpu-operator.device-plugin.common.podTemplate.spec" }}
 containers:
   - image: "{{ .Values.devicePlugin.image.repository }}:{{ .Values.devicePlugin.image.tag }}"
     imagePullPolicy: "{{ .Values.devicePlugin.image.pullPolicy }}"
@@ -76,17 +74,4 @@ volumes:
       path: /var/lib/runai/shared
       type: DirectoryOrCreate
     name: runai-shared-directory
-{{- end }}
-
-{{- define "fake-gpu-operator.device-plugin.deployment" }}
-apiVersion: apps/v1
-kind: Deployment
-{{- include "fake-gpu-operator.device-plugin.metadata" .}}
-spec:
-  replicas: 1
-  {{- include "fake-gpu-operator.device-plugin.podSelector" . | nindent 2 }}
-  template:
-    {{- include "fake-gpu-operator.device-plugin.podTemplate.metadata" . | nindent 4 }}
-    spec:
-      {{- include "fake-gpu-operator.device-plugin.podTemplate.spec.common" . | nindent 6 }}
 {{- end }}

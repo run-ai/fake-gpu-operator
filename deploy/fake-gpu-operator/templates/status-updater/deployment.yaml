@@ -27,18 +27,12 @@ spec:
           env:
             - name: TOPOLOGY_CM_NAME
               value: topology
+            # GuyTodo: Remove and replace with FAKE_GPU_OPERATOR_NAMESPACE
             - name: TOPOLOGY_CM_NAMESPACE
               value: "{{ .Release.Namespace }}"
-            - name: FAKE_NODE_DEPLOYMENTS_PATH
-              value: /var/lib/status-updater/fake-node-deployments
-          volumeMounts:
-            - name: fake-node-deployments
-              mountPath: /var/lib/status-updater/fake-node-deployments
+            - name: FAKE_GPU_OPERATOR_NAMESPACE
+              value: "{{ .Release.Namespace }}"
       restartPolicy: Always
       serviceAccountName: status-updater
       imagePullSecrets:
         - name: gcr-secret
-      volumes:
-        - name: fake-node-deployments
-          configMap:
-            name: fake-node-deployments

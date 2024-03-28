@@ -4,23 +4,21 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
+	"k8s.io/utils/ptr"
 )
 
-func (p *NodeHandler) createFakeNodeDeployments(node *v1.Node) error {
-	fmt.Printf("Creating fake node deployments for node %s\n", node.Name)
+func (p *NodeHandler) applyFakeNodeDeployments(node *v1.Node) error {
 	if !isFakeNode(node) {
 		return nil
 	}
 
-	deployments, err := p.getFakeNodeDeployments(node)
+	deployments, err := p.generateFakeNodeDeployments(node)
 	if err != nil {
 		return fmt.Errorf("failed to get fake node deployments: %w", err)
 	}
@@ -35,27 +33,37 @@ func (p *NodeHandler) createFakeNodeDeployments(node *v1.Node) error {
 	return nil
 }
 
-func (p *NodeHandler) getFakeNodeDeployments(node *v1.Node) ([]appsv1.Deployment, error) {
-	deploymentsPath := os.Getenv("FAKE_NODE_DEPLOYMENTS_PATH")
-
-	deploymentFiles, err := os.ReadDir(deploymentsPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read fake node deployments directory: %w", err)
+func (p *NodeHandler) deleteFakeNodeDeployments(node *v1.Node) error {
+	if !isFakeNode(node) {
+		return nil
 	}
 
-	var deployments []appsv1.Deployment
-	for _, dirEntry := range deploymentFiles {
-		if !dirEntry.Type().IsRegular() {
-			continue
-		}
+	deployments, err := p.generateFakeNodeDeployments(node)
+	if err != nil {
+		return fmt.Errorf("failed to get fake node deployments: %w", err)
+	}
 
-		deployment, err := readDeploymentFile(path.Join(deploymentsPath, dirEntry.Name()))
-		if err != nil {
-			return nil, fmt.Errorf("failed to read deployment file %s: %w", dirEntry.Name(), err)
+	for _, deployment := range deployments {
+		err := p.kubeClient.AppsV1().Deployments(deployment.Namespace).Delete(context.TODO(), deployment.Name, metav1.DeleteOptions{})
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete deployment %s: %w", deployment.Name, err)
 		}
+	}
 
-		enrichFakeNodeDeployment(&deployment, node)
-		deployments = append(deployments, deployment)
+	return nil
+}
+
+func (p *NodeHandler) generateFakeNodeDeployments(node *v1.Node) ([]appsv1.Deployment, error) {
+	deploymentTemplates, err := p.kubeClient.AppsV1().Deployments(os.Getenv(constants.EnvFakeGpuOperatorNs)).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=true", constants.FakeNodeDeploymentTemplateLabel),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list deployments: %w", err)
+	}
+
+	deployments := []appsv1.Deployment{}
+	for i := range deploymentTemplates.Items {
+		deployments = append(deployments, *generateFakeNodeDeploymentFromTemplate(&deploymentTemplates.Items[i], node))
 	}
 
 	return deployments, nil
@@ -68,11 +76,13 @@ func (p *NodeHandler) applyDeployment(deployment appsv1.Deployment) error {
 	}
 
 	if errors.IsNotFound(err) {
+		deployment.ResourceVersion = ""
 		_, err := p.kubeClient.AppsV1().Deployments(deployment.Namespace).Create(context.TODO(), &deployment, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to create deployment %s: %w", deployment.Name, err)
 		}
 	} else {
+		deployment.UID = existingDeployment.UID
 		deployment.ResourceVersion = existingDeployment.ResourceVersion
 		_, err := p.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(context.TODO(), &deployment, metav1.UpdateOptions{})
 		if err != nil {
@@ -83,27 +93,18 @@ func (p *NodeHandler) applyDeployment(deployment appsv1.Deployment) error {
 	return nil
 }
 
-func readDeploymentFile(path string) (appsv1.Deployment, error) {
-	fileContent, err := os.ReadFile(path)
-	if err != nil {
-		return appsv1.Deployment{}, fmt.Errorf("failed to read deployment file %s: %w", path, err)
-	}
+func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v1.Node) *appsv1.Deployment {
+	deployment := template.DeepCopy()
 
-	var deployment appsv1.Deployment
-	err = yaml.Unmarshal(fileContent, &deployment)
-	if err != nil {
-		return appsv1.Deployment{}, fmt.Errorf("failed to unmarshal deployment file %s: %w", path, err)
-	}
-
-	return deployment, nil
-}
-
-func enrichFakeNodeDeployment(deployment *appsv1.Deployment, node *v1.Node) {
+	delete(deployment.Labels, constants.FakeNodeDeploymentTemplateLabel)
 	deployment.Name = fmt.Sprintf("%s-%s", deployment.Name, node.Name)
+	deployment.Spec.Replicas = ptr.To(int32(1))
 	deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, v1.EnvVar{
 		Name:  constants.EnvNodeName,
 		Value: node.Name,
 	})
+
+	return deployment
 }
 
 func isFakeNode(node *v1.Node) bool {

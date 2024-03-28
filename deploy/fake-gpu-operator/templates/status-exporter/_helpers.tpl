@@ -1,28 +1,25 @@
-{{- define "fake-gpu-operator.status-exporter.metadata" }}
-metadata:
-  labels:
-    app: nvidia-dcgm-exporter
-    component: status-exporter
-    app.kubernetes.io/name: nvidia-container-toolkit
-  name: nvidia-dcgm-exporter
-  namespace: {{ .Release.Namespace }}
-{{- end }}
+{{- define "fake-gpu-operator.status-exporter.common.metadata.labels" -}}
+app: nvidia-dcgm-exporter
+component: status-exporter
+app.kubernetes.io/name: nvidia-container-toolkit
+{{- end -}}
 
-{{- define "fake-gpu-operator.status-exporter.podSelector" }}
-selector:
-  matchLabels:
-    app: nvidia-dcgm-exporter
-{{- end }}
+{{- define "fake-gpu-operator.status-exporter.common.metadata.name" -}}
+nvidia-dcgm-exporter
+{{- end -}}
 
-{{- define "fake-gpu-operator.status-exporter.podTemplate.metadata" }}
-metadata:
-  creationTimestamp: null
-  labels:
-    app: nvidia-dcgm-exporter
-    app.kubernetes.io/name: nvidia-container-toolkit
-{{- end }}
+{{- define "fake-gpu-operator.status-exporter.common.podSelector" -}}
+matchLabels:
+  app: nvidia-dcgm-exporter
+{{- end -}}
 
-{{- define "fake-gpu-operator.status-exporter.podTemplate.spec.common" }}
+{{- define "fake-gpu-operator.status-exporter.common.podTemplate.metadata" -}}
+labels:
+  app: nvidia-dcgm-exporter
+  app.kubernetes.io/name: nvidia-container-toolkit
+{{- end -}}
+
+{{- define "fake-gpu-operator.status-exporter.common.podTemplate.spec" -}}
 containers:
 - image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag }}"
   imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
@@ -61,17 +58,4 @@ volumes:
     hostPath:
       path: /var/lib/runai/proc
       type: DirectoryOrCreate
-{{- end }}
-
-{{- define "fake-gpu-operator.status-exporter.deployment" }}
-apiVersion: apps/v1
-kind: Deployment
-{{- include "fake-gpu-operator.status-exporter.metadata" .}}
-spec:
-  replicas: 1
-  {{- include "fake-gpu-operator.status-exporter.podSelector" . | nindent 2 }}
-  template:
-    {{- include "fake-gpu-operator.status-exporter.podTemplate.metadata" . | nindent 4 }}
-    spec:
-      {{- include "fake-gpu-operator.status-exporter.podTemplate.spec.common" . | nindent 6 }}
-{{- end }}
+{{- end -}}
