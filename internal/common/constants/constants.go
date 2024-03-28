@@ -6,6 +6,7 @@ const (
 	PodGroupNameAnnotation         = "pod-group-name"
 	ReservationPodGpuIdxAnnotation = "run.ai/reserve_for_gpu_index"
 	MigMappingAnnotation           = "run.ai/mig-mapping"
+	KwokNodeAnnotation             = "kwok.x-k8s.io/node"
 
 	GpuGroupLabel       = "runai-gpu-group"
 	GpuProductLabel     = "nvidia.com/gpu.product"

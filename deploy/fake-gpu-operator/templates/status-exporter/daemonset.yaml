@@ -1,66 +1,11 @@
 apiVersion: apps/v1
 kind: DaemonSet
-metadata:
-  labels:
-    app: nvidia-dcgm-exporter
-    component: status-exporter
-    # this label would make the deployment pod to mimic the container-toolkit, on top of mimicking the dcgm-exporter.
-    app.kubernetes.io/name: nvidia-container-toolkit
-  name: nvidia-dcgm-exporter
-
+{{- include "fake-gpu-operator.status-exporter.metadata" . }}
 spec:
-  selector:
-    matchLabels:
-      app: nvidia-dcgm-exporter
+  {{- include "fake-gpu-operator.status-exporter.podSelector" . | nindent 2 }}
   template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: nvidia-dcgm-exporter
-        app.kubernetes.io/name: nvidia-container-toolkit
+    {{- include "fake-gpu-operator.status-exporter.podTemplate.metadata" . | nindent 4 }}
     spec:
-      containers:
-        - image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag }}"
-          imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
-          resources:
-            {{- toYaml .Values.statusExporter.resources | nindent 12 }}
-          name: nvidia-dcgm-exporter
-          env:
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: TOPOLOGY_CM_NAME
-              value: topology
-            - name: TOPOLOGY_CM_NAMESPACE
-              value: "{{ .Release.Namespace }}"
-            - name: TOPOLOGY_MAX_EXPORT_INTERVAL
-              value: "{{ .Values.statusExporter.topologyMaxExportInterval }}"
-          ports:
-            - containerPort: 9400
-              name: http
-          volumeMounts:
-            - mountPath: /runai/proc
-              name: runai-proc-directory
+      {{- include "fake-gpu-operator.status-exporter.podTemplate.spec.common" . | nindent 6 }}
       nodeSelector:
         nvidia.com/gpu.deploy.dcgm-exporter: "true"
-      restartPolicy: Always
-      schedulerName: default-scheduler
-      serviceAccount: status-exporter
-      serviceAccountName: status-exporter
-      tolerations:
-        - effect: NoSchedule
-          key: nvidia.com/gpu
-          operator: Exists
-      imagePullSecrets:
-        - name: gcr-secret
-      volumes:
-        - name: runai-proc-directory
-          hostPath:
-            path: /var/lib/runai/proc
-            type: DirectoryOrCreate
-  updateStrategy:
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-    type: RollingUpdate
