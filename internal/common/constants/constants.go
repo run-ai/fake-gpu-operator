@@ -17,7 +17,7 @@ const (
 
 	GpuResourceName = "nvidia.com/gpu"
 
-	// GuyTodo: Replace all references to this
+	// GuyTodo: Use these constants in the code
 	EnvFakeNode            = "FAKE_NODE"
 	EnvNodeName            = "NODE_NAME"
 	EnvTopologyCmName      = "TOPOLOGY_CM_NAME"
