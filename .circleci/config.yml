@@ -1,184 +1,182 @@
-  version: 2.1
-  executors:
-    runai-executor:
-      docker:
-        - image: cimg/go:1.18.2
-  
-  commands:
-    remote_docker:
-      steps:
-        - setup_remote_docker:
-            docker_layer_caching: true
-            version: 20.10.14
-    install_project_dependencies:
-      steps:
-        - checkout
-        - run:
-            name: "Install project dependencies"
-            command: |
-              go mod download
-              go mod verify
+version: 2.1
+executors:
+  runai-executor:
+    docker:
+      - image: cimg/go:1.22.1
 
-    pre_docker_commands:
-      steps:
-        - remote_docker
-        - run:
-            name: "Extract gcloud private key to file"
-            command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
-        - run:
-            name: "Docker gcr login"
-            command: cat gcr_auth.json | docker login -u _json_key --password-stdin https://gcr.io
-        - run:
-            name: "Docker Red Hat login"
-            command: echo "$REDHAT_DOCKER_PASS" | docker login -u $REDHAT_DOCKER_USER --password-stdin https://registry.redhat.io
+commands:
+  remote_docker:
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
+          version: 20.10.14
+  install_project_dependencies:
+    steps:
+      - checkout
+      - run:
+          name: "Install project dependencies"
+          command: |
+            go mod download
+            go mod verify
 
+  pre_docker_commands:
+    steps:
+      - remote_docker
+      - run:
+          name: "Extract gcloud private key to file"
+          command: echo "$STAGING_GCLOUD_SERVICE_JSON_CONTENT" | base64 -d > ./gcr_auth.json
+      - run:
+          name: "Docker gcr login"
+          command: cat gcr_auth.json | docker login -u _json_key --password-stdin https://gcr.io
+      - run:
+          name: "Docker Red Hat login"
+          command: echo "$REDHAT_DOCKER_PASS" | docker login -u $REDHAT_DOCKER_USER --password-stdin https://registry.redhat.io
 
-    operator_update_version_in_helm_chart:
-      steps:
-        - run:
-            name: Update version in helm chart
-            command: |
-              TAG=${CIRCLE_TAG/v/''}
-              echo "Updating fake-gpu-operator new version number $TAG in runai helm chart directory..."
-              sed -i s/0.0.0/$TAG/g deploy/fake-gpu-operator/values.yaml
+  operator_update_version_in_helm_chart:
+    steps:
+      - run:
+          name: Update version in helm chart
+          command: |
+            TAG=${CIRCLE_TAG/v/''}
+            echo "Updating fake-gpu-operator new version number $TAG in runai helm chart directory..."
+            sed -i s/0.0.0/$TAG/g deploy/fake-gpu-operator/values.yaml
 
-  jobs:
-    lint:
-      executor: runai-executor
-      steps:
-         - remote_docker
-         - install_project_dependencies
-         - run:
-             command: |
-              curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
-              golangci-lint run -v --timeout 5m
-    test:
-      executor: runai-executor
-      steps:
-        - remote_docker
-        - install_project_dependencies
-        - run:
-            name: "Create a temp directory for artifacts"
-            command: |
-              mkdir -p /tmp/artifacts
-              mkdir -p /tmp/artifacts/test-results
-              mkdir -p /tmp/artifacts/test-results/service-tests
-        - run:
-            name: "Run Service tests"
-            command: |
-              make test-all
-        - store_artifacts:
-            name: "Store artifacts"
-            path: /tmp/artifacts
-        - store_test_results:
-            name: "Store test results"
-            path: /tmp/artifacts/test-results
-    deploy_to_staging:
-      executor: runai-executor
-      steps:
-        - checkout
-        - pre_docker_commands
-        - run:
-            name: "Build Images"
-            environment:
-              CIRCLE_TAG: <<pipeline.git.revision>>
-            command: |
-              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
-              make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${CIRCLE_TAG}
-        - run:
-            name: "Push to Google Cloud"
-            command: |
-              TAG=<<pipeline.git.revision>>
-              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
-              make push-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
-    deploy_to_production:
-      executor: runai-executor
-      steps:
-        - checkout
-        - pre_docker_commands
-        - run:
-            name: "Push to Google Cloud"
-            environment:
-              CIRCLE_TAG: <<pipeline.git.tag>>
-            command: |
-              TAG=${CIRCLE_TAG/v/''}
-              DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
-              make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
-              make push-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
-    chart_build_staging:
-      working_directory: ~/go/src/github.com/run-ai/fake-gpu-operator
-      docker:
-        - image: google/cloud-sdk:276.0.0 # Later versions do not have pip
-      steps:
-        - checkout
-        - run:
-            name: Package and publish chart to staging
-            environment:
-              CIRCLE_SHA1: <<pipeline.git.revision>>
-              CIRCLE_TAG: <<pipeline.git.tag>>
-              PIPELINE_NUMBER: <<pipeline.number>>
-              REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
-              BUCKET: gs://fake-gpu-operator
-              UPLOAD_TARGET: prod
-              GCLOUD_PROJECT: run-ai-staging
-            command: |
-              chmod u+x script/uploadChart.sh
-              script/uploadChart.sh
+jobs:
+  lint:
+    executor: runai-executor
+    steps:
+      - remote_docker
+      - install_project_dependencies
+      - run:
+          command: |
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
+            golangci-lint run -v --timeout 5m
+  test:
+    executor: runai-executor
+    steps:
+      - remote_docker
+      - install_project_dependencies
+      - run:
+          name: "Create a temp directory for artifacts"
+          command: |
+            mkdir -p /tmp/artifacts
+            mkdir -p /tmp/artifacts/test-results
+            mkdir -p /tmp/artifacts/test-results/service-tests
+      - run:
+          name: "Run Service tests"
+          command: |
+            make test-all
+      - store_artifacts:
+          name: "Store artifacts"
+          path: /tmp/artifacts
+      - store_test_results:
+          name: "Store test results"
+          path: /tmp/artifacts/test-results
+  deploy_to_staging:
+    executor: runai-executor
+    steps:
+      - checkout
+      - pre_docker_commands
+      - run:
+          name: "Build Images"
+          environment:
+            CIRCLE_TAG: <<pipeline.git.revision>>
+          command: |
+            DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
+            make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${CIRCLE_TAG}
+      - run:
+          name: "Push to Google Cloud"
+          command: |
+            TAG=<<pipeline.git.revision>>
+            DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
+            make push-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
+  deploy_to_production:
+    executor: runai-executor
+    steps:
+      - checkout
+      - pre_docker_commands
+      - run:
+          name: "Push to Google Cloud"
+          environment:
+            CIRCLE_TAG: <<pipeline.git.tag>>
+          command: |
+            TAG=${CIRCLE_TAG/v/''}
+            DOCKER_REPO_BASE="gcr.io/run-ai-staging/fake-gpu-operator"
+            make images DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
+            make push-all DOCKER_REPO_BASE=${DOCKER_REPO_BASE} DOCKER_TAG=${TAG}
+  chart_build_staging:
+    working_directory: ~/go/src/github.com/run-ai/fake-gpu-operator
+    docker:
+      - image: google/cloud-sdk:276.0.0 # Later versions do not have pip
+    steps:
+      - checkout
+      - run:
+          name: Package and publish chart to staging
+          environment:
+            CIRCLE_SHA1: <<pipeline.git.revision>>
+            CIRCLE_TAG: <<pipeline.git.tag>>
+            PIPELINE_NUMBER: <<pipeline.number>>
+            REPO_URL: https://fake-gpu-operator.storage.googleapis.com/
+            BUCKET: gs://fake-gpu-operator
+            UPLOAD_TARGET: prod
+            GCLOUD_PROJECT: run-ai-staging
+          command: |
+            chmod u+x script/uploadChart.sh
+            script/uploadChart.sh
 
-  workflows:
-    version: 2
-    production:
-      jobs:
-        - lint:
-            filters:
-              branches:
-                ignore: /.*/
-              tags:
-                only: /^v.*/
-        - test:
-            filters:
-              branches:
-                ignore: /.*/
-              tags:
-                only: /^v.*/
-        - deploy_to_production:
-            requires:
-              - lint
-              - test
-            filters:
-              branches:
-                ignore: /.*/
-              tags:
-                only: /^v.*/  
-        - chart_build_staging:
-            requires:
-              - deploy_to_production
-            filters:
-              branches:
-                ignore: /.*/
-              tags:
-                only: /^v.*/
+workflows:
+  version: 2
+  production:
+    jobs:
+      - lint:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - deploy_to_production:
+          requires:
+            - lint
+            - test
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - chart_build_staging:
+          requires:
+            - deploy_to_production
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
 
+  test_lint_deploy:
+    jobs:
+      - lint:
+          filters:
+            tags:
+              ignore: /^v.*/
+      - test:
+          filters:
+            tags:
+              ignore: /^v.*/
 
-    test_lint_deploy:
-      jobs:
-        - lint:
-            filters:
-              tags:
-                ignore: /^v.*/
-        - test:
-            filters:
-              tags:
-                ignore: /^v.*/
+      - deploy_to_staging:
+          requires:
+            - lint
+            - test
 
-        - deploy_to_staging:
-            requires:
-              - lint
-              - test
-
-            filters:
-              tags:
-                ignore: /^v.*/
-              branches:
-                only:
-                  - main
+          filters:
+            tags:
+              ignore: /^v.*/
+            branches:
+              only:
+                - main
