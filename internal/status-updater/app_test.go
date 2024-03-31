@@ -252,153 +252,153 @@ var _ = Describe("StatusUpdater", func() {
 				})
 			})
 		})
+	})
 
-		When("informed of a shared GPU pod", func() {
-			var (
-				expectedTopology *topology.NodeTopology
-			)
+	When("informed of a shared GPU pod", func() {
+		var (
+			expectedTopology *topology.NodeTopology
+		)
 
-			var (
-				expectTopologyToBeUpdatedWithReservationPod = func() {
-					expectedTopology = createTopology(nodeGpuCount, node)
-					expectedTopology.Gpus[0].Status.AllocatedBy.Pod = reservationPodName
-					expectedTopology.Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
-					expectedTopology.Gpus[0].Status.AllocatedBy.Namespace = constants.ReservationNs
-					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
-				}
-				expectTopologyToBeUpdatedWithSharedGpuPod = func() {
-					expectedTopology.Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
-						podUID: topology.GpuUsageStatus{
-							Utilization: topology.Range{
-								Min: 80,
-								Max: 100,
-							},
-							FbUsed: int(float64(expectedTopology.GpuMemory) * 0.5),
+		var (
+			expectTopologyToBeUpdatedWithReservationPod = func() {
+				expectedTopology = createTopology(nodeGpuCount, node)
+				expectedTopology.Gpus[0].Status.AllocatedBy.Pod = reservationPodName
+				expectedTopology.Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
+				expectedTopology.Gpus[0].Status.AllocatedBy.Namespace = constants.ReservationNs
+				Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
+			}
+			expectTopologyToBeUpdatedWithSharedGpuPod = func() {
+				expectedTopology.Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+					podUID: topology.GpuUsageStatus{
+						Utilization: topology.Range{
+							Min: 80,
+							Max: 100,
 						},
-					}
-
-					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
-				}
-			)
-
-			Context("with a runai-gpu annotation", func() {
-				It("should update the cluster topology at its reservation pod location", func() {
-					gpuIdx := 0
-
-					// Test reservation pod handling
-					reservationPod := createGpuIdxReservationPod(gpuIdx)
-					_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-
-					expectTopologyToBeUpdatedWithReservationPod()
-
-					// Test shared gpu pod handling
-					pod := createGpuIdxSharedGpuPod(gpuIdx, 0.5)
-					_, err = kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-
-					podGroup := createPodGroup("train")
-					_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-
-					expectTopologyToBeUpdatedWithSharedGpuPod()
-				})
-			})
-
-			Context("with a runai-gpu-group label", func() {
-				It("should update the cluster topology at its reservation pod location", func() {
-					gpuGroup := "group1"
-
-					// Test reservation pod handling
-					reservationPod := createGpuGroupReservationPod(gpuGroup)
-					_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-
-					expectTopologyToBeUpdatedWithReservationPod()
-
-					// Test shared gpu pod handling
-					pod := createGpuGroupSharedGpuPod(gpuGroup, 0.5)
-					_, err = kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-
-					podGroup := createPodGroup("train")
-					_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-
-					expectTopologyToBeUpdatedWithSharedGpuPod()
-				})
-			})
-		})
-
-		When("informed of a GPU node", func() {
-			It("should create a new now topology", func() {
-				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node1",
-						Labels: map[string]string{
-							"nvidia.com/gpu.deploy.device-plugin": "true",
-							"nvidia.com/gpu.deploy.dcgm-exporter": "true",
-						},
+						FbUsed: int(float64(expectedTopology.GpuMemory) * 0.5),
 					},
 				}
 
-				_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+				Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
+			}
+		)
+
+		Context("with a runai-gpu annotation", func() {
+			It("should update the cluster topology at its reservation pod location", func() {
+				gpuIdx := 0
+
+				// Test reservation pod handling
+				reservationPod := createGpuIdxReservationPod(gpuIdx)
+				_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(getTopologyNodeFromKube(kubeclient, node.Name)).Should(Not(BeNil()))
+				expectTopologyToBeUpdatedWithReservationPod()
 
-				baseTopology, err := getTopologyFromKube(kubeclient)()
+				// Test shared gpu pod handling
+				pod := createGpuIdxSharedGpuPod(gpuIdx, 0.5)
+				_, err = kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(baseTopology).ToNot(BeNil())
 
-				nodeTopology, err := getTopologyNodeFromKube(kubeclient, node.Name)()
+				podGroup := createPodGroup("train")
+				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(nodeTopology).ToNot(BeNil())
 
-				Expect(nodeTopology.GpuMemory).To(Equal(baseTopology.Config.NodeAutofill.GpuMemory))
-				Expect(nodeTopology.GpuProduct).To(Equal(baseTopology.Config.NodeAutofill.GpuProduct))
-				Expect(nodeTopology.Gpus).To(HaveLen(baseTopology.Config.NodeAutofill.GpuCount))
-				Expect(nodeTopology.MigStrategy).To(Equal(baseTopology.Config.NodeAutofill.MigStrategy))
+				expectTopologyToBeUpdatedWithSharedGpuPod()
 			})
 		})
 
-		When("informed of a node without GPU labels", func() {
-			It("should not add the node to the cluster topology", func() {
-				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node1",
-					},
-				}
+		Context("with a runai-gpu-group label", func() {
+			It("should update the cluster topology at its reservation pod location", func() {
+				gpuGroup := "group1"
 
-				_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+				// Test reservation pod handling
+				reservationPod := createGpuGroupReservationPod(gpuGroup)
+				_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				Consistently(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(MatchError(errors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, topology.GetNodeTopologyCMName(node.Name))))
+
+				expectTopologyToBeUpdatedWithReservationPod()
+
+				// Test shared gpu pod handling
+				pod := createGpuGroupSharedGpuPod(gpuGroup, 0.5)
+				_, err = kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+				Expect(err).ToNot(HaveOccurred())
+
+				podGroup := createPodGroup("train")
+				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+				Expect(err).ToNot(HaveOccurred())
+
+				expectTopologyToBeUpdatedWithSharedGpuPod()
 			})
 		})
+	})
 
-		// When informed of a node deletion, it should remove the node from the cluster topology
-		When("informed of a node deletion", func() {
-			It("should remove the node from the cluster topology", func() {
-				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node1",
-						Labels: map[string]string{
-							"nvidia.com/gpu.deploy.device-plugin": "true",
-							"nvidia.com/gpu.deploy.dcgm-exporter": "true",
-						},
+	When("informed of a GPU node", func() {
+		It("should create a new now topology", func() {
+			node := &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+					Labels: map[string]string{
+						"nvidia.com/gpu.deploy.device-plugin": "true",
+						"nvidia.com/gpu.deploy.dcgm-exporter": "true",
 					},
-				}
+				},
+			}
 
-				_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
-				Expect(err).ToNot(HaveOccurred())
+			_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
 
-				Eventually(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(BeNil())
+			Eventually(getTopologyNodeFromKube(kubeclient, node.Name)).Should(Not(BeNil()))
 
-				err = kubeclient.CoreV1().Nodes().Delete(context.TODO(), node.Name, metav1.DeleteOptions{})
-				Expect(err).ToNot(HaveOccurred())
+			baseTopology, err := getTopologyFromKube(kubeclient)()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(baseTopology).ToNot(BeNil())
 
-				Eventually(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(Not(BeNil()))
-			})
+			nodeTopology, err := getTopologyNodeFromKube(kubeclient, node.Name)()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(nodeTopology).ToNot(BeNil())
+
+			Expect(nodeTopology.GpuMemory).To(Equal(baseTopology.Config.NodeAutofill.GpuMemory))
+			Expect(nodeTopology.GpuProduct).To(Equal(baseTopology.Config.NodeAutofill.GpuProduct))
+			Expect(nodeTopology.Gpus).To(HaveLen(baseTopology.Config.NodeAutofill.GpuCount))
+			Expect(nodeTopology.MigStrategy).To(Equal(baseTopology.Config.NodeAutofill.MigStrategy))
+		})
+	})
+
+	When("informed of a node without GPU labels", func() {
+		It("should not add the node to the cluster topology", func() {
+			node := &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+				},
+			}
+
+			_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Consistently(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(MatchError(errors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, topology.GetNodeTopologyCMName(node.Name))))
+		})
+	})
+
+	// When informed of a node deletion, it should remove the node from the cluster topology
+	When("informed of a node deletion", func() {
+		It("should remove the node from the cluster topology", func() {
+			node := &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "node1",
+					Labels: map[string]string{
+						"nvidia.com/gpu.deploy.device-plugin": "true",
+						"nvidia.com/gpu.deploy.dcgm-exporter": "true",
+					},
+				},
+			}
+
+			_, err := kubeclient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(BeNil())
+
+			err = kubeclient.CoreV1().Nodes().Delete(context.TODO(), node.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(getTopologyNodeFromKubeErrorOrNil(kubeclient, node.Name)).Should(Not(BeNil()))
 		})
 	})
 })
