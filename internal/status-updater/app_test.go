@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	kfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
 )
@@ -137,118 +138,169 @@ var _ = Describe("StatusUpdater", func() {
 	})
 
 	When("informed of a dedicated GPU pod", func() {
-		Context("creation and deletion", func() {
-			type testCase struct {
-				podGpuCount   int64
-				podPhase      v1.PodPhase
-				podConditions []v1.PodCondition
-				workloadType  string
-			}
+		Context("non-reservation pod", func() {
+			Context("creation and deletion", func() {
+				type testCase struct {
+					podGpuCount   int64
+					podPhase      v1.PodPhase
+					podConditions []v1.PodCondition
+					workloadType  string
+				}
 
-			cases := []testCase{}
+				cases := []testCase{}
 
-			for i := int64(1); i <= nodeGpuCount; i++ {
-				for _, phase := range []v1.PodPhase{v1.PodPending, v1.PodRunning, v1.PodSucceeded, v1.PodFailed, v1.PodUnknown} {
-					for _, workloadType := range []string{"build", "train", "interactive-preemptible", "inference"} {
-						tCase := testCase{
-							podGpuCount:  i,
-							podPhase:     phase,
-							workloadType: workloadType,
-						}
+				for i := int64(1); i <= nodeGpuCount; i++ {
+					for _, phase := range []v1.PodPhase{v1.PodPending, v1.PodRunning, v1.PodSucceeded, v1.PodFailed, v1.PodUnknown} {
+						for _, workloadType := range []string{"build", "train", "interactive-preemptible", "inference"} {
+							tCase := testCase{
+								podGpuCount:  i,
+								podPhase:     phase,
+								workloadType: workloadType,
+							}
 
-						if phase == v1.PodPending { // Pending pods can be unscheduled or scheduled (e.g. when scheduled but the containers are not started yet)
-							tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionFalse}}
-							cases = append(cases, tCase)
+							if phase == v1.PodPending { // Pending pods can be unscheduled or scheduled (e.g. when scheduled but the containers are not started yet)
+								tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionFalse}}
+								cases = append(cases, tCase)
 
-							tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}}
-							cases = append(cases, tCase)
-						} else { // Non-pending pods are always scheduled
-							tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}}
-							cases = append(cases, tCase)
+								tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}}
+								cases = append(cases, tCase)
+							} else { // Non-pending pods are always scheduled
+								tCase.podConditions = []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}}
+								cases = append(cases, tCase)
+							}
 						}
 					}
 				}
-			}
 
-			for _, caseDetails := range cases {
-				caseBaseName := fmt.Sprintf("GPU count %d, pod phase %s, workloadType: %s", caseDetails.podGpuCount, caseDetails.podPhase, caseDetails.workloadType)
-				caseDetails := caseDetails
-				It(caseBaseName, func() {
-					By("creating the pod")
-					pod := createDedicatedGpuPod(caseDetails.podGpuCount, caseDetails.podPhase, caseDetails.podConditions)
-					_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-					podGroup := createPodGroup(caseDetails.workloadType)
-					_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
+				for _, caseDetails := range cases {
+					caseBaseName := fmt.Sprintf("GPU count %d, pod phase %s, workloadType: %s", caseDetails.podGpuCount, caseDetails.podPhase, caseDetails.workloadType)
+					caseDetails := caseDetails
+					It(caseBaseName, func() {
+						By("creating the pod")
+						pod := createDedicatedGpuPod(caseDetails.podGpuCount, caseDetails.podPhase, caseDetails.podConditions)
+						_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+						Expect(err).ToNot(HaveOccurred())
+						podGroup := createPodGroup(caseDetails.workloadType)
+						_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+						Expect(err).ToNot(HaveOccurred())
 
-					expectedTopology := createTopology(nodeGpuCount, node)
-					isPodScheduledConditionTrue := isConditionTrue(caseDetails.podConditions, v1.PodScheduled)
+						expectedTopology := createTopology(nodeGpuCount, node)
+						isPodScheduledConditionTrue := isConditionTrue(caseDetails.podConditions, v1.PodScheduled)
 
-					if caseDetails.podPhase == v1.PodRunning ||
-						((caseDetails.podPhase == v1.PodPending || caseDetails.podPhase == v1.PodUnknown) && isPodScheduledConditionTrue) {
-						for i := 0; i < int(caseDetails.podGpuCount); i++ {
-							expectedTopology.Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
-								podUID: topology.GpuUsageStatus{
-									Utilization:           getExpectedUtilization(caseDetails.workloadType, caseDetails.podPhase),
-									FbUsed:                expectedTopology.GpuMemory,
-									UseKnativeUtilization: caseDetails.workloadType == "inference" && caseDetails.podPhase == v1.PodRunning,
-								},
+						if caseDetails.podPhase == v1.PodRunning ||
+							((caseDetails.podPhase == v1.PodPending || caseDetails.podPhase == v1.PodUnknown) && isPodScheduledConditionTrue) {
+							for i := 0; i < int(caseDetails.podGpuCount); i++ {
+								expectedTopology.Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+									podUID: topology.GpuUsageStatus{
+										Utilization:           getExpectedUtilization(caseDetails.workloadType, caseDetails.podPhase),
+										FbUsed:                expectedTopology.GpuMemory,
+										UseKnativeUtilization: caseDetails.workloadType == "inference" && caseDetails.podPhase == v1.PodRunning,
+									},
+								}
+								expectedTopology.Gpus[i].Status.AllocatedBy.Pod = podName
+								expectedTopology.Gpus[i].Status.AllocatedBy.Container = containerName
+								expectedTopology.Gpus[i].Status.AllocatedBy.Namespace = podNamespace
 							}
-							expectedTopology.Gpus[i].Status.AllocatedBy.Pod = podName
-							expectedTopology.Gpus[i].Status.AllocatedBy.Container = containerName
-							expectedTopology.Gpus[i].Status.AllocatedBy.Namespace = podNamespace
 						}
-					}
 
-					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
+						Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
 
-					By("deleting the pod")
-					err = kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
-					Expect(err).ToNot(HaveOccurred())
-					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(createTopology(nodeGpuCount, node)))
-				})
-			}
-		})
+						By("deleting the pod")
+						err = kubeclient.CoreV1().Pods(podNamespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+						Expect(err).ToNot(HaveOccurred())
+						Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(createTopology(nodeGpuCount, node)))
+					})
+				}
+			})
 
-		Context("update", func() {
-			When("pod phase changes", func() {
-				BeforeEach(func() {
-					// Create a pod in the pending phase with scheduled condition true
-					pod := createDedicatedGpuPod(1, v1.PodPending, []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}})
-					_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
-					workloadType := "train"
-					podGroup := createPodGroup(workloadType)
-					_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
-					Expect(err).ToNot(HaveOccurred())
+			Context("update", func() {
+				When("pod phase changes", func() {
+					BeforeEach(func() {
+						// Create a pod in the pending phase with scheduled condition true
+						pod := createDedicatedGpuPod(1, v1.PodPending, []v1.PodCondition{{Type: v1.PodScheduled, Status: v1.ConditionTrue}})
+						_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+						Expect(err).ToNot(HaveOccurred())
+						workloadType := "train"
+						podGroup := createPodGroup(workloadType)
+						_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+						Expect(err).ToNot(HaveOccurred())
 
-					expectedTopology := createTopology(nodeGpuCount, node)
-					expectedTopology.Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
-						podUID: topology.GpuUsageStatus{
-							Utilization:           getExpectedUtilization(workloadType, v1.PodPending),
+						expectedTopology := createTopology(nodeGpuCount, node)
+						expectedTopology.Gpus[0].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{
+							podUID: topology.GpuUsageStatus{
+								Utilization:           getExpectedUtilization(workloadType, v1.PodPending),
+								FbUsed:                expectedTopology.GpuMemory,
+								UseKnativeUtilization: false,
+							},
+						}
+
+						By("creating the pod with pending phase")
+						Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
+
+						By("updating the pod phase to running")
+						pod, err = kubeclient.CoreV1().Pods(podNamespace).Get(context.TODO(), podName, metav1.GetOptions{})
+						Expect(err).ToNot(HaveOccurred())
+						pod.Status.Phase = v1.PodRunning
+						_, err = kubeclient.CoreV1().Pods(podNamespace).UpdateStatus(context.TODO(), pod, metav1.UpdateOptions{})
+						Expect(err).ToNot(HaveOccurred())
+
+						expectedTopology.Gpus[0].Status.PodGpuUsageStatus[podUID] = topology.GpuUsageStatus{
+							Utilization:           getExpectedUtilization(workloadType, v1.PodRunning),
 							FbUsed:                expectedTopology.GpuMemory,
 							UseKnativeUtilization: false,
-						},
-					}
+						}
 
-					By("creating the pod with pending phase")
-					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
+						Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
+					})
+				})
+			})
+		})
 
-					By("updating the pod phase to running")
-					pod, err = kubeclient.CoreV1().Pods(podNamespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		Context("reservation pod", func() {
+			When("GPU Index annotation is set (pre 2.17)", func() {
+				It("should not reset the GPU Index annotation", func() {
+					gpuIdx := 0
+
+					reservationPod := createGpuIdxReservationPod(ptr.To(gpuIdx))
+					_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 					Expect(err).ToNot(HaveOccurred())
-					pod.Status.Phase = v1.PodRunning
-					_, err = kubeclient.CoreV1().Pods(podNamespace).UpdateStatus(context.TODO(), pod, metav1.UpdateOptions{})
+
+					// Expect the pod to consistently contain the GPU Index annotation
+					Consistently(func() (string, error) {
+						pod, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Get(context.TODO(), reservationPodName, metav1.GetOptions{})
+						if err != nil {
+							return "", err
+						}
+						return pod.Annotations[constants.ReservationPodGpuIdxAnnotation], nil
+					}).Should(Equal(strconv.Itoa(gpuIdx)))
+				})
+			})
+
+			When("Gpu Index annotation is not set (post 2.17)", func() {
+				It("should set the GPU Index annotation with the GPU UUID", func() {
+					reservationPod := createGpuIdxReservationPod(nil)
+					_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 					Expect(err).ToNot(HaveOccurred())
 
-					expectedTopology.Gpus[0].Status.PodGpuUsageStatus[podUID] = topology.GpuUsageStatus{
-						Utilization:           getExpectedUtilization(workloadType, v1.PodRunning),
-						FbUsed:                expectedTopology.GpuMemory,
-						UseKnativeUtilization: false,
-					}
+					Eventually(func() (bool, error) {
+						pod, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Get(context.TODO(), reservationPodName, metav1.GetOptions{})
+						if err != nil {
+							return false, err
+						}
 
-					Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
+						nodeTopology, err := getTopologyNodeFromKube(kubeclient, node)()
+						if err != nil || nodeTopology == nil {
+							return false, err
+						}
+
+						for _, gpuDetails := range nodeTopology.Gpus {
+							if gpuDetails.ID == pod.Annotations[constants.ReservationPodGpuIdxAnnotation] {
+								return true, nil
+							}
+						}
+
+						return false, nil
+					}).Should(BeTrue())
 				})
 			})
 		})
@@ -287,7 +339,7 @@ var _ = Describe("StatusUpdater", func() {
 				gpuIdx := 0
 
 				// Test reservation pod handling
-				reservationPod := createGpuIdxReservationPod(gpuIdx)
+				reservationPod := createGpuIdxReservationPod(ptr.To(gpuIdx))
 				_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -548,9 +600,12 @@ func createBaseSharedGpuPod(gpuFraction float64) *v1.Pod {
 	}
 }
 
-func createGpuIdxReservationPod(gpuIdx int) *v1.Pod {
+func createGpuIdxReservationPod(gpuIdx *int) *v1.Pod {
 	pod := createBaseReservationPod()
-	pod.Annotations[constants.ReservationPodGpuIdxAnnotation] = strconv.Itoa(gpuIdx)
+
+	if gpuIdx != nil {
+		pod.Annotations[constants.ReservationPodGpuIdxAnnotation] = strconv.Itoa(*gpuIdx)
+	}
 	return pod
 }
 
