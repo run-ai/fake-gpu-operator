@@ -1,4 +1,4 @@
-FROM golang:1.21 as common-builder
+FROM golang:1.22.1 as common-builder
 WORKDIR $GOPATH/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
