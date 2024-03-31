@@ -102,6 +102,9 @@ func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v
 	deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, v1.EnvVar{
 		Name:  constants.EnvNodeName,
 		Value: node.Name,
+	}, v1.EnvVar{
+		Name:  constants.EnvFakeNode,
+		Value: "true",
 	})
 
 	return deployment
