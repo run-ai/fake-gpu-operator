@@ -27,7 +27,6 @@ spec:
           env:
             - name: TOPOLOGY_CM_NAME
               value: topology
-            # GuyTodo: Remove and replace with FAKE_GPU_OPERATOR_NAMESPACE
             - name: TOPOLOGY_CM_NAMESPACE
               value: "{{ .Release.Namespace }}"
             - name: FAKE_GPU_OPERATOR_NAMESPACE
