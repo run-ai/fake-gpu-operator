@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cni.projectcalico.org/containerID: 75affaf027829643896b3de5699d15fedb291f4f7efac6f00b0d0bbe9a2dd65a
+    cni.projectcalico.org/podIP: 100.122.249.151/32
+    cni.projectcalico.org/podIPs: 100.122.249.151/32
+    pod-group-name: pg-runai-reservation-gpu-i-0b498db53280b86a6-fzdhl-3b47e794-97f0-4824-b7d5-bb44c122039e
+    run.ai/reserve_for_gpu_index: GPU-8983c66a-23df-e63b-4c2f-afcae9ec79b3
+    runai-job-id: 3b47e794-97f0-4824-b7d5-bb44c122039e
+  creationTimestamp: "2024-03-31T09:03:25Z"
+  labels:
+    app: runai-reservation
+    app.runai.resource.reservation: runai-reservation-gpu
+    runai-gpu-group: df7c0dd3-9795-443c-85b9-acbf49c8fb6b
+  name: runai-reservation-gpu-i-0b498db53280b86a6-fzdhl
+  namespace: runai-reservation
+  resourceVersion: "10625"
+  uid: 3b47e794-97f0-4824-b7d5-bb44c122039e
+spec:
+  containers:
+  - env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.namespace
+    image: gcr.io/run-ai-prod/resource-reservation:v3.5.0
+    imagePullPolicy: IfNotPresent
+    name: runai-reservation
+    resources:
+      limits:
+        nvidia.com/gpu: "1"
+      requests:
+        nvidia.com/gpu: "1"
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-fnjgk
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  imagePullSecrets:
+  - name: runai-reg-creds
+  nodeName: i-0b498db53280b86a6
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: runai-scheduler
+  securityContext: {}
+  serviceAccount: runai-reservation-engine
+  serviceAccountName: runai-reservation-engine
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-fnjgk
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:25Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:27Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:27Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:25Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://1063439dc8e82d20ef89a97ad9567d40d59d0d270ac5b8d4cab7f49a474e4398
+    image: gcr.io/run-ai-prod/resource-reservation:v3.5.0
+    imageID: gcr.io/run-ai-prod/resource-reservation@sha256:add1db641829508bbd1e74a7e757348159bc99b67844fc656acc1e795872d0a6
+    lastState: {}
+    name: runai-reservation
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2024-03-31T09:03:27Z"
+  hostIP: 172.20.62.77
+  phase: Running
+  podIP: 100.122.249.151
+  podIPs:
+  - ip: 100.122.249.151
+  qosClass: BestEffort
+  startTime: "2024-03-31T09:03:25Z"

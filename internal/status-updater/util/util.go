@@ -26,7 +26,7 @@ func IsPodTerminated(pod *v1.Pod) bool {
 }
 
 func IsPodScheduled(pod *v1.Pod) bool {
-	// This should be checked using the pod's PodScheduled condition once https://github.com/run-ai/runai-engine/pull/174 is merged and available.
+	// This may be checked using the pod's PodScheduled condition once https://github.com/run-ai/runai-engine/pull/174 is merged and available.
 	return pod.Spec.NodeName != ""
 }
 

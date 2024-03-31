@@ -50,6 +50,11 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *to
 		}
 	}
 
+	err := p.handleGpuReservationPodAddition(pod, nodeTopology)
+	if err != nil {
+		return fmt.Errorf("failed to handle GPU reservation pod addition: %w", err)
+	}
+
 	return nil
 }
 

@@ -47,7 +47,6 @@ func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, nodeTopology *topol
 }
 
 func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
-
 	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, nodeTopology)
 	if err != nil {
 		return err
