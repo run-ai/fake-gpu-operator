@@ -42,12 +42,17 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *to
 			gpu.Status.AllocatedBy.Pod = pod.Name
 			gpu.Status.AllocatedBy.Container = pod.Spec.Containers[0].Name
 
-			if pod.Namespace != constants.ReservationNs {
+			if !util.IsGpuReservationPod(pod) {
 				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
 			}
 
 			requestedGpusCount--
 		}
+	}
+
+	err := p.handleGpuReservationPodAddition(pod, nodeTopology)
+	if err != nil {
+		return fmt.Errorf("failed to handle GPU reservation pod addition: %w", err)
 	}
 
 	return nil
@@ -65,7 +70,7 @@ func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, nodeTopology *topo
 			gpu.Status.AllocatedBy.Pod == pod.Name &&
 			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
 		if isGpuOccupiedByPod {
-			if pod.Namespace != constants.ReservationNs {
+			if !util.IsGpuReservationPod(pod) {
 				gpu.Status.PodGpuUsageStatus[pod.UID] =
 					calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
 			}

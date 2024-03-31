@@ -9,9 +9,8 @@ import (
 func IsSharedGpuPod(pod *v1.Pod) bool {
 	_, runaiGpuExists := pod.Annotations[constants.GpuIdxAnnotation]
 	_, runaiGpuGroupExists := pod.Labels[constants.GpuGroupLabel]
-	isReservationPod := pod.Namespace == constants.ReservationNs
 
-	return !isReservationPod && (runaiGpuExists || runaiGpuGroupExists)
+	return !IsGpuReservationPod(pod) && (runaiGpuExists || runaiGpuGroupExists)
 }
 
 func IsDedicatedGpuPod(pod *v1.Pod) bool {
@@ -27,11 +26,10 @@ func IsPodTerminated(pod *v1.Pod) bool {
 }
 
 func IsPodScheduled(pod *v1.Pod) bool {
-	for _, condition := range pod.Status.Conditions {
-		if condition.Type == v1.PodScheduled && condition.Status == v1.ConditionTrue {
-			return true
-		}
-	}
+	// This may be checked using the pod's PodScheduled condition once https://github.com/run-ai/runai-engine/pull/174 is merged and available.
+	return pod.Spec.NodeName != ""
+}
 
-	return false
+func IsGpuReservationPod(pod *v1.Pod) bool {
+	return pod.Namespace == constants.ReservationNs
 }

@@ -15,10 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	runaiReservationNs = constants.ReservationNs
-)
-
 func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	if !util.IsSharedGpuPod(pod) {
 		return nil
@@ -51,7 +47,6 @@ func (p *PodHandler) handleSharedGpuPodDeletion(pod *v1.Pod, nodeTopology *topol
 }
 
 func (p *PodHandler) calculateAndSetPodGpuUsageStatus(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
-
 	reservationPodGpuIdx, err := getMatchingReservationPodGpuIdx(p.kubeClient, pod, nodeTopology)
 	if err != nil {
 		return err
@@ -155,5 +150,5 @@ func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Int
 }
 
 func getNodeReservationPods(kubeclient kubernetes.Interface, nodeName string) (*v1.PodList, error) {
-	return kubeclient.CoreV1().Pods(runaiReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
+	return kubeclient.CoreV1().Pods(constants.ReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
 }

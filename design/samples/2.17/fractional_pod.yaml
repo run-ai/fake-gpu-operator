@@ -1,0 +1,228 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    clusterId: d69dff42-4134-41d9-90fc-1c39505cb774
+    cni.projectcalico.org/containerID: 4357ed00f685ddcfafb9b551fbad81f6ad9a39d74f0158fe22b6e937dad415df
+    cni.projectcalico.org/podIP: 100.122.249.152/32
+    cni.projectcalico.org/podIPs: 100.122.249.152/32
+    gpu-fraction: "0.5"
+    pod-group-name: pg-frac-1-0-2237ca39-cac0-4601-b658-8a3c5f406a4f
+    received-resource-type: Fraction
+    runai-allocated-gpu-memory: "7680"
+    runai-allocated-gpus: "0.5"
+    runai-allocated-mig-gpus: "0"
+    runai-calculated-status: Running
+    runai-job-id: 2237ca39-cac0-4601-b658-8a3c5f406a4f
+    runai-node: i-0b498db53280b86a6
+    runai/shared-gpu-configmap: frac-1-ns26p7c-runai-sh-gpu
+    user: test@run.ai
+    workloadId: 027397ab-4c3c-45f7-87d0-8b3bae4ded65
+  creationTimestamp: "2024-03-31T09:03:22Z"
+  generateName: frac-1-
+  labels:
+    app: runaijob
+    controller-uid: 2237ca39-cac0-4601-b658-8a3c5f406a4f
+    createdBy: RunaiJob
+    project: pa
+    release: frac-1
+    run.ai/top-owner-uid: 027397ab-4c3c-45f7-87d0-8b3bae4ded65
+    runai-gpu-group: df7c0dd3-9795-443c-85b9-acbf49c8fb6b
+    runai/pod-index: 0-0
+    workloadKind: TrainingWorkload
+    workloadName: frac-1
+  name: frac-1-0-0
+  namespace: runai-pa
+  ownerReferences:
+  - apiVersion: run.ai/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: RunaiJob
+    name: frac-1
+    uid: 2237ca39-cac0-4601-b658-8a3c5f406a4f
+  resourceVersion: "10748"
+  uid: a801b3c7-b9be-4830-821c-2456cad2234f
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: runai/node-pool
+            operator: DoesNotExist
+  containers:
+  - env:
+    - name: RUNAI_JOB_NAME
+      value: frac-1
+    - name: RUNAI_PROJECT
+      value: pa
+    - name: WANDB_NOTES
+      value: https://shaibi-real.runailabs.com/trainings?columnFilter=[{"term":"frac-1","name":"name"}]&clusterId=d69dff42-4134-41d9-90fc-1c39505cb774
+    - name: POD_INDEX
+      value: "0"
+    - name: RUNAI_GPU_MEMORY_REQUEST
+      value: "0.50"
+    - name: RUNAI_GPU_MEMORY_LIMIT
+      value: "0.50"
+    - name: NVIDIA_VISIBLE_DEVICES
+      valueFrom:
+        configMapKeyRef:
+          key: RUNAI-VISIBLE-DEVICES
+          name: frac-1-ns26p7c-runai-sh-gpu-0
+    - name: RUNAI_NUM_OF_GPUS
+      valueFrom:
+        configMapKeyRef:
+          key: RUNAI_NUM_OF_GPUS
+          name: frac-1-ns26p7c-runai-sh-gpu-0
+    - name: jobUUID
+      value: 2237ca39-cac0-4601-b658-8a3c5f406a4f
+    - name: JOB_UUID
+      value: 2237ca39-cac0-4601-b658-8a3c5f406a4f
+    - name: jobName
+      value: frac-1
+    - name: JOB_NAME
+      value: frac-1
+    - name: reporterGatewayURL
+      value: runai-prometheus-pushgateway.runai.svc.cluster.local:9091
+    - name: REPORTER_GATEWAY_URL
+      value: runai-prometheus-pushgateway.runai.svc.cluster.local:9091
+    - name: podUUID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+    - name: POD_UUID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.uid
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    envFrom:
+    - configMapRef:
+        name: frac-1-ns26p7c-runai-sh-gpu-0-evar
+        optional: false
+    image: gshaibi/gpu-burn
+    imagePullPolicy: IfNotPresent
+    name: frac-1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100M
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: {}
+      seccompProfile:
+        type: RuntimeDefault
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-dfphn
+      readOnly: true
+    - mountPath: /etc/ld.so.preload
+      name: frac-1-ns26p7c-runai-sh-gpu-0-vol
+      readOnly: true
+      subPath: ld.so.preload-key
+    - mountPath: /etc/runai.d/memory
+      name: frac-1-ns26p7c-runai-sh-gpu-0-vol
+      readOnly: true
+      subPath: config
+    - mountPath: /etc/runai.d/pod_uuid
+      name: frac-1-ns26p7c-runai-sh-gpu-0-vol
+      readOnly: true
+      subPath: pod-uuid
+    - mountPath: /runai/shared
+      name: runai-shared-directory
+      readOnly: true
+    - mountPath: /etc/runai.d/route
+      name: frac-1-ns26p7c-runai-sh-gpu-0-vol
+      readOnly: true
+      subPath: route
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: i-0b498db53280b86a6
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: runai-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-dfphn
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+  - configMap:
+      defaultMode: 420
+      name: frac-1-ns26p7c-runai-sh-gpu-0
+    name: frac-1-ns26p7c-runai-sh-gpu-0-vol
+  - hostPath:
+      path: /var/lib/runai/shared
+      type: DirectoryOrCreate
+    name: runai-shared-directory
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:27Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:51Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:51Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-03-31T09:03:27Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://4205608c75216bfe3d3a71ea7301f8bc041acba92673e033fc87be6d91867dc6
+    image: docker.io/gshaibi/gpu-burn:latest
+    imageID: docker.io/gshaibi/gpu-burn@sha256:ed07993b0581228c2bd7113fae0ed214549547f0fa91ba50165bc2473cfaf979
+    lastState: {}
+    name: frac-1
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2024-03-31T09:03:51Z"
+  hostIP: 172.20.62.77
+  phase: Running
+  podIP: 100.122.249.152
+  podIPs:
+  - ip: 100.122.249.152
+  qosClass: Burstable
+  startTime: "2024-03-31T09:03:27Z"
