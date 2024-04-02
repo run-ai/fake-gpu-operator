@@ -29,6 +29,8 @@ spec:
               value: topology
             - name: TOPOLOGY_CM_NAMESPACE
               value: "{{ .Release.Namespace }}"
+            - name: FAKE_GPU_OPERATOR_NAMESPACE
+              value: "{{ .Release.Namespace }}"
       restartPolicy: Always
       serviceAccountName: status-updater
       imagePullSecrets:
