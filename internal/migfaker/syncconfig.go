@@ -3,6 +3,7 @@ package migfaker
 import (
 	"sync"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -51,7 +52,7 @@ func ContinuouslySyncMigConfigChanges(clientset kubernetes.Interface, migConfig 
 		clientset.CoreV1().RESTClient(),
 		ResourceNodes,
 		v1.NamespaceAll,
-		fields.OneTermEqualSelector("metadata.name", viper.GetString("NODE_NAME")),
+		fields.OneTermEqualSelector("metadata.name", viper.GetString(constants.EnvNodeName)),
 	)
 
 	_, controller := cache.NewInformer(

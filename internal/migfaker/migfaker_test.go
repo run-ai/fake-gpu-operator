@@ -38,7 +38,7 @@ func TestFakeMapping(t *testing.T) {
 	}
 	kubeClientMock.ActualGetNodeLabels = func() (map[string]string, error) {
 		return map[string]string{
-			constants.GpuProductLabel: "NVIDIA-A100-SXM4-40GB",
+			constants.LabelGpuProduct: "NVIDIA-A100-SXM4-40GB",
 		}, nil
 	}
 

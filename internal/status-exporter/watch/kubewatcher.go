@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/spf13/viper"
@@ -28,7 +29,7 @@ func (w *KubeWatcher) Subscribe(subscriber chan<- *topology.NodeTopology) {
 }
 
 func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
-	cmChan, err := w.kubeclient.WatchConfigMap(viper.GetString("TOPOLOGY_CM_NAMESPACE"), topology.GetNodeTopologyCMName(viper.GetString("NODE_NAME")))
+	cmChan, err := w.kubeclient.WatchConfigMap(viper.GetString(constants.EnvTopologyCmNamespace), topology.GetNodeTopologyCMName(viper.GetString(constants.EnvNodeName)))
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +51,7 @@ func (w *KubeWatcher) Watch(stopCh <-chan struct{}) {
 
 		case <-ticker.C:
 			log.Printf("Topology update not received within interval, publishing...\n")
-			cm, ok := w.kubeclient.GetConfigMap(viper.GetString("TOPOLOGY_CM_NAMESPACE"), topology.GetNodeTopologyCMName(viper.GetString("NODE_NAME")))
+			cm, ok := w.kubeclient.GetConfigMap(viper.GetString(constants.EnvTopologyCmNamespace), topology.GetNodeTopologyCMName(viper.GetString(constants.EnvNodeName)))
 			if !ok {
 				break
 			}

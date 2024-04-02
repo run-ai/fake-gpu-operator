@@ -55,7 +55,7 @@ func (p *NodeHandler) deleteFakeNodeDeployments(node *v1.Node) error {
 
 func (p *NodeHandler) generateFakeNodeDeployments(node *v1.Node) ([]appsv1.Deployment, error) {
 	deploymentTemplates, err := p.kubeClient.AppsV1().Deployments(os.Getenv(constants.EnvFakeGpuOperatorNs)).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=true", constants.FakeNodeDeploymentTemplateLabel),
+		LabelSelector: fmt.Sprintf("%s=true", constants.LabelFakeNodeDeploymentTemplate),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
@@ -96,7 +96,7 @@ func (p *NodeHandler) applyDeployment(deployment appsv1.Deployment) error {
 func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v1.Node) *appsv1.Deployment {
 	deployment := template.DeepCopy()
 
-	delete(deployment.Labels, constants.FakeNodeDeploymentTemplateLabel)
+	delete(deployment.Labels, constants.LabelFakeNodeDeploymentTemplate)
 	deployment.Name = fmt.Sprintf("%s-%s", deployment.Name, node.Name)
 	deployment.Spec.Replicas = ptr.To(int32(1))
 	deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, v1.EnvVar{
@@ -111,5 +111,5 @@ func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v
 }
 
 func isFakeNode(node *v1.Node) bool {
-	return node != nil && node.Annotations[constants.KwokNodeAnnotation] == "fake"
+	return node != nil && node.Annotations[constants.AnnotationKwokNode] == "fake"
 }

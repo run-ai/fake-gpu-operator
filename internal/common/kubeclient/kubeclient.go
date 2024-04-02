@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +45,7 @@ func NewKubeClient(config *rest.Config, stop chan struct{}) *KubeClient {
 }
 
 func (client *KubeClient) SetNodeLabels(lables map[string]string) error {
-	nodeName := viper.GetString("NODE_NAME")
+	nodeName := viper.GetString(constants.EnvNodeName)
 	node, err := client.ClientSet.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -60,7 +61,7 @@ func (client *KubeClient) SetNodeLabels(lables map[string]string) error {
 }
 
 func (client *KubeClient) SetNodeAnnotations(annotations map[string]string) error {
-	nodeName := viper.GetString("NODE_NAME")
+	nodeName := viper.GetString(constants.EnvNodeName)
 	node, err := client.ClientSet.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -76,7 +77,7 @@ func (client *KubeClient) SetNodeAnnotations(annotations map[string]string) erro
 }
 
 func (client *KubeClient) GetNodeLabels() (map[string]string, error) {
-	nodeName := viper.GetString("NODE_NAME")
+	nodeName := viper.GetString(constants.EnvNodeName)
 	node, err := client.ClientSet.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
