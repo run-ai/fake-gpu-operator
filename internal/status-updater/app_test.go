@@ -271,7 +271,7 @@ var _ = Describe("StatusUpdater", func() {
 						if err != nil {
 							return "", err
 						}
-						return pod.Annotations[constants.ReservationPodGpuIdxAnnotation], nil
+						return pod.Annotations[constants.AnnotationReservationPodGpuIdx], nil
 					}).Should(Equal(strconv.Itoa(gpuIdx)))
 				})
 			})
@@ -294,7 +294,7 @@ var _ = Describe("StatusUpdater", func() {
 						}
 
 						for _, gpuDetails := range nodeTopology.Gpus {
-							if gpuDetails.ID == pod.Annotations[constants.ReservationPodGpuIdxAnnotation] {
+							if gpuDetails.ID == pod.Annotations[constants.AnnotationReservationPodGpuIdx] {
 								return true, nil
 							}
 						}
@@ -531,7 +531,7 @@ func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase, conditions []v1.Po
 			Namespace: podNamespace,
 			UID:       podUID,
 			Annotations: map[string]string{
-				constants.PodGroupNameAnnotation: podGroupName,
+				constants.AnnotationPodGroupName: podGroupName,
 			},
 		},
 		Spec: v1.PodSpec{
@@ -557,14 +557,14 @@ func createDedicatedGpuPod(gpuCount int64, phase v1.PodPhase, conditions []v1.Po
 func createGpuIdxSharedGpuPod(gpuIdx int, gpuFraction float64) *v1.Pod {
 	pod := createBaseSharedGpuPod(gpuFraction)
 
-	pod.Annotations[constants.GpuIdxAnnotation] = fmt.Sprintf("%d", gpuIdx)
+	pod.Annotations[constants.AnnotationGpuIdx] = fmt.Sprintf("%d", gpuIdx)
 
 	return pod
 }
 
 func createGpuGroupSharedGpuPod(gpuGroup string, gpuFraction float64) *v1.Pod {
 	pod := createBaseSharedGpuPod(gpuFraction)
-	pod.Labels[constants.GpuGroupLabel] = gpuGroup
+	pod.Labels[constants.LabelGpuGroup] = gpuGroup
 	return pod
 }
 
@@ -575,8 +575,8 @@ func createBaseSharedGpuPod(gpuFraction float64) *v1.Pod {
 			Namespace: podNamespace,
 			UID:       podUID,
 			Annotations: map[string]string{
-				constants.GpuFractionAnnotation:  fmt.Sprintf("%f", gpuFraction),
-				constants.PodGroupNameAnnotation: podGroupName,
+				constants.AnnotationGpuFraction:  fmt.Sprintf("%f", gpuFraction),
+				constants.AnnotationPodGroupName: podGroupName,
 			},
 			Labels: map[string]string{},
 		},
@@ -604,14 +604,14 @@ func createGpuIdxReservationPod(gpuIdx *int) *v1.Pod {
 	pod := createBaseReservationPod()
 
 	if gpuIdx != nil {
-		pod.Annotations[constants.ReservationPodGpuIdxAnnotation] = strconv.Itoa(*gpuIdx)
+		pod.Annotations[constants.AnnotationReservationPodGpuIdx] = strconv.Itoa(*gpuIdx)
 	}
 	return pod
 }
 
 func createGpuGroupReservationPod(gpuGroup string) *v1.Pod {
 	pod := createBaseReservationPod()
-	pod.Labels[constants.GpuGroupLabel] = gpuGroup
+	pod.Labels[constants.LabelGpuGroup] = gpuGroup
 	return pod
 }
 

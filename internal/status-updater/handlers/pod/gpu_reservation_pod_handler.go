@@ -29,7 +29,7 @@ func (p *PodHandler) handleGpuReservationPodAddition(pod *v1.Pod, nodeTopology *
 func (p *PodHandler) setReservationPodGpuIdxAnnotationIfNeeded(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
 	// DEPRECATED: Prior to 2.17, the scheduler had set the GPU index annotation for the reservation pod,
 	// therefore we skip setting the annotation if it already exists to support backward compatibility.
-	if _, ok := pod.Annotations[constants.ReservationPodGpuIdxAnnotation]; ok {
+	if _, ok := pod.Annotations[constants.AnnotationReservationPodGpuIdx]; ok {
 		return nil
 	}
 
@@ -39,7 +39,7 @@ func (p *PodHandler) setReservationPodGpuIdxAnnotationIfNeeded(pod *v1.Pod, node
 		return fmt.Errorf("failed to find GPU allocated by pod %s: %w", pod.Name, err)
 	}
 
-	annotationKey := constants.ReservationPodGpuIdxAnnotation
+	annotationKey := constants.AnnotationReservationPodGpuIdx
 	annotationVal := allocatedGpuID
 	patch := []byte(fmt.Sprintf(`{"metadata": {"annotations": {"%s": "%s"}}}`, annotationKey, annotationVal))
 

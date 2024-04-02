@@ -48,10 +48,10 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 	smappings, _ := json.Marshal(mappings)
 
 	labels := map[string]string{
-		constants.MigConfigStateLabel: "success",
+		constants.LabelMigConfigState: "success",
 	}
 	annotations := map[string]string{
-		constants.MigMappingAnnotation: base64.StdEncoding.EncodeToString(smappings),
+		constants.AnnotationMigMapping: base64.StdEncoding.EncodeToString(smappings),
 	}
 
 	err := faker.kubeclient.SetNodeLabels(labels)
@@ -95,7 +95,7 @@ func (faker *MigFaker) getGpuProduct() (string, error) {
 		return "", fmt.Errorf("failed to get node labels: %w", err)
 	}
 
-	return nodeLabels[constants.GpuProductLabel], nil
+	return nodeLabels[constants.LabelGpuProduct], nil
 }
 
 func migInstanceNameToGpuInstanceId(gpuProduct string, migInstanceName string) (int, error) {

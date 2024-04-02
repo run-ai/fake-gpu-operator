@@ -7,8 +7,8 @@ import (
 )
 
 func IsSharedGpuPod(pod *v1.Pod) bool {
-	_, runaiGpuExists := pod.Annotations[constants.GpuIdxAnnotation]
-	_, runaiGpuGroupExists := pod.Labels[constants.GpuGroupLabel]
+	_, runaiGpuExists := pod.Annotations[constants.AnnotationGpuIdx]
+	_, runaiGpuGroupExists := pod.Labels[constants.LabelGpuGroup]
 
 	return !IsGpuReservationPod(pod) && (runaiGpuExists || runaiGpuGroupExists)
 }

@@ -20,7 +20,7 @@ import (
 
 const (
 	gpuUtilizationAnnotationKey = "run.ai/simulated-gpu-utilization"
-	gpuFractionAnnotationKey    = constants.GpuFractionAnnotation
+	gpuFractionAnnotationKey    = constants.AnnotationGpuFraction
 
 	idleGpuPodNamePrefix = "runai-idle-gpu-"
 )
@@ -104,7 +104,7 @@ func calculateUtilizationFromAnnotation(annotationValue string) (*topology.Range
 }
 
 func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
-	podGroupName := pod.Annotations[constants.PodGroupNameAnnotation]
+	podGroupName := pod.Annotations[constants.AnnotationPodGroupName]
 	if podGroupName == "" {
 		return "", fmt.Errorf("pod %s has no constants.PodGroupNameAnnotation annotation", pod.Name)
 	}

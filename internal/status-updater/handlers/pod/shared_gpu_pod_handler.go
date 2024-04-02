@@ -105,7 +105,7 @@ func getMatchingReservationPodName(kubeclient kubernetes.Interface, pod *v1.Pod)
 }
 
 func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
-	runaiGpu := pod.Annotations[constants.GpuIdxAnnotation]
+	runaiGpu := pod.Annotations[constants.AnnotationGpuIdx]
 	if runaiGpu == "" {
 		return "", fmt.Errorf("pod %s has empty runai-gpu annotation", pod.Name)
 	}
@@ -121,7 +121,7 @@ func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Int
 	}
 
 	for _, nodeReservationPod := range nodeReservationPods.Items {
-		if nodeReservationPod.Annotations[constants.ReservationPodGpuIdxAnnotation] == runaiGpu {
+		if nodeReservationPod.Annotations[constants.AnnotationReservationPodGpuIdx] == runaiGpu {
 			return nodeReservationPod.Name, nil
 		}
 	}
@@ -130,7 +130,7 @@ func getMatchingReservationPodNameByRunaiGpuAnnotation(kubeclient kubernetes.Int
 }
 
 func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Interface, pod *v1.Pod) (string, error) {
-	runaiGpuGroup := pod.Labels[constants.GpuGroupLabel]
+	runaiGpuGroup := pod.Labels[constants.LabelGpuGroup]
 	if runaiGpuGroup == "" {
 		return "", fmt.Errorf("pod %s has empty runai-gpu-group label", pod.Name)
 	}
@@ -141,7 +141,7 @@ func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Int
 	}
 
 	for _, nodeReservationPod := range nodeReservationPods.Items {
-		if nodeReservationPod.Labels[constants.GpuGroupLabel] == runaiGpuGroup {
+		if nodeReservationPod.Labels[constants.LabelGpuGroup] == runaiGpuGroup {
 			return nodeReservationPod.Name, nil
 		}
 	}
