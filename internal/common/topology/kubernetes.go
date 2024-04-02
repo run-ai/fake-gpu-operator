@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,7 @@ import (
 func GetNodeTopologyFromCM(kubeclient kubernetes.Interface, nodeName string) (*NodeTopology, error) {
 	cmName := GetNodeTopologyCMName(nodeName)
 	cm, err := kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
+		viper.GetString(constants.EnvTopologyCmNamespace)).Get(
 		context.TODO(), cmName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -31,7 +32,7 @@ func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTop
 	}
 
 	_, err = kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Create(context.TODO(), cm, metav1.CreateOptions{})
+		viper.GetString(constants.EnvTopologyCmNamespace)).Create(context.TODO(), cm, metav1.CreateOptions{})
 	return err
 }
 
@@ -42,21 +43,21 @@ func UpdateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTop
 	}
 
 	_, err = kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Update(context.TODO(), cm, metav1.UpdateOptions{})
+		viper.GetString(constants.EnvTopologyCmNamespace)).Update(context.TODO(), cm, metav1.UpdateOptions{})
 	return err
 }
 
 func DeleteNodeTopologyCM(kubeclient kubernetes.Interface, nodeName string) error {
 
 	err := kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Delete(context.TODO(), GetNodeTopologyCMName(nodeName), metav1.DeleteOptions{})
+		viper.GetString(constants.EnvTopologyCmNamespace)).Delete(context.TODO(), GetNodeTopologyCMName(nodeName), metav1.DeleteOptions{})
 	return err
 }
 
 func GetBaseTopologyFromCM(kubeclient kubernetes.Interface) (*BaseTopology, error) {
 	topologyCm, err := kubeclient.CoreV1().ConfigMaps(
-		viper.GetString("TOPOLOGY_CM_NAMESPACE")).Get(
-		context.TODO(), viper.GetString("TOPOLOGY_CM_NAME"), metav1.GetOptions{})
+		viper.GetString(constants.EnvTopologyCmNamespace)).Get(
+		context.TODO(), viper.GetString(constants.EnvTopologyCmName), metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get topology configmap: %v", err)
 	}
@@ -92,8 +93,8 @@ func FromNodeTopologyCM(cm *corev1.ConfigMap) (*NodeTopology, error) {
 func ToBaseTopologyCM(baseTopology *BaseTopology) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      viper.GetString("TOPOLOGY_CM_NAME"),
-			Namespace: viper.GetString("TOPOLOGY_CM_NAMESPACE"),
+			Name:      viper.GetString(constants.EnvTopologyCmName),
+			Namespace: viper.GetString(constants.EnvTopologyCmNamespace),
 		},
 		Data: make(map[string]string),
 	}
@@ -112,7 +113,7 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GetNodeTopologyCMName(nodeName),
-			Namespace: viper.GetString("TOPOLOGY_CM_NAMESPACE"),
+			Namespace: viper.GetString(constants.EnvTopologyCmNamespace),
 			Labels: map[string]string{
 				"node-topology": "true",
 			},
@@ -131,5 +132,5 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 }
 
 func GetNodeTopologyCMName(nodeName string) string {
-	return viper.GetString("TOPOLOGY_CM_NAME") + "-" + nodeName
+	return viper.GetString(constants.EnvTopologyCmName) + "-" + nodeName
 }

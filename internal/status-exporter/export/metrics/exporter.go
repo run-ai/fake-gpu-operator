@@ -10,6 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
@@ -61,7 +62,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 }
 
 func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
-	nodeName := viper.GetString("NODE_NAME")
+	nodeName := viper.GetString(constants.EnvNodeName)
 
 	gpuUtilization.Reset()
 	gpuFbUsed.Reset()

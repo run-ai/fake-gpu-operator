@@ -501,8 +501,8 @@ func setupConfig() {
 }
 
 func setupEnvs() {
-	os.Setenv("TOPOLOGY_CM_NAME", "fake-cm-name")
-	os.Setenv("TOPOLOGY_CM_NAMESPACE", "fake-cm-namespace")
+	os.Setenv(constants.EnvTopologyCmName, "fake-cm-name")
+	os.Setenv(constants.EnvTopologyCmNamespace, "fake-cm-namespace")
 }
 
 func createTopology(gpuCount int64, nodeName string) *topology.NodeTopology {

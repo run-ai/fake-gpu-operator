@@ -9,6 +9,7 @@ import (
 
 	"github.com/otiai10/copy"
 	"github.com/run-ai/fake-gpu-operator/internal/common/config"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/deviceplugin"
 	"github.com/spf13/viper"
@@ -28,11 +29,11 @@ func main() {
 	kubeClient := KubeClientFn(clusterConfig)
 
 	log.Println("Fake Device Plugin Running")
-	requiredEnvVars := []string{"TOPOLOGY_CM_NAME", "TOPOLOGY_CM_NAMESPACE", "NODE_NAME"}
+	requiredEnvVars := []string{constants.EnvTopologyCmName, constants.EnvTopologyCmNamespace, constants.EnvNodeName}
 	config.ValidateConfig(requiredEnvVars)
 	viper.AutomaticEnv()
 
-	topology, err := topology.GetNodeTopologyFromCM(kubeClient, os.Getenv("NODE_NAME"))
+	topology, err := topology.GetNodeTopologyFromCM(kubeClient, os.Getenv(constants.EnvNodeName))
 	if err != nil {
 		log.Printf("Failed to get topology: %s\n", err)
 		os.Exit(1)

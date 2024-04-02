@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 )
 
@@ -25,8 +26,8 @@ type nvidiaSmiArgs struct {
 
 // main is the entry point for the application.
 func main() {
-	os.Setenv("TOPOLOGY_CM_NAMESPACE", "gpu-operator")
-	os.Setenv("TOPOLOGY_CM_NAME", "topology")
+	os.Setenv(constants.EnvTopologyCmNamespace, "gpu-operator")
+	os.Setenv(constants.EnvTopologyCmName, "topology")
 
 	args := getNvidiaSmiArgs()
 
@@ -34,7 +35,7 @@ func main() {
 }
 
 func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
-	nodeName := os.Getenv("NODE_NAME")
+	nodeName := os.Getenv(constants.EnvNodeName)
 
 	// Send http request to topology-server to get the topology
 	resp, err := http.Get("http://topology-server.gpu-operator/topology/nodes/" + nodeName)

@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	status_exporter "github.com/run-ai/fake-gpu-operator/internal/status-exporter"
@@ -102,9 +103,9 @@ func setupConfig() {
 }
 
 func setupEnvs() {
-	os.Setenv("TOPOLOGY_CM_NAME", topologyCmName)
-	os.Setenv("TOPOLOGY_CM_NAMESPACE", topologyCmNamespace)
-	os.Setenv("NODE_NAME", nodeName)
+	os.Setenv(constants.EnvTopologyCmName, topologyCmName)
+	os.Setenv(constants.EnvTopologyCmNamespace, topologyCmNamespace)
+	os.Setenv(constants.EnvNodeName, nodeName)
 	os.Setenv("KUBERNETES_SERVICE_HOST", "fake-k8s-service-host")
 	os.Setenv("KUBERNETES_SERVICE_PORT", "fake-k8s-service-port")
 }

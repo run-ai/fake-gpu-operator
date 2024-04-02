@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
@@ -22,7 +23,7 @@ func (watcher *FakeWatcher) Subscribe(subscriber chan<- *topology.NodeTopology) 
 func (watcher *FakeWatcher) Watch(stopCh <-chan struct{}) {}
 
 func TestExport(t *testing.T) {
-	viper.SetDefault("NODE_NAME", "my_node")
+	viper.SetDefault(constants.EnvNodeName, "my_node")
 
 	myNode := &topology.NodeTopology{
 		GpuProduct: "some gpu",

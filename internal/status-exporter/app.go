@@ -13,7 +13,7 @@ import (
 
 type StatusExporterAppConfig struct {
 	NodeName                  string `mapstructure:"NODE_NAME" validator:"required"`
-	TopologyCmName            string `mapstructure:"TOPOLOGY_CM_NAME" validator:"required"`
+	TopologyCmName            string `mapstructure:constants.EnvTopologyCmName validator:"required"`
 	TopologyCmNamespace       string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validator:"required"`
 	TopologyMaxExportInterval string `mapstructure:"TOPOLOGY_MAX_EXPORT_INTERVAL"`
 }
