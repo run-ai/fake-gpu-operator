@@ -40,6 +40,9 @@ func (e *FsExporter) Run(stopCh <-chan struct{}) {
 }
 
 func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
+	if err := os.RemoveAll("/runai/proc/pod"); err != nil {
+		log.Printf("Failed deleting runai/proc/pod directory: %s", err.Error())
+	}
 
 	for gpuIdx, gpu := range nodeTopology.Gpus {
 		// Ignoring pods that are not supposed to be seen by runai-container-toolkit
@@ -50,7 +53,7 @@ func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
 		for podUuid, gpuUsageStatus := range gpu.Status.PodGpuUsageStatus {
 			log.Printf("Exporting pod %s gpu stats to filesystem", podUuid)
 
-			path := fmt.Sprintf("runai/proc/pod/%s/metrics/gpu/%d", podUuid, gpuIdx)
+			path := fmt.Sprintf("/runai/proc/pod/%s/metrics/gpu/%d", podUuid, gpuIdx)
 			if err := os.MkdirAll(path, 0644); err != nil {
 				log.Printf("Failed creating directory for pod %s: %s", podUuid, err.Error())
 			}
@@ -74,5 +77,5 @@ func writeFile(path string, content []byte) error {
 }
 
 func mbToBytes(mb int) int {
-	return mb * 1024 * 1024
+	return mb * (1000 * 1000)
 }

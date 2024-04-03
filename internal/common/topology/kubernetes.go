@@ -115,7 +115,8 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 			Name:      GetNodeTopologyCMName(nodeName),
 			Namespace: viper.GetString(constants.EnvTopologyCmNamespace),
 			Labels: map[string]string{
-				"node-topology": "true",
+				constants.LabelTopologyCMNodeTopology: "true",
+				constants.LabelTopologyCMNodeName:     nodeName,
 			},
 		},
 		Data: make(map[string]string),

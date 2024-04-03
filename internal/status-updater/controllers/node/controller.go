@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
@@ -15,6 +16,7 @@ import (
 	nodehandler "github.com/run-ai/fake-gpu-operator/internal/status-updater/handlers/node"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/informers"
@@ -65,7 +67,7 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 }
 
 func (c *NodeController) Run(stopCh <-chan struct{}) {
-	err := c.pruneTopologyNodes()
+	err := c.pruneTopologyConfigMaps()
 	if err != nil {
 		log.Fatalf("Failed to prune topology nodes: %v", err)
 	}
@@ -73,8 +75,9 @@ func (c *NodeController) Run(stopCh <-chan struct{}) {
 	c.informer.Run(stopCh)
 }
 
-func (c *NodeController) pruneTopologyNodes() error {
-	log.Print("Pruning topology nodes...")
+// This function prunes the topology ConfigMaps that are not associated with any fake gpu nodes, and initializes the GpuTopologyStatus field in the remaining ConfigMaps.
+func (c *NodeController) pruneTopologyConfigMaps() error {
+	log.Print("Pruning topology ConfigMaps...")
 
 	gpuNodes, err := c.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.deploy.dcgm-exporter=true,nvidia.com/gpu.deploy.device-plugin=true",
@@ -84,7 +87,7 @@ func (c *NodeController) pruneTopologyNodes() error {
 	}
 
 	nodeTopologyCms, err := c.kubeClient.CoreV1().ConfigMaps(viper.GetString(constants.EnvTopologyCmNamespace)).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: "node-topology=true",
+		LabelSelector: fmt.Sprintf("%s=true", constants.LabelTopologyCMNodeTopology),
 	})
 	if err != nil {
 		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
@@ -95,10 +98,47 @@ func (c *NodeController) pruneTopologyNodes() error {
 		validNodeTopologyCMMap[topology.GetNodeTopologyCMName(node.Name)] = true
 	}
 
+	var multiErr error
 	for _, cm := range nodeTopologyCms.Items {
-		if _, ok := validNodeTopologyCMMap[cm.Name]; !ok {
-			util.LogErrorIfExist(c.kubeClient.CoreV1().ConfigMaps(viper.GetString(constants.EnvTopologyCmNamespace)).Delete(context.TODO(), cm.Name, metav1.DeleteOptions{}), fmt.Sprintf("Failed to delete node topology cm %s", cm.Name))
+		_, ok := validNodeTopologyCMMap[cm.Name]
+		multiErr = multierror.Append(multiErr, c.pruneTopologyConfigMap(&cm, ok))
+	}
+
+	return nil
+}
+
+func (c *NodeController) pruneTopologyConfigMap(cm *v1.ConfigMap, isValidNodeTopologyCM bool) error {
+	if !isValidNodeTopologyCM {
+		util.LogErrorIfExist(c.kubeClient.CoreV1().ConfigMaps(viper.GetString(constants.EnvTopologyCmNamespace)).Delete(context.TODO(), cm.Name, metav1.DeleteOptions{}), fmt.Sprintf("Failed to delete node topology cm %s", cm.Name))
+	}
+
+	nodeTopology, err := topology.FromNodeTopologyCM(cm)
+	if err != nil {
+		return fmt.Errorf("failed to parse node topology cm %s: %v", cm.Name, err)
+	}
+
+	for i := range nodeTopology.Gpus {
+		nodeTopology.Gpus[i].Status.PodGpuUsageStatus = topology.PodGpuUsageStatusMap{}
+
+		// Remove non-existing pods from the allocation info
+		allocatingPodExists, err := isPodExist(c.kubeClient, nodeTopology.Gpus[i].Status.AllocatedBy.Pod, nodeTopology.Gpus[i].Status.AllocatedBy.Namespace)
+		if err != nil {
+			return fmt.Errorf("failed to check if pod %s exists: %v", nodeTopology.Gpus[i].Status.AllocatedBy.Pod, err)
 		}
+
+		if !allocatingPodExists {
+			nodeTopology.Gpus[i].Status.AllocatedBy = topology.ContainerDetails{}
+		}
+	}
+
+	nodeName, ok := cm.ObjectMeta.Labels[constants.LabelTopologyCMNodeName]
+	if !ok {
+		return fmt.Errorf("node topology cm %s does not have node name label", cm.Name)
+	}
+
+	err = topology.UpdateNodeTopologyCM(c.kubeClient, nodeTopology, nodeName)
+	if err != nil {
+		return fmt.Errorf("failed to update node topology cm %s: %v", cm.Name, err)
 	}
 
 	return nil
@@ -108,4 +148,15 @@ func isFakeGpuNode(node *v1.Node) bool {
 	return node != nil &&
 		node.Labels["nvidia.com/gpu.deploy.dcgm-exporter"] == "true" &&
 		node.Labels["nvidia.com/gpu.deploy.device-plugin"] == "true"
+}
+
+func isPodExist(kubeClient kubernetes.Interface, podName string, namespace string) (bool, error) {
+	_, err := kubeClient.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return false, err
+		}
+		return false, nil
+	}
+	return true, nil
 }
