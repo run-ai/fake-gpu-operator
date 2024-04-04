@@ -30,6 +30,7 @@ type StatusUpdaterAppConfiguration struct {
 
 type StatusUpdaterApp struct {
 	Controllers []controllers.Interface
+	kubeClient  kubernetes.Interface
 	stopCh      chan struct{}
 	wg          *sync.WaitGroup
 }
@@ -53,11 +54,11 @@ func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
 
 	app.wg = &sync.WaitGroup{}
 
-	kubeClient := KubeClientFn(clusterConfig)
+	app.kubeClient = KubeClientFn(clusterConfig)
 	dynamicClient := DynamicClientFn(clusterConfig)
 
-	app.Controllers = append(app.Controllers, podcontroller.NewPodController(kubeClient, dynamicClient, app.wg))
-	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(kubeClient, app.wg))
+	app.Controllers = append(app.Controllers, podcontroller.NewPodController(app.kubeClient, dynamicClient, app.wg))
+	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(app.kubeClient, app.wg))
 }
 
 func (app *StatusUpdaterApp) Name() string {

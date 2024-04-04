@@ -12,6 +12,8 @@ const (
 	LabelGpuProduct                 = "nvidia.com/gpu.product"
 	LabelMigConfigState             = "nvidia.com/mig.config.state"
 	LabelFakeNodeDeploymentTemplate = "run.ai/fake-node-deployment-template"
+	LabelTopologyCMNodeTopology     = "node-topology"
+	LabelTopologyCMNodeName         = "node-name"
 
 	ReservationNs = "runai-reservation"
 
