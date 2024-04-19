@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/client_model v0.5.0
 	github.com/spf13/viper v1.14.0
 	github.com/tidwall/gjson v1.14.1
-	golang.org/x/net v0.20.0
+	golang.org/x/net v0.23.0
 	google.golang.org/grpc v1.58.3
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.29.3
@@ -88,8 +88,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
-	golang.org/x/term v0.16.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
