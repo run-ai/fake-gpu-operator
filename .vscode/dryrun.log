@@ -1,0 +1,5 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory `/Users/dormull-or/Documents/Repositories/fake-gpu-operator'
+env GOOS=linux GOARCH=amd64 go build -o /Users/dormull-or/Documents/Repositories/fake-gpu-operator/bin/ ./cmd/""
+make: Leaving directory `/Users/dormull-or/Documents/Repositories/fake-gpu-operator'
+ 

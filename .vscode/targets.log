@@ -1,0 +1,376 @@
+make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+# GNU Make 3.81
+# Copyright (C) 2006  Free Software Foundation, Inc.
+# This is free software; see the source for copying conditions.
+# There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# This program built for i386-apple-darwin11.3.0
+ 
+make: *** No rule to make target `all'.  Stop.
+
+
+# Make data base, printed on Wed Jun 21 09:32:30 2023
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# environment
+VSCODE_CRASH_REPORTER_PROCESS_TYPE = extensionHost
+# makefile (from `Makefile', line 8)
+NAMESPACE = gpu-operator
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# automatic
+@F = $(notdir $@)
+# makefile
+CURDIR := /Users/dormull-or/Documents/Repositories/fake-gpu-operator
+# makefile (from `Makefile', line 6)
+DOCKER_TAG = 0.0.0-dev
+# makefile
+SHELL = /bin/sh
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en-us","osLocale":"en-il","availableLanguages":{},"_languagePackSupport":true}
+# environment
+_ = /usr/bin/make
+# makefile (from `Makefile', line 1)
+MAKEFILE_LIST :=  Makefile
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+__CFBundleIdentifier = com.microsoft.VSCode
+# environment
+INFOPATH = /opt/homebrew/share/info:
+# environment
+VSCODE_CWD = /
+# environment
+GOPROXY = https://proxy.golang.org,direct
+# environment
+PATH = /opt/homebrew/bin:/opt/homebrew/sbin:/Library/Frameworks/Python.framework/Versions/3.10/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin
+# environment
+LSCOLORS = Gxfxcxdxbxegedabagacad
+# environment
+GOPATH = /Users/dormull-or/go
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# default
+.FEATURES := target-specific order-only second-expansion else-if archives jobserver check-symlink
+# environment
+SSH_AUTH_SOCK = /private/tmp/com.apple.launchd.k5GMFNKAjh/Listeners
+# automatic
+%F = $(notdir $%)
+# environment
+PWD = /Users/dormull-or/Documents/Repositories/fake-gpu-operator
+# makefile (from `Makefile', line 5)
+DOCKER_REPO_FULL = ${DOCKER_REPO_BASE}/${COMPONENT}
+# environment
+HOMEBREW_CELLAR = /opt/homebrew/Cellar
+# environment
+ORIGINAL_XDG_CURRENT_DESKTOP = undefined
+# environment
+MANPATH = /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/share/man:/Library/Developer/CommandLineTools/usr/share/man:/Library/Developer/CommandLineTools/Toolchains/XcodeDefault.xctoolchain/usr/share/man:/opt/homebrew/share/man::
+# environment
+GOMODCACHE = /Users/dormull-or/go/pkg/mod
+# environment
+HOME = /Users/dormull-or
+# default
+MAKEFILEPATH = $(shell /usr/bin/xcode-select -print-path 2>/dev/null || echo /Developer)/Makefiles
+# environment
+VSCODE_CODE_CACHE_PATH = /Users/dormull-or/Library/Application Support/Code/CachedData/695af097c7bd098fbf017ce3ac85e09bbc5dda06
+# environment
+LOGNAME = dormull-or
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
+# environment
+ZSH = /Users/dormull-or/.oh-my-zsh
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# environment
+XPC_FLAGS = 0x0
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+SHLVL = 1
+# makefile (from `Makefile', line 1)
+BUILD_DIR = $(shell pwd)/bin
+# default
+MAKE_VERSION := 3.81
+# environment
+USER = dormull-or
+# makefile
+.DEFAULT_GOAL := build
+# environment
+LESS = -R
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# environment
+LE_WORKING_DIR = /Users/dormull-or/.acme.sh
+# default
+MAKE_COMMAND := /Library/Developer/CommandLineTools/usr/bin/make
+# environment
+GCR_SECRET = eyAiYXV0aHMiOiB7ICJnY3IuaW8iOiB7ICJhdXRoIjogIlgycHpiMjVmYTJWNU9uc2dJQ0owZVhCbElqb2dJbk5sY25acFkyVmZZV05qYjNWdWRDSXNJQ0FpY0hKdmFtVmpkRjlwWkNJNklDSnlkVzR0WVdrdGNISnZaQ0lzSUNBaWNISnBkbUYwWlY5clpYbGZhV1FpT2lBaVlXRXhabVpqTXpsaVpXUXhaamhqTURRMU1tSTVOMkV4T1RrMVptUmxObVprTXpNMk1tUTFNQ0lzSUNBaWNISnBkbUYwWlY5clpYa2lPaUFpTFMwdExTMUNSVWRKVGlCUVVrbFdRVlJGSUV0RldTMHRMUzB0WEc1TlNVbEZkbEZKUWtGRVFVNUNaMnR4YUd0cFJ6bDNNRUpCVVVWR1FVRlRRMEpMWTNkbloxTnFRV2RGUVVGdlNVSkJVVVJLZDNGQ1NFVmliVll2UTAxNVhHNTFlWEYxYlVKcVZtOHlNRUpWYzJaUGFEWjFkRXRDVGpoUVVrUTBhRmt6Wm5Wek5rbHJaelZEYmtrMVVVZDJRbUU1TlU1RGJrcGhhSFZKVkZGTVYwZE1YRzVFZEdaMk9XOTNWVEZSYm5STGMwRnZPVnBJYm1jdlFWTkZla1JsUkdadVFrVndWbm9yU0ROR056SXlVemhIUlVGcGRXVnFlVGhsZWtWUlZEUnZZekpMWEc1V1V6Wm5WbW95T0ZZNVQyOXVaek5sVDJGMGJtUklRbFZxUmxodFFXRk9kbUpzUWtrMFRFWlZkVXhvUm1WbVkzbERMMEZvVERKYVF6bGtjRlJaVUhsYVhHNXFkRWxJVUhGVVR6QnlkSGhRVEdrNGRtaDBRV2gyTVUxb1FuWkViVEpFUmpCWGIwVTRTMlJFSzI5NldWUkxUVkJ6U1hCclJHRm1Nbk00Y0Zob1lXcE5YRzV3YUVkRFFsYzNhekE0U25aeVNpdElaMVk1YlRFNFMzaG1NU3R1YVVkcWJrMWhSV0pOVFRjM2MyZFRXaTkxUTNoM01rVXdhbmR1ZGpGWlMzZFZjQ3RtWEc1a1pGTnhRbmh6YmtGblRVSkJRVVZEWjJkRlFWaGlLMnh2WlVKSGFqYzJZM3BHU0ZSMk1WUkdSbFl2Wlc5eFRFbFlUbk5HYkcxMmMzZGxiazlJVDNoU1hHNTRRV1ZXVDBSb1JtdEJXVmQ1Ym00MUwxRnlWWHBxY21Oak1FTTVNV015UVdGYVJEUklXRkVyUjNRdmVYZE9WVUZtVVdVclUwRnJlVmd2VDNrelZITTFYRzVPWkVabmVVbGFTMU4wU3pVME0wUXlXV0kwY0dKQ05tZExSVUpqVVhaMFRDdHNPR2xVZWxwRVkxZFRUalJQWlhkSlpscERRWE40UkRsalZsQnNTazlUWEc0MlExZDVLMVZEYlZONmRYbDFhbms1Tlc5VVJscExTQzgxUWpaeVFXdzNOUzh5TDNORlVVa3hVaXRYY1ZOUmRVdDNjbmxGVG5SaU9DdExVazFrVGxaRVhHNXVaVkp1VVZWWmFqSjZLM1p2YmtsVGJqRm1hSGgyWjBvMGEzaHZlRWR1TUdOeWJERnBaMFpuY0RaYU16SkpRblZUVEZFNE9FSnlhVkJFVW14M016bGhYRzVaU1c5MVYxUXpTR1F3VmtadFpITlZSMnBTWjNKamVHOU5TekoxU0ZRd2NGbG9WekUyWW1aa2IxRkxRbWRSUkhScWEyRTVhR3c0U1dWeFdWQXZWak4yWEc1NlVUaFhkRzlEVVhWMk5sRkZMMGg2U1ZSNmEydGhZVm81YVRKVU56azVlSGd2WW05eVJsWjRlSEJrTkRBNU56TXhMMXB6ZUhGUFFYWmFTV05oU3pVMlhHNTBPRFJ5YTFnMk5VUkxkSGhYY2xkcmJuaDJNeXQ1UlRKRVIySkdTek5ZVFhSdU4zZE9halJ0UkhkTE0xSk9TVlZJUWpGSFRWbGpRV3hDZEdveFprODBYRzVaVkdwSGVURXljV0Z2VjJGTmFqWnBNRW96VWtSbVQybGhkMHRDWjFGRVdtSk9OVTgwUmxsdGFFRnVMM05rTm5oVlVESjNNRlZvTkZaWEwzRnJhbE0xWEc1d01VSnBhV2xsUTBkcWJtUTJSV1pDSzJsR0syVnpMMnhEYkRaR1ZtVkZaMWh4ZHpsRVdEbFFNemh4YW1SeFIyeFZiVWhQV0hwUlduTTBia0ZRTkc1c1hHNTJXRWxYYVdWVE1GQjViV3B4VUZWWU9GbEdZMlphUzNremNEazJaa2N4YUVWWFRtcElNVEI1TXpGUGNtZEJURll3VlhSRGFIRjVhSGRhWWs1eGRDODJYRzVvZUdWU2FsbEJlRTVSUzBKblJHWlZSMmhtYzJadFZWWjJabFpCUkVaWFVrVmFlVFkwTVdkblQycGtUMGRMZVZaQlUxTlBabTFNYzJ0cFYxVlhRMVEzWEc1Wk4wZHRNM0ZZVVd0RlUySk9iV3d3TTJKelQzRTVjRlJ6ZDFSMVRGTk5Na1V3VURFck5YZDBkVUpVTlhodWNXSXdaM3BxWm1ocFpuSllPV3hEVm1oR1hHNUJNbmRqY3pGd2NXRkxOemxuTkcxeFYyTTNibFZPZWpNNFlpOTVlR3RhYzNkMFZXeGphWFpqZDA4eFQwcGFOVW92VDNwdGNFZ3hiRUZ2UjBGUVRqRllYRzVHYVcxRGRFZEdLMFY0UVU0d1VVWnNTWGg0VXpsNWVXcHRZbmt6SzJOcE1tNW1PR2wwUXpjelUwRkhRVXBRVFV0alZXVmlOM1puUzBsaVZUWjNhamNyWEc1YVJrUnJPVTB3YmtGeU9YY3pUVVJHUmtkd1pWRldkV0pGYWtFelVVSk1ZVmg1YWxjeGQxcG1aRFp6VTJkV1RtWTNVelZTTlV4VGFGaEVOVGgxUWtkUlhHNURkVEUyZGpSVU5DOVRaRzF2T0doc1JYZG9NRkozZGxWV1ZuRnBVRXBYV1hGWGR6bEhTV3REWjFsRlFXaGhORFZuV1UxcmRtOU1kRVpPVVVOUE5HTnFYRzVUZVhWNlFtWmFiM2hHV2pWTmNETkJSVE4xZFRoRVRuazJlbkpPTlVwbVVDdDZjVmxIYkhsMFFVVm5ObU5CVjNCak9VZ3hjWG92UjBSc1JGTmtUbkZEWEc1R1VuTTNkMWw1V1dwMFIzTm9VV3BPYjFWMWVXNTZWelZaYldSMGFHaHZiMHh5WW1ScFR6UnZZa2hYYUZOblRHVm1WR0YyT0RKaWR6aHZlV3gwUkV0TlhHNXRNbFZqVTFZNE5WVlVkbFJ3TUVobldrMWlNUzgzTkQxY2JpMHRMUzB0UlU1RUlGQlNTVlpCVkVVZ1MwVlpMUzB0TFMxY2JpSXNJQ0FpWTJ4cFpXNTBYMlZ0WVdsc0lqb2dJbWRqY2kxd2RXeHNRSEoxYmkxaGFTMXdjbTlrTG1saGJTNW5jMlZ5ZG1salpXRmpZMjkxYm5RdVkyOXRJaXdnSUNKamJHbGxiblJmYVdRaU9pQWlNVEUxT0RFMU9EQTNPREF6TkRZeU16VXhNemd6SWl3Z0lDSmhkWFJvWDNWeWFTSTZJQ0pvZEhSd2N6b3ZMMkZqWTI5MWJuUnpMbWR2YjJkc1pTNWpiMjB2Ynk5dllYVjBhREl2WVhWMGFDSXNJQ0FpZEc5clpXNWZkWEpwSWpvZ0ltaDBkSEJ6T2k4dmIyRjFkR2d5TG1kdmIyZHNaV0Z3YVhNdVkyOXRMM1J2YTJWdUlpd2dJQ0poZFhSb1gzQnliM1pwWkdWeVgzZzFNRGxmWTJWeWRGOTFjbXdpT2lBaWFIUjBjSE02THk5M2QzY3VaMjl2WjJ4bFlYQnBjeTVqYjIwdmIyRjFkR2d5TDNZeEwyTmxjblJ6SWl3Z0lDSmpiR2xsYm5SZmVEVXdPVjlqWlhKMFgzVnliQ0k2SUNKb2RIUndjem92TDNkM2R5NW5iMjluYkdWaGNHbHpMbU52YlM5eWIySnZkQzkyTVM5dFpYUmhaR0YwWVM5NE5UQTVMMmRqY2kxd2RXeHNKVFF3Y25WdUxXRnBMWEJ5YjJRdWFXRnRMbWR6WlhKMmFXTmxZV05qYjNWdWRDNWpiMjBpZlE9PSIgfSB9LCAiSHR0cEhlYWRlcnMiOiB7ICJVc2VyLUFnZW50IjogIkRvY2tlci1DbGllbnQvMTkuMDMuNSAoZGFyd2luKSIgfX0=
+# default
+.VARIABLES := 
+# environment
+TMPDIR = /var/folders/l4/ygb314n15p77z5cvq_b2fccr0000gn/T/
+# automatic
+*F = $(notdir $*)
+# environment
+VSCODE_IPC_HOOK = /Users/dormull-or/Library/Application Support/Code/1.79-main.sock
+# environment
+MallocNanoZone = 0
+# makefile
+MAKEFLAGS = Rrqp
+# environment
+MFLAGS = -Rrqp
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# environment
+XPC_SERVICE_NAME = application.com.microsoft.VSCode.50967437.50967443
+# environment
+HOMEBREW_PREFIX = /opt/homebrew
+ 
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# automatic
++F = $(notdir $+)
+# environment
+HOMEBREW_REPOSITORY = /opt/homebrew
+# environment
+__CF_USER_TEXT_ENCODING = 0x1F5:0x0:0x0
+# environment
+COMMAND_MODE = unix2003
+# default
+MAKEFILES := 
+# makefile (from `Makefile', line 2)
+COMPONENT = "$1"
+# automatic
+<F = $(notdir $<)
+# environment
+PAGER = less
+# makefile (from `Makefile', line 7)
+DOCKER_IMAGE_NAME = ${DOCKER_REPO_FULL}:${DOCKER_TAG}
+# environment
+LC_ALL = C
+# automatic
+^F = $(notdir $^)
+# makefile (from `Makefile', line 4)
+DOCKER_REPO_BASE = gcr.io/run-ai-lab/fake-gpu-operator
+# default
+SUFFIXES := 
+# environment
+KOPS_STATE_STORE = s3://runai-kops-state
+# environment
+MAKELEVEL := 0
+# makefile (from `Makefile', line 68)
+GINKGO = $(BUILD_DIR)/ginkgo
+# environment
+LANG = C
+# environment
+VSCODE_PID = 47167
+# variable set hash-table stats:
+# Load=81/1024=8%, Rehash=0, Collisions=4/112=4%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 16777231, inode 4281732): 18 files, no impossibilities.
+
+# 18 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+/Users/dormull-or/Documents/Repositories/fake-gpu-operator/bin/ginkgo:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 70):
+	GOBIN=${BUILD_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.0
+	
+
+# Not a target:
+all:
+#  Command-line target.
+#  Implicit rule search has been done.
+#  File does not exist.
+#  File has not been updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+.PHONY: build build clean image images push push-all restart deploy deploy-all image-test test-all
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+build-shared:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 15):
+	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ -buildmode=c-shared ./cmd/${COMPONENT}
+	
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+push:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 35):
+	docker push ${DOCKER_IMAGE_NAME}
+	
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2023-06-21 09:32:05
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/0=0%
+
+build:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 11):
+	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
+	
+
+push-all:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 39):
+	make push COMPONENT=device-plugin
+	make push COMPONENT=status-updater
+	make push COMPONENT=status-exporter
+	make push COMPONENT=topology-server
+	make push COMPONENT=mig-faker
+	
+
+test-all: /Users/dormull-or/Documents/Repositories/fake-gpu-operator/bin/ginkgo
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 73):
+	$(GINKGO) -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
+	
+
+images:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 27):
+	make image COMPONENT=device-plugin
+	make image COMPONENT=status-updater
+	make image COMPONENT=status-exporter
+	make image COMPONENT=topology-server
+	make image COMPONENT=mig-faker
+	
+
+image-test:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 62):
+	mkdir -p /tmp/artifacts/test-results
+	mkdir -p /tmp/artifacts/test-results/unit-tests
+	mkdir -p /tmp/artifacts/test-results/service-tests
+	docker build -t test-image --target test .
+	
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+restart:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 47):
+	kubectl delete pod -l component=${COMPONENT} --force -n ${NAMESPACE}
+	
+
+image:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 23):
+	DOCKER_BUILDKIT=1 docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
+	
+
+clean:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 19):
+	rm -rf ${BUILD_DIR}
+	
+
+deploy: image push
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+
+deploy-all:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  commands to execute (from `Makefile', line 54):
+	make image push COMPONENT=device-plugin
+	make image push COMPONENT=status-updater
+	make image push COMPONENT=status-exporter
+	make image push COMPONENT=topology-server
+	make image push COMPONENT=mig-faker
+	
+
+# files hash-table stats:
+# Load=18/1024=2%, Rehash=0, Collisions=0/56=0%
+# VPATH Search Paths
+
+# No `vpath' search paths.
+
+# No general (`VPATH' variable) search path.
+
+# # of strings in strcache: 1
+# # of strcache buffers: 1
+# strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
+# strcache free: total = 4087 / max = 4087 / min = 4087 / avg = 4087
+
+# Finished Make data base on Wed Jun 21 09:32:30 2023
+
+ 

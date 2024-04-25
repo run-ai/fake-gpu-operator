@@ -1,0 +1,141 @@
+name: CI - commit to master
+
+on:
+  push:
+    paths-ignore:
+      - ".github/**"
+    branches:
+      - "master"
+
+concurrency:
+  group: ${{ github.head_ref || github.ref || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  checks: write
+  contents: read
+  pull-requests: write
+  id-token: write
+  security-events: write
+  actions: read
+  repository-projects: read
+
+env:
+  ENVIRONMENT: "test"
+  CONTAINER_REGISTRY: "fake-gpu-operator-containers-test"
+  HELM_REGISTRY: "fake-gpu-operator-charts-test"
+  ENV_IN_A_CLICK_CLUSTER_NAME_PREFIX: "fgo" # fake-gpu-operator short
+  ARGO_CD_SECRET_NAME: "INFRA_ARGOCD_TOKEN_CICD"
+  ARGO_CD_TEAM_NAME: "cicd"
+  SERVICE_LIST: "fake-gpu-operator
+    fake-gpu-operator-chart"
+
+jobs:
+  env:
+    runs-on: ubuntu-latest
+    name: Set environment
+    outputs:
+      ENVIRONMENT: ${{ env.ENVIRONMENT }}
+      CONTAINER_REGISTRY: ${{ env.CONTAINER_REGISTRY }}
+      VERSION: ${{ steps.env.outputs.version }}
+      HELM_REGISTRY: ${{ env.HELM_REGISTRY }}
+      CLUSTER_NAME: ${{ steps.env.outputs.cluster_name }}
+      SERVICE_LIST: ${{ env.SERVICE_LIST }}
+      ARGO_CD_SECRET_NAME: ${{ env.ARGO_CD_SECRET_NAME }}
+      ARGO_CD_TEAM_NAME: ${{ env.ARGO_CD_TEAM_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GIT_HUB_TOKEN }}
+      - name: set env
+        id: env
+        run: |
+          short_sha=$(echo ${{ github.sha }} | cut -c1-7)
+          branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          branch_name_md5=$(echo $branch | md5sum | cut -d' ' -f1 )
+          unique_branch_id=${branch_name_md5: -4}
+          branch=$(echo $branch | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9-]//g' -e 's/--+/--/g' -e 's/^-*//' -e 's/-*$//' -e 's/-*-/-/g' | cut -c1-21 )
+          [ "${branch: -1}" == "-" ] && branch=${branch: : -1} # If branch ends with '-' removing last character
+          cluster_name=${{ env.ENV_IN_A_CLICK_CLUSTER_NAME_PREFIX }}-$unique_branch_id-$branch
+          echo cluster_name=$cluster_name >> $GITHUB_OUTPUT
+          version="0.0.0-$((GITHUB_RUN_NUMBER + 1000000)).$branch-$short_sha"
+          echo version=$version >> $GITHUB_OUTPUT
+          echo $version
+          echo $cluster_name
+
+  get-service-list:
+    name: Get service list
+    needs: env
+    uses: run-ai/runai-actions/.github/workflows/get-service-list-v2.yml@main
+    secrets: inherit
+    with:
+      service_list: ${{ needs.env.outputs.SERVICE_LIST }}
+
+  docker-login:
+    name: Docker login
+    uses: run-ai/runai-actions/.github/workflows/docker-login-v2.yaml@main
+    needs: env
+    secrets: inherit
+    with:
+      env: ${{ needs.env.outputs.ENVIRONMENT }}
+
+  make:
+    name: Make
+    needs: [get-service-list, env, docker-login]
+    strategy:
+      fail-fast: false
+      matrix:
+        service_list: ${{ fromJson(needs.get-service-list.outputs.service_list).service_list }}
+    uses: run-ai/runai-actions/.github/workflows/make-v2.yml@main
+    secrets: inherit
+    with:
+      service_name: ${{ matrix.service_list }}
+      version: ${{ needs.env.outputs.VERSION }}
+      registry: ${{ needs.env.outputs.CONTAINER_REGISTRY }}
+      env: ${{ needs.env.outputs.ENVIRONMENT }}
+
+  build-and-push:
+    name: Build and push
+    needs: [make, env, get-service-list]
+    uses: run-ai/runai-actions/.github/workflows/build-and-push-v2.yml@main
+    strategy:
+      fail-fast: false
+      matrix:
+        service_list: ${{ fromJson(needs.get-service-list.outputs.service_list).service_list }}
+    secrets: inherit
+    with:
+      service_name: ${{ matrix.service_list }}
+      container_registry: ${{ needs.env.outputs.CONTAINER_REGISTRY }}
+      helm_registry: ${{ needs.env.outputs.HELM_REGISTRY }}
+      version: ${{ needs.env.outputs.VERSION }}
+      env: ${{ needs.env.outputs.ENVIRONMENT }}
+
+  setup-env:
+    name: Setup environment
+    needs: env
+    uses: run-ai/runai-actions/.github/workflows/create-env-in-a-click-v2.yml@main
+    secrets: inherit
+    with:
+      cluster_name: ${{ needs.env.outputs.CLUSTER_NAME }}
+      runai-cluster-enabled: false
+      runai-control-plane-enabled: false
+      secret-name: ${{ needs.env.outputs.ARGO_CD_SECRET_NAME }}
+      team-name: ${{ needs.env.outputs.ARGO_CD_TEAM_NAME }}
+      fake-gpu-version: ${{ needs.env.outputs.VERSION }}
+      wait-for-sync: true
+
+  send-logs-to-loki:
+    name: Send logs to Loki
+    needs:
+      [
+        env,
+        get-service-list,
+        docker-login,
+        setup-env,
+        make,
+        build-and-push,
+      ]
+    if: failure() || success()
+    uses: run-ai/runai-actions/.github/workflows/send-log-to-loki-v2.yml@main
+    secrets: inherit

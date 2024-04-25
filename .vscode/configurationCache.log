@@ -1,0 +1,1 @@
+{"buildTargets":["/Users/dormull-or/Documents/Repositories/fake-gpu-operator/bin/ginkgo","build","build-shared","clean","deploy","deploy-all","image","image-test","images","push","push-all","restart","test-all"],"launchTargets":[],"customConfigurationProvider":{"workspaceBrowse":{"browsePath":[],"compilerArgs":[]},"fileIndex":[]}}
