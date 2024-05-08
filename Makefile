@@ -30,6 +30,7 @@ images:
 	make image COMPONENT=status-exporter
 	make image COMPONENT=topology-server
 	make image COMPONENT=mig-faker
+	make image COMPONENT=jupyter-notebook
 .PHONY: images
 
 push:
@@ -42,6 +43,7 @@ push-all:
 	make push COMPONENT=status-exporter
 	make push COMPONENT=topology-server
 	make push COMPONENT=mig-faker
+	make push COMPONENT=jupyter-notebook
 .PHONY: push-all
 
 restart: 
@@ -57,6 +59,7 @@ deploy-all:
 	make image push COMPONENT=status-exporter
 	make image push COMPONENT=topology-server
 	make image push COMPONENT=mig-faker
+	make image push COMPONENT=jupyter-notebook
 .PHONY: deploy-all
 
 image-test:
