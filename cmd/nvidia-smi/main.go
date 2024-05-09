@@ -64,22 +64,19 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	args.GpuTotalMem = int(float64(nodeTopology.GpuMemory) * gpuPortion)
 
 	var gpuIdx int
-	if os.Getenv("NVIDIA_VISIBLE_DEVICES") == "" {
-		// Whole GPU is used
-		podName := os.Getenv("HOSTNAME")
-		// Search gpu for the podName
-		for idx, gpu := range nodeTopology.Gpus {
-			if gpu.Status.AllocatedBy.Pod == podName {
+	currentPodName := os.Getenv("HOSTNAME")
+	currentPodUuid := os.Getenv("POD_UUID")
+	for idx, gpu := range nodeTopology.Gpus {
+		if gpu.Status.AllocatedBy.Pod == currentPodName {
+			gpuIdx = idx
+			break
+		}
+
+		for podUuid := range gpu.Status.PodGpuUsageStatus {
+			if string(podUuid) == currentPodUuid {
 				gpuIdx = idx
 				break
 			}
-		}
-	} else {
-		// Shared GPU is used
-		gpuIdxStr := os.Getenv("NVIDIA_VISIBLE_DEVICES")
-		gpuIdx, err = strconv.Atoi(gpuIdxStr)
-		if err != nil {
-			panic(err)
 		}
 	}
 

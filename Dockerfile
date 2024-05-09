@@ -38,6 +38,9 @@ COPY ./cmd/mig-faker/ ./cmd/mig-faker/
 COPY ./internal/ ./internal/
 RUN --mount=type=cache,target=/root/.cache/go-build make build COMPONENT=mig-faker
 
+FROM jupyter/minimal-notebook as jupyter-notebook
+COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
+
 FROM ubuntu as device-plugin
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
 COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
