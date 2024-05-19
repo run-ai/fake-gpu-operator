@@ -7,8 +7,11 @@ DOCKER_TAG=0.0.0-dev
 DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
+OS?=linux
+ARCH?=amd64
+
 build:
-	env GOOS=linux GOARCH=amd64 go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
+	env GOOS=${OS} GOARCH=${ARCH} go build -o ${BUILD_DIR}/ ./cmd/${COMPONENT}
 .PHONY: build
 
 build-preloader:
@@ -21,7 +24,8 @@ clean:
 .PHONY: clean
 
 image:
-	DOCKER_BUILDKIT=1 docker build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} .
+	docker buildx inspect fgo-multi-platform > /dev/null || docker buildx create --name=fgo-multi-platform
+	docker buildx --builder=fgo-multi-platform build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} --platform linux/amd64,linux/arm64 .
 .PHONY: image
 
 images:
