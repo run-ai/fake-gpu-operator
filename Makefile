@@ -7,6 +7,11 @@ DOCKER_TAG=0.0.0-dev
 DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
+SHOULD_PUSH?=false
+DOCKER_BUILDX_PUSH_FLAG=$(if $(filter true,$(SHOULD_PUSH)),--push,)
+DOCKER_BUILDX_PLATFORMS?=linux/amd64,linux/arm64
+DOCKER_BUILDX_BUILDER?=fgo-multi-platform
+
 OS?=linux
 ARCH?=amd64
 
@@ -23,9 +28,12 @@ clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean
 
-image:
+init-buildx:
 	docker buildx inspect fgo-multi-platform > /dev/null || docker buildx create --name=fgo-multi-platform
-	docker buildx --builder=fgo-multi-platform build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} --platform linux/amd64,linux/arm64 .
+.PHONY: init-buildx
+
+image: init-buildx
+	docker buildx --builder=fgo-multi-platform build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .
 .PHONY: image
 
 images:
@@ -37,34 +45,9 @@ images:
 	make image COMPONENT=jupyter-notebook
 .PHONY: images
 
-push:
-	docker push ${DOCKER_IMAGE_NAME}
-.PHONY: push
-
-push-all:
-	make push COMPONENT=device-plugin
-	make push COMPONENT=status-updater
-	make push COMPONENT=status-exporter
-	make push COMPONENT=topology-server
-	make push COMPONENT=mig-faker
-	make push COMPONENT=jupyter-notebook
-.PHONY: push-all
-
 restart: 
 	kubectl delete pod -l component=${COMPONENT} --force -n ${NAMESPACE}
 .PHONY: restart
-
-deploy: image push
-.PHONY: deploy
-
-deploy-all:
-	make image push COMPONENT=device-plugin
-	make image push COMPONENT=status-updater
-	make image push COMPONENT=status-exporter
-	make image push COMPONENT=topology-server
-	make image push COMPONENT=mig-faker
-	make image push COMPONENT=jupyter-notebook
-.PHONY: deploy-all
 
 image-test:
 	mkdir -p /tmp/artifacts/test-results
