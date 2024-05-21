@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
@@ -106,6 +107,15 @@ func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v
 		Name:  constants.EnvFakeNode,
 		Value: "true",
 	})
+
+	deployment.Spec.Template.Spec.Containers[0].Resources.Limits = v1.ResourceList{
+		v1.ResourceMemory: resource.MustParse("100Mi"),
+		v1.ResourceCPU:    resource.MustParse("50m"),
+	}
+	deployment.Spec.Template.Spec.Containers[0].Resources.Requests = v1.ResourceList{
+		v1.ResourceMemory: resource.MustParse("20Mi"),
+		v1.ResourceCPU:    resource.MustParse("10m"),
+	}
 
 	return deployment
 }
