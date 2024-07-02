@@ -28,12 +28,12 @@ clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean
 
-init-buildx:
-	docker buildx inspect fgo-multi-platform > /dev/null || docker buildx create --name=fgo-multi-platform
-.PHONY: init-buildx
+# init-buildx:
+# 	docker buildx inspect fgo-multi-platform > /dev/null || docker buildx create --name=fgo-multi-platform
+# .PHONY: init-buildx
 
-image: init-buildx
-	docker buildx --builder=fgo-multi-platform build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .
+image:
+	docker buildx build -t ${DOCKER_IMAGE_NAME} --target ${COMPONENT} ${DOCKER_BUILDX_PUSH_FLAG} .
 .PHONY: image
 
 images:

@@ -13,6 +13,7 @@ import (
 type Interface interface {
 	HandleAdd(node *v1.Node) error
 	HandleDelete(node *v1.Node) error
+	HandleUpdate(node *v1.Node) error
 }
 
 type NodeHandler struct {
@@ -30,14 +31,26 @@ func NewNodeHandler(kubeClient kubernetes.Interface) *NodeHandler {
 func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 	log.Printf("Handling node addition: %s\n", node.Name)
 
-	err := p.createNodeTopologyCM(node)
+	baseTopology, err := topology.GetBaseTopologyFromCM(p.kubeClient)
+	if err != nil {
+		return fmt.Errorf("failed to get base topology: %w", err)
+	}
+
+	err = p.createNodeTopologyCM(node, baseTopology)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology ConfigMap: %w", err)
 	}
 
-	err = p.applyFakeNodeDeployments(node)
-	if err != nil {
-		return fmt.Errorf("failed to apply fake node deployments: %w", err)
+	if baseTopology.Config.FakeNodeHandling {
+		err = p.applyFakeDevicePlugin(baseTopology.Config.NodeAutofill.GpuCount, node)
+		if err != nil {
+			return fmt.Errorf("failed to apply fake node deployments: %w", err)
+		}
+	} else {
+		err = p.applyFakeNodeDeployments(node)
+		if err != nil {
+			return fmt.Errorf("failed to apply fake node deployments: %w", err)
+		}
 	}
 
 	return nil
@@ -56,5 +69,23 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 		return fmt.Errorf("failed to delete fake node deployments: %w", err)
 	}
 
+	return nil
+}
+
+func (p *NodeHandler) HandleUpdate(node *v1.Node) error {
+	baseTopology, err := topology.GetBaseTopologyFromCM(p.kubeClient)
+	if err != nil {
+		return fmt.Errorf("failed to get base topology: %w", err)
+	}
+
+	if !baseTopology.Config.FakeNodeHandling {
+		return nil
+	}
+
+	gpuCount := baseTopology.Config.NodeAutofill.GpuCount
+	err = p.applyFakeDevicePlugin(gpuCount, node)
+	if err != nil {
+		return fmt.Errorf("failed to apply fake node deployments: %w", err)
+	}
 	return nil
 }

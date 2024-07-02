@@ -53,6 +53,10 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 				node := obj.(*v1.Node)
 				util.LogErrorIfExist(c.handler.HandleAdd(node), "Failed to handle node addition")
 			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				newNode := newObj.(*v1.Node)
+				util.LogErrorIfExist(c.handler.HandleUpdate(newNode), "Failed to handle node addition")
+			},
 			DeleteFunc: func(obj interface{}) {
 				node := obj.(*v1.Node)
 				util.LogErrorIfExist(c.handler.HandleDelete(node), "Failed to handle node deletion")

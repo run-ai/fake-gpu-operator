@@ -11,8 +11,26 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 )
+
+func (p *NodeHandler) applyFakeDevicePlugin(gpuCount int, node *v1.Node) error {
+	if !isFakeNode(node) {
+		return nil
+	}
+
+	patch := fmt.Sprintf(
+		`{"status": {"capacity": {"%s": "%d"}, "allocatable": {"%s": "%d"}}}`,
+		constants.GpuResourceName, gpuCount, constants.GpuResourceName, gpuCount,
+	)
+	_, err := p.kubeClient.CoreV1().Nodes().Patch(context.TODO(), node.Name, types.MergePatchType, []byte(patch), metav1.PatchOptions{}, "status")
+	if err != nil {
+		return fmt.Errorf("failed to update node capacity and allocatable: %v", err)
+	}
+
+	return nil
+}
 
 func (p *NodeHandler) applyFakeNodeDeployments(node *v1.Node) error {
 	if !isFakeNode(node) {
