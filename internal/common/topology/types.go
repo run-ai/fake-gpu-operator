@@ -48,7 +48,8 @@ type Range struct {
 }
 
 type Config struct {
-	NodeAutofill NodeAutofillSettings `yaml:"node-autofill"`
+	NodeAutofill     NodeAutofillSettings `yaml:"node-autofill"`
+	FakeNodeHandling bool                 `yaml:"fake-node-handling"`
 }
 
 type NodeAutofillSettings struct {

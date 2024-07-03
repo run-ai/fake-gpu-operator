@@ -8,15 +8,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
+func (p *NodeHandler) createNodeTopologyCM(
+	node *v1.Node, baseTopology *topology.BaseTopology,
+) error {
 	nodeTopology, _ := topology.GetNodeTopologyFromCM(p.kubeClient, node.Name)
 	if nodeTopology != nil {
 		return nil
-	}
-
-	baseTopology, err := topology.GetBaseTopologyFromCM(p.kubeClient)
-	if err != nil {
-		return fmt.Errorf("failed to get base topology: %w", err)
 	}
 
 	nodeAutofillSettings := baseTopology.Config.NodeAutofill
@@ -28,7 +25,7 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 		MigStrategy: nodeAutofillSettings.MigStrategy,
 	}
 
-	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)
+	err := topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology: %w", err)
 	}
