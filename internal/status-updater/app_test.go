@@ -486,7 +486,7 @@ func getTopologyNodeFromKubeErrorOrNil(kubeclient kubernetes.Interface, nodeName
 
 func setupFakes(kubeclient kubernetes.Interface, dynamicClient dynamic.Interface) {
 	status_updater.InClusterConfigFn = func() *rest.Config {
-		return nil
+		return &rest.Config{}
 	}
 	status_updater.KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 		return kubeclient
