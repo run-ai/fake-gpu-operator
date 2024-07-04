@@ -51,6 +51,8 @@ func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
 	app.stopCh = stopCh
 
 	clusterConfig := InClusterConfigFn()
+	clusterConfig.QPS = 100
+	clusterConfig.Burst = 200
 
 	app.wg = &sync.WaitGroup{}
 
