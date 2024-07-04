@@ -50,12 +50,16 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				node := obj.(*v1.Node)
-				util.LogErrorIfExist(c.handler.HandleAdd(node), "Failed to handle node addition")
+				go func() {
+					node := obj.(*v1.Node)
+					util.LogErrorIfExist(c.handler.HandleAdd(node), "Failed to handle node addition")
+				}()
 			},
 			DeleteFunc: func(obj interface{}) {
-				node := obj.(*v1.Node)
-				util.LogErrorIfExist(c.handler.HandleDelete(node), "Failed to handle node deletion")
+				go func() {
+					node := obj.(*v1.Node)
+					util.LogErrorIfExist(c.handler.HandleDelete(node), "Failed to handle node deletion")
+				}()
 			},
 		},
 	})
