@@ -182,14 +182,12 @@ func getTestCases() map[string]testCase {
 				},
 			},
 			expectedLabels: map[string]string{
-				"nvidia.com/gpu.present":              "true",
-				"nvidia.com/gpu.memory":               "20000",
-				"nvidia.com/gpu.count":                "1",
-				"nvidia.com/mig.strategy":             "mixed",
-				"nvidia.com/gpu.product":              "Tesla P100",
-				"run.ai/fake.gpu":                     "true",
-				"nvidia.com/gpu.deploy.dcgm-exporter": "true",
-				"nvidia.com/gpu.deploy.device-plugin": "true",
+				"nvidia.com/gpu.present":  "true",
+				"nvidia.com/gpu.memory":   "20000",
+				"nvidia.com/gpu.count":    "1",
+				"nvidia.com/mig.strategy": "mixed",
+				"nvidia.com/gpu.product":  "Tesla P100",
+				"run.ai/fake.gpu":         "true",
 			},
 			expectedMetrics: []*dto.MetricFamily{
 				{
@@ -309,14 +307,12 @@ func getTestCases() map[string]testCase {
 				},
 			},
 			expectedLabels: map[string]string{
-				"nvidia.com/gpu.present":              "true",
-				"nvidia.com/gpu.memory":               "20000",
-				"nvidia.com/gpu.count":                "2",
-				"nvidia.com/mig.strategy":             "mixed",
-				"nvidia.com/gpu.product":              "Tesla P100",
-				"run.ai/fake.gpu":                     "true",
-				"nvidia.com/gpu.deploy.dcgm-exporter": "true",
-				"nvidia.com/gpu.deploy.device-plugin": "true",
+				"nvidia.com/gpu.present":  "true",
+				"nvidia.com/gpu.memory":   "20000",
+				"nvidia.com/gpu.count":    "2",
+				"nvidia.com/mig.strategy": "mixed",
+				"nvidia.com/gpu.product":  "Tesla P100",
+				"run.ai/fake.gpu":         "true",
 			},
 			expectedMetrics: []*dto.MetricFamily{
 				{
