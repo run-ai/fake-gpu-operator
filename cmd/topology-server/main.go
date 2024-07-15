@@ -18,23 +18,23 @@ func main() {
 	http.HandleFunc("/topology", func(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
-		baseTopology, err := topology.GetBaseTopologyFromCM(kubeclient.ClientSet)
+		clusterTopology, err := topology.GetClusterTopologyFromCM(kubeclient.ClientSet)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 
-		baseTopologyJSON, err := json.Marshal(baseTopology)
+		clusterTopologyJSON, err := json.Marshal(clusterTopology)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 
-		log.Printf("Returning cluster topology: %s", baseTopologyJSON)
+		log.Printf("Returning cluster topology: %s", clusterTopologyJSON)
 
-		_, err = w.Write(baseTopologyJSON)
+		_, err = w.Write(clusterTopologyJSON)
 		if err != nil {
 			panic(err)
 		}

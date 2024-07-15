@@ -1,7 +1,7 @@
 apiVersion: v1
 data:
   topology.yml: |-
-{{ toYaml .Values.initialTopology | indent 4 }}
+{{ toYaml .Values.topology | indent 4 }}
 kind: ConfigMap
 metadata:
   name: topology

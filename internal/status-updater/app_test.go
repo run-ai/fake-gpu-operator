@@ -48,17 +48,6 @@ const (
 	nodeGpuCount                = 2
 )
 
-var (
-	defaultTopologyConfig = topology.Config{
-		NodeAutofill: topology.NodeAutofillSettings{
-			GpuCount:    nodeGpuCount,
-			GpuMemory:   11441,
-			GpuProduct:  "Tesla-K80",
-			MigStrategy: "mixed",
-		},
-	}
-)
-
 func TestStatusUpdater(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "StatusUpdater Suite")
@@ -73,11 +62,19 @@ var _ = Describe("StatusUpdater", func() {
 	)
 
 	BeforeEach(func() {
-		baseTopology := &topology.BaseTopology{
-			Config: defaultTopologyConfig,
+		clusterTopology := &topology.ClusterTopology{
+			NodePools: map[string]topology.NodePoolTopology{
+				"default": {
+					GpuMemory:  11441,
+					GpuProduct: "Tesla-K80",
+					GpuCount:   nodeGpuCount,
+				},
+			},
+			NodePoolLabelKey: "run.ai/simulated-gpu-node-pool",
+			MigStrategy:      "mixed",
 		}
 
-		topologyStr, err := yaml.Marshal(baseTopology)
+		topologyStr, err := yaml.Marshal(clusterTopology)
 		Expect(err).ToNot(HaveOccurred())
 		topologyConfigMap := &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -102,8 +99,7 @@ var _ = Describe("StatusUpdater", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: node,
 				Labels: map[string]string{
-					"nvidia.com/gpu.deploy.dcgm-exporter": "true",
-					"nvidia.com/gpu.deploy.device-plugin": "true",
+					"run.ai/simulated-gpu-node-pool": "default",
 				},
 			},
 		}
@@ -389,8 +385,7 @@ var _ = Describe("StatusUpdater", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node1",
 					Labels: map[string]string{
-						"nvidia.com/gpu.deploy.device-plugin": "true",
-						"nvidia.com/gpu.deploy.dcgm-exporter": "true",
+						"run.ai/simulated-gpu-node-pool": "default",
 					},
 				},
 			}
@@ -400,18 +395,18 @@ var _ = Describe("StatusUpdater", func() {
 
 			Eventually(getTopologyNodeFromKube(kubeclient, node.Name)).Should(Not(BeNil()))
 
-			baseTopology, err := getTopologyFromKube(kubeclient)()
+			clusterTopology, err := getTopologyFromKube(kubeclient)()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(baseTopology).ToNot(BeNil())
+			Expect(clusterTopology).ToNot(BeNil())
 
 			nodeTopology, err := getTopologyNodeFromKube(kubeclient, node.Name)()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(nodeTopology).ToNot(BeNil())
 
-			Expect(nodeTopology.GpuMemory).To(Equal(baseTopology.Config.NodeAutofill.GpuMemory))
-			Expect(nodeTopology.GpuProduct).To(Equal(baseTopology.Config.NodeAutofill.GpuProduct))
-			Expect(nodeTopology.Gpus).To(HaveLen(baseTopology.Config.NodeAutofill.GpuCount))
-			Expect(nodeTopology.MigStrategy).To(Equal(baseTopology.Config.NodeAutofill.MigStrategy))
+			Expect(nodeTopology.GpuMemory).To(Equal(clusterTopology.NodePools["default"].GpuMemory))
+			Expect(nodeTopology.GpuProduct).To(Equal(clusterTopology.NodePools["default"].GpuProduct))
+			Expect(nodeTopology.Gpus).To(HaveLen(clusterTopology.NodePools["default"].GpuCount))
+			Expect(nodeTopology.MigStrategy).To(Equal(clusterTopology.MigStrategy))
 		})
 	})
 
@@ -436,8 +431,7 @@ var _ = Describe("StatusUpdater", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node1",
 					Labels: map[string]string{
-						"nvidia.com/gpu.deploy.device-plugin": "true",
-						"nvidia.com/gpu.deploy.dcgm-exporter": "true",
+						"run.ai/simulated-gpu-node-pool": "default",
 					},
 				},
 			}
@@ -455,9 +449,9 @@ var _ = Describe("StatusUpdater", func() {
 	})
 })
 
-func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.BaseTopology, error) {
-	return func() (*topology.BaseTopology, error) {
-		ret, err := topology.GetBaseTopologyFromCM(kubeclient)
+func getTopologyFromKube(kubeclient kubernetes.Interface) func() (*topology.ClusterTopology, error) {
+	return func() (*topology.ClusterTopology, error) {
+		ret, err := topology.GetClusterTopologyFromCM(kubeclient)
 		return ret, err
 	}
 }

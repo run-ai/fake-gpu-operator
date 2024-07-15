@@ -17,13 +17,16 @@ type Interface interface {
 
 type NodeHandler struct {
 	kubeClient kubernetes.Interface
+
+	clusterTopology *topology.ClusterTopology
 }
 
 var _ Interface = &NodeHandler{}
 
-func NewNodeHandler(kubeClient kubernetes.Interface) *NodeHandler {
+func NewNodeHandler(kubeClient kubernetes.Interface, clusterTopology *topology.ClusterTopology) *NodeHandler {
 	return &NodeHandler{
-		kubeClient: kubeClient,
+		kubeClient:      kubeClient,
+		clusterTopology: clusterTopology,
 	}
 }
 
