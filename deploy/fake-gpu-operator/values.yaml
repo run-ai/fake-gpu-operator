@@ -64,11 +64,12 @@ topology:
   # nodePools is a map of node pool name to node pool configuration.
   # Nodes are assigned to node pools based on the node pool label's value (key is configurable via nodePoolLabelKey).
   # 
-  # For example, nodes that have the label "run.ai/simulated-gpu-node-pool: default" 
+  # For example, nodes that have the label "run.ai/simulated-gpu-node-pool: default"
   # will be assigned to the "default" node pool.
   nodePools:
     default:
-      gpuType: "nvidia-tesla-v100"
+      gpuProduct: Tesla-K80
       gpuCount: 2
+      gpuMemory: 11441
   nodePoolLabelKey: "run.ai/simulated-gpu-node-pool"
   mig-strategy: mixed

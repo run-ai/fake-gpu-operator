@@ -43,6 +43,11 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return fmt.Errorf("failed to apply fake node deployments: %w", err)
 	}
 
+	err = p.labelNode(node)
+	if err != nil {
+		return fmt.Errorf("failed to label node: %w", err)
+	}
+
 	return nil
 }
 
@@ -57,6 +62,11 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	err = p.deleteFakeNodeDeployments(node)
 	if err != nil {
 		return fmt.Errorf("failed to delete fake node deployments: %w", err)
+	}
+
+	err = p.unlabelNode(node)
+	if err != nil {
+		return fmt.Errorf("failed to unlabel node: %w", err)
 	}
 
 	return nil

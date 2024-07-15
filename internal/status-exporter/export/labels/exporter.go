@@ -45,14 +45,12 @@ func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
 func (e *LabelsExporter) export(nodeTopology *topology.NodeTopology) error {
 
 	labels := map[string]string{
-		"nvidia.com/gpu.memory":               strconv.Itoa(nodeTopology.GpuMemory),
-		"nvidia.com/gpu.product":              nodeTopology.GpuProduct,
-		"nvidia.com/mig.strategy":             nodeTopology.MigStrategy,
-		"nvidia.com/gpu.count":                strconv.Itoa(len(nodeTopology.Gpus)),
-		"nvidia.com/gpu.present":              "true",
-		"run.ai/fake.gpu":                     "true",
-		"nvidia.com/gpu.deploy.dcgm-exporter": "true",
-		"nvidia.com/gpu.deploy.device-plugin": "true",
+		"nvidia.com/gpu.memory":   strconv.Itoa(nodeTopology.GpuMemory),
+		"nvidia.com/gpu.product":  nodeTopology.GpuProduct,
+		"nvidia.com/mig.strategy": nodeTopology.MigStrategy,
+		"nvidia.com/gpu.count":    strconv.Itoa(len(nodeTopology.Gpus)),
+		"nvidia.com/gpu.present":  "true",
+		"run.ai/fake.gpu":         "true",
 	}
 
 	err := e.kubeclient.SetNodeLabels(labels)
