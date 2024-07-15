@@ -68,5 +68,6 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 }
 
 func (p *PodController) Run(stopCh <-chan struct{}) {
+	log.Println("Starting pod controller")
 	p.informer.Run(stopCh)
 }

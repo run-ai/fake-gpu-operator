@@ -86,6 +86,7 @@ func (c *NodeController) Run(stopCh <-chan struct{}) {
 		log.Fatalf("Failed to prune topology nodes: %v", err)
 	}
 
+	log.Println("Starting node controller")
 	c.informer.Run(stopCh)
 }
 
