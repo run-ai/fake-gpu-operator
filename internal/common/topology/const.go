@@ -1,5 +1,5 @@
 package topology
 
 const (
-	CmTopologyKey = "topology.yml"
+	cmTopologyKey = "topology.yml"
 )
