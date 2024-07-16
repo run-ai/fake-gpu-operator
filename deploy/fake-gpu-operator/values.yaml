@@ -71,5 +71,5 @@ topology:
       gpuProduct: Tesla-K80
       gpuCount: 2
       gpuMemory: 11441
-  nodePoolLabelKey: "run.ai/simulated-gpu-node-pool"
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   mig-strategy: mixed
