@@ -424,7 +424,6 @@ var _ = Describe("StatusUpdater", func() {
 		})
 	})
 
-	// When informed of a node deletion, it should remove the node from the cluster topology
 	When("informed of a node deletion", func() {
 		It("should remove the node from the cluster topology", func() {
 			node := &v1.Node{
