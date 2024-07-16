@@ -10,11 +10,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+const (
+	dcgmExporterLabelKey = "nvidia.com/gpu.deploy.dcgm-exporter"
+	devicePluginLabelKey = "nvidia.com/gpu.deploy.device-plugin"
+)
+
 // labelNode labels the node with required labels for the fake-gpu-operator to function.
 func (p *NodeHandler) labelNode(node *v1.Node) error {
 	err := p.patchNodeLabels(node, map[string]interface{}{
-		"nvidia.com/gpu.deploy.dcgm-exporter": "true",
-		"nvidia.com/gpu.deploy.device-plugin": "true",
+		dcgmExporterLabelKey: "true",
+		devicePluginLabelKey: "true",
 	})
 	if err != nil {
 		return fmt.Errorf("failed to label node %s: %w", node.Name, err)
@@ -26,8 +31,8 @@ func (p *NodeHandler) labelNode(node *v1.Node) error {
 // unlabelNode removes the labels from the node that were added by the fake-gpu-operator.
 func (p *NodeHandler) unlabelNode(node *v1.Node) error {
 	err := p.patchNodeLabels(node, map[string]interface{}{
-		"nvidia.com/gpu.deploy.dcgm-exporter": nil,
-		"nvidia.com/gpu.deploy.device-plugin": nil,
+		dcgmExporterLabelKey: nil,
+		devicePluginLabelKey: nil,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to unlabel node %s: %w", node.Name, err)

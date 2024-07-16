@@ -72,4 +72,4 @@ topology:
       gpuCount: 2
       gpuMemory: 11441
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
-  mig-strategy: mixed
+  migStrategy: mixed
