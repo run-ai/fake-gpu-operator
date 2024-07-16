@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -34,7 +35,7 @@ func (p *NodeHandler) unlabelNode(node *v1.Node) error {
 		dcgmExporterLabelKey: nil,
 		devicePluginLabelKey: nil,
 	})
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to unlabel node %s: %w", node.Name, err)
 	}
 
