@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: status-updater
   annotations:
-    checksum/initialTopology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+    checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
   labels:
     app: status-updater
 spec:

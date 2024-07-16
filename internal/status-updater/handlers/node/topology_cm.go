@@ -14,21 +14,24 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 		return nil
 	}
 
-	baseTopology, err := topology.GetBaseTopologyFromCM(p.kubeClient)
-	if err != nil {
-		return fmt.Errorf("failed to get base topology: %w", err)
+	nodePoolName, ok := node.Labels[p.clusterTopology.NodePoolLabelKey]
+	if !ok {
+		return fmt.Errorf("node %s does not have a nodepool label", node.Name)
 	}
 
-	nodeAutofillSettings := baseTopology.Config.NodeAutofill
+	nodePoolTopology, ok := p.clusterTopology.NodePools[nodePoolName]
+	if !ok {
+		return fmt.Errorf("nodepool %s not found in cluster topology", nodePoolName)
+	}
 
 	nodeTopology = &topology.NodeTopology{
-		GpuMemory:   nodeAutofillSettings.GpuMemory,
-		GpuProduct:  nodeAutofillSettings.GpuProduct,
-		Gpus:        generateGpuDetails(nodeAutofillSettings.GpuCount, node.Name),
-		MigStrategy: nodeAutofillSettings.MigStrategy,
+		GpuMemory:   nodePoolTopology.GpuMemory,
+		GpuProduct:  nodePoolTopology.GpuProduct,
+		Gpus:        generateGpuDetails(nodePoolTopology.GpuCount, node.Name),
+		MigStrategy: p.clusterTopology.MigStrategy,
 	}
 
-	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)
+	err := topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology: %w", err)
 	}

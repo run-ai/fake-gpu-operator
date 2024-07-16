@@ -12,7 +12,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/initialTopology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+        checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
       labels:
         app: mig-faker
         component: mig-faker

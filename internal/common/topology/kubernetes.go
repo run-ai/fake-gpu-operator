@@ -48,13 +48,12 @@ func UpdateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTop
 }
 
 func DeleteNodeTopologyCM(kubeclient kubernetes.Interface, nodeName string) error {
-
 	err := kubeclient.CoreV1().ConfigMaps(
 		viper.GetString(constants.EnvTopologyCmNamespace)).Delete(context.TODO(), GetNodeTopologyCMName(nodeName), metav1.DeleteOptions{})
 	return err
 }
 
-func GetBaseTopologyFromCM(kubeclient kubernetes.Interface) (*BaseTopology, error) {
+func GetClusterTopologyFromCM(kubeclient kubernetes.Interface) (*ClusterTopology, error) {
 	topologyCm, err := kubeclient.CoreV1().ConfigMaps(
 		viper.GetString(constants.EnvTopologyCmNamespace)).Get(
 		context.TODO(), viper.GetString(constants.EnvTopologyCmName), metav1.GetOptions{})
@@ -62,7 +61,7 @@ func GetBaseTopologyFromCM(kubeclient kubernetes.Interface) (*BaseTopology, erro
 		return nil, fmt.Errorf("failed to get topology configmap: %v", err)
 	}
 
-	cluster, err := FromBaseTopologyCM(topologyCm)
+	cluster, err := FromClusterTopologyCM(topologyCm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse topology configmap: %v", err)
 	}
@@ -70,19 +69,19 @@ func GetBaseTopologyFromCM(kubeclient kubernetes.Interface) (*BaseTopology, erro
 	return cluster, nil
 }
 
-func FromBaseTopologyCM(cm *corev1.ConfigMap) (*BaseTopology, error) {
-	var baseTopology BaseTopology
-	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &baseTopology)
+func FromClusterTopologyCM(cm *corev1.ConfigMap) (*ClusterTopology, error) {
+	var clusterTopology ClusterTopology
+	err := yaml.Unmarshal([]byte(cm.Data[cmTopologyKey]), &clusterTopology)
 	if err != nil {
 		return nil, err
 	}
 
-	return &baseTopology, nil
+	return &clusterTopology, nil
 }
 
 func FromNodeTopologyCM(cm *corev1.ConfigMap) (*NodeTopology, error) {
 	var nodeTopology NodeTopology
-	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &nodeTopology)
+	err := yaml.Unmarshal([]byte(cm.Data[cmTopologyKey]), &nodeTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +89,7 @@ func FromNodeTopologyCM(cm *corev1.ConfigMap) (*NodeTopology, error) {
 	return &nodeTopology, nil
 }
 
-func ToBaseTopologyCM(baseTopology *BaseTopology) (*corev1.ConfigMap, error) {
+func ToClusterTopologyCM(clusterTopology *ClusterTopology) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      viper.GetString(constants.EnvTopologyCmName),
@@ -99,12 +98,12 @@ func ToBaseTopologyCM(baseTopology *BaseTopology) (*corev1.ConfigMap, error) {
 		Data: make(map[string]string),
 	}
 
-	topologyData, err := yaml.Marshal(baseTopology)
+	topologyData, err := yaml.Marshal(clusterTopology)
 	if err != nil {
 		return nil, err
 	}
 
-	cm.Data[CmTopologyKey] = string(topologyData)
+	cm.Data[cmTopologyKey] = string(topologyData)
 
 	return cm, nil
 }
@@ -127,7 +126,7 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 		return nil, err
 	}
 
-	cm.Data[CmTopologyKey] = string(topologyData)
+	cm.Data[cmTopologyKey] = string(topologyData)
 
 	return cm, nil
 }

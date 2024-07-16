@@ -18,6 +18,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -28,22 +30,30 @@ type NodeController struct {
 	kubeClient kubernetes.Interface
 	informer   cache.SharedIndexInformer
 	handler    nodehandler.Interface
+
+	clusterTopology *topology.ClusterTopology
 }
 
 var _ controllers.Interface = &NodeController{}
 
 func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *NodeController {
-	c := &NodeController{
-		kubeClient: kubeClient,
-		informer:   informers.NewSharedInformerFactory(kubeClient, 0).Core().V1().Nodes().Informer(),
-		handler:    nodehandler.NewNodeHandler(kubeClient),
+	clusterTopology, err := topology.GetClusterTopologyFromCM(kubeClient)
+	if err != nil {
+		log.Fatalf("Failed to get cluster topology: %v", err)
 	}
 
-	_, err := c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
+	c := &NodeController{
+		kubeClient:      kubeClient,
+		informer:        informers.NewSharedInformerFactory(kubeClient, 0).Core().V1().Nodes().Informer(),
+		handler:         nodehandler.NewNodeHandler(kubeClient, clusterTopology),
+		clusterTopology: clusterTopology,
+	}
+
+	_, err = c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			switch node := obj.(type) {
 			case *v1.Node:
-				return isFakeGpuNode(node)
+				return c.isFakeGpuNode(node)
 			default:
 				return false
 			}
@@ -76,6 +86,7 @@ func (c *NodeController) Run(stopCh <-chan struct{}) {
 		log.Fatalf("Failed to prune topology nodes: %v", err)
 	}
 
+	log.Println("Starting node controller")
 	c.informer.Run(stopCh)
 }
 
@@ -83,8 +94,13 @@ func (c *NodeController) Run(stopCh <-chan struct{}) {
 func (c *NodeController) pruneTopologyConfigMaps() error {
 	log.Print("Pruning topology ConfigMaps...")
 
+	gpuNodesLabelReq, err := labels.NewRequirement(c.clusterTopology.NodePoolLabelKey, selection.Exists, nil)
+	if err != nil {
+		return fmt.Errorf("failed creating label requirement: %v", err)
+	}
+
 	gpuNodes, err := c.kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
-		LabelSelector: "nvidia.com/gpu.deploy.dcgm-exporter=true,nvidia.com/gpu.deploy.device-plugin=true",
+		LabelSelector: labels.NewSelector().Add(*gpuNodesLabelReq).String(),
 	})
 	if err != nil {
 		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
@@ -148,10 +164,9 @@ func (c *NodeController) pruneTopologyConfigMap(cm *v1.ConfigMap, isValidNodeTop
 	return nil
 }
 
-func isFakeGpuNode(node *v1.Node) bool {
-	return node != nil &&
-		node.Labels["nvidia.com/gpu.deploy.dcgm-exporter"] == "true" &&
-		node.Labels["nvidia.com/gpu.deploy.device-plugin"] == "true"
+func (c *NodeController) isFakeGpuNode(node *v1.Node) bool {
+	_, isNodeAssignedToNodePool := node.Labels[c.clusterTopology.NodePoolLabelKey]
+	return isNodeAssignedToNodePool
 }
 
 func isPodExist(kubeClient kubernetes.Interface, podName string, namespace string) (bool, error) {

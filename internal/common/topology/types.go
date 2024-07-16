@@ -6,28 +6,37 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type BaseTopology struct {
-	Config Config `json:"config"`
+type ClusterTopology struct {
+	NodePools        map[string]NodePoolTopology `yaml:"nodePools"`
+	NodePoolLabelKey string                      `yaml:"nodePoolLabelKey"`
+
+	MigStrategy string `yaml:"migStrategy"`
+}
+
+type NodePoolTopology struct {
+	GpuCount   int    `yaml:"gpuCount"`
+	GpuMemory  int    `yaml:"gpuMemory"`
+	GpuProduct string `yaml:"gpuProduct"`
 }
 
 type NodeTopology struct {
-	GpuMemory   int          `yaml:"gpu-memory"`
-	GpuProduct  string       `yaml:"gpu-product"`
+	GpuMemory   int          `yaml:"gpuMemory"`
+	GpuProduct  string       `yaml:"gpuProduct"`
 	Gpus        []GpuDetails `yaml:"gpus"`
-	MigStrategy string       `yaml:"mig-strategy"`
+	MigStrategy string       `yaml:"migStrategy"`
 }
 
 type GpuDetails struct {
-	ID     string    `json:"id"`
-	Status GpuStatus `json:"status"`
+	ID     string    `yaml:"id"`
+	Status GpuStatus `yaml:"status"`
 }
 
 type PodGpuUsageStatusMap map[types.UID]GpuUsageStatus
 
 type GpuStatus struct {
-	AllocatedBy ContainerDetails `yaml:"allocated-by"`
+	AllocatedBy ContainerDetails `yaml:"allocatedBy"`
 	// Maps PodUID to its GPU usage status
-	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"pod-gpu-usage-status"`
+	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"podGpuUsageStatus"`
 }
 
 type ContainerDetails struct {
@@ -38,24 +47,13 @@ type ContainerDetails struct {
 
 type GpuUsageStatus struct {
 	Utilization           Range `yaml:"utilization"`
-	FbUsed                int   `yaml:"fb-used"`
-	UseKnativeUtilization bool  `yaml:"use-knative-utilization"`
+	FbUsed                int   `yaml:"fbUsed"`
+	UseKnativeUtilization bool  `yaml:"useKnativeUtilization"`
 }
 
 type Range struct {
 	Min int `yaml:"min"`
 	Max int `yaml:"max"`
-}
-
-type Config struct {
-	NodeAutofill NodeAutofillSettings `yaml:"node-autofill"`
-}
-
-type NodeAutofillSettings struct {
-	GpuCount    int    `yaml:"gpu-count"`
-	GpuMemory   int    `yaml:"gpu-memory"`
-	GpuProduct  string `yaml:"gpu-product"`
-	MigStrategy string `yaml:"mig-strategy"`
 }
 
 // Errors

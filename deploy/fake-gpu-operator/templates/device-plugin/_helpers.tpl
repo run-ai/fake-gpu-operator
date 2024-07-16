@@ -18,7 +18,7 @@ matchLabels:
 
 {{- define "fake-gpu-operator.device-plugin.common.podTemplate.metadata" }}
 annotations:
-  checksum/initialTopology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+  checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
 labels:
   app: device-plugin
   component: device-plugin
