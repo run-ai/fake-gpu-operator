@@ -14,6 +14,8 @@ spec:
   replicas: 1
   template:
     metadata:
+      annotations:
+        checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
       labels:
         app: status-updater
         component: status-updater
