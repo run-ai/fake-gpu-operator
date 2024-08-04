@@ -12,5 +12,10 @@ spec:
       {{- include "fake-gpu-operator.device-plugin.common.podTemplate.metadata" . | nindent 6 }}
     spec:
       {{- include "fake-gpu-operator.device-plugin.common.podTemplate.spec" . | nindent 6 }}
-      nodeSelector:
-        nvidia.com/gpu.deploy.device-plugin: "true"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: run.ai/simulated-gpu-node-pool
+                operator: Exists
