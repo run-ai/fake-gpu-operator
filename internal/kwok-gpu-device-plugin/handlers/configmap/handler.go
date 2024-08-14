@@ -33,11 +33,11 @@ func NewConfigMapHandler(kubeClient kubernetes.Interface, clusterTopology *topol
 }
 
 func (p *ConfigMapHandler) HandleAdd(cm *v1.ConfigMap, node *v1.Node) error {
-	log.Printf("Handling node addition: %s\n", cm.Name)
+	log.Printf("Handling config map addition: %s\n", cm.Name)
 
 	nodeTopology, err := topology.FromNodeTopologyCM(cm)
 	if err != nil {
-		return fmt.Errorf("failed to create node topology ConfigMap: %w", err)
+		return fmt.Errorf("failed to read node topology ConfigMap: %w", err)
 	}
 
 	return p.applyFakeDevicePlugin(len(nodeTopology.Gpus), node)

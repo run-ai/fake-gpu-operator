@@ -11,6 +11,6 @@ func main() {
 	requiredEnvVars := []string{constants.EnvTopologyCmName, constants.EnvTopologyCmNamespace, constants.EnvFakeGpuOperatorNs}
 	config.ValidateConfig(requiredEnvVars)
 
-	appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})
+	appRunner := app.NewAppRunner(&status_updater.KWOKDevicePluginApp{})
 	appRunner.Run()
 }

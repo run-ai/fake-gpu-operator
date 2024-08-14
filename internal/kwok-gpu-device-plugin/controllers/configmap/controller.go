@@ -44,6 +44,7 @@ func NewConfigMapController(
 		kubeClient:      kubeClient,
 		cmInformer:      informerFactory.Core().V1().ConfigMaps().Informer(),
 		nodeLister:      informerFactory.Core().V1().Nodes().Lister(),
+		informerFactory: informerFactory,
 		handler:         cmhandler.NewConfigMapHandler(kubeClient, clusterTopology),
 		clusterTopology: clusterTopology,
 	}
