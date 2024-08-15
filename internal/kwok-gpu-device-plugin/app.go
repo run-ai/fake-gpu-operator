@@ -1,7 +1,6 @@
 package kwokgdp
 
 import (
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -18,8 +17,9 @@ var KubeClientFn = func(c *rest.Config) kubernetes.Interface {
 	return kubernetes.NewForConfigOrDie(c)
 }
 
-var DynamicClientFn = func(c *rest.Config) dynamic.Interface {
-	return dynamic.NewForConfigOrDie(c)
+type StatusUpdaterAppConfiguration struct {
+	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
+	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
 }
 
 type KWOKDevicePluginApp struct {
@@ -57,5 +57,7 @@ func (app *KWOKDevicePluginApp) Name() string {
 }
 
 func (app *KWOKDevicePluginApp) GetConfig() interface{} {
-	return nil
+	var config StatusUpdaterAppConfiguration
+
+	return config
 }
