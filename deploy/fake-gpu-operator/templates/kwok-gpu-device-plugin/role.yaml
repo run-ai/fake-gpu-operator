@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: plugin
+  name: fake-kwok-gpu-device-plugin
 rules:
   - apiGroups:
       - ""
