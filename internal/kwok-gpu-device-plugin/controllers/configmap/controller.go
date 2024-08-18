@@ -1,7 +1,9 @@
 package configmamp
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -11,11 +13,17 @@ import (
 	cmhandler "github.com/run-ai/fake-gpu-operator/internal/kwok-gpu-device-plugin/handlers/configmap"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	listersv1 "k8s.io/client-go/listers/core/v1"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+)
+
+const (
+	maxRetryCount  = 10
+	baseRetryDelay = time.Millisecond * 100
 )
 
 type ConfigMapController struct {
@@ -61,7 +69,7 @@ func NewConfigMapController(
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				go func() {
-					c.callConfigMapHandler(obj.(*v1.ConfigMap))
+					c.callConfigMapHandler(obj.(*v1.ConfigMap), 0)
 				}()
 			},
 		},
@@ -82,22 +90,33 @@ func (c *ConfigMapController) isFakeGpuKWOKNodeConfigMap(cm *v1.ConfigMap) bool 
 	if cm == nil || cm.Labels == nil {
 		return false
 	}
-	nodeName := cm.Labels[constants.LabelTopologyCMNodeName]
-
-	node, err := c.nodeLister.Get(nodeName)
-	if err != nil {
+	nodeName, foundNodeName := cm.Labels[constants.LabelTopologyCMNodeName]
+	if !foundNodeName {
 		return false
 	}
 
-	_, isNodeAssignedToNodePool := node.Labels[c.clusterTopology.NodePoolLabelKey]
-	return isNodeAssignedToNodePool && node.Annotations[constants.AnnotationKwokNode] == "fake"
+	node, err := c.nodeLister.Get(nodeName)
+	if err != nil {
+		node, err = c.kubeClient.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			log.Printf("Failed to get node %s: %v", nodeName, err)
+			return false
+		}
+	}
+
+	return node.Annotations[constants.AnnotationKwokNode] == "fake"
 }
 
-func (c *ConfigMapController) callConfigMapHandler(cm *v1.ConfigMap) {
+func (c *ConfigMapController) callConfigMapHandler(cm *v1.ConfigMap, retryCount int) {
 	nodeName := cm.Labels[constants.LabelTopologyCMNodeName]
 	node, err := c.nodeLister.Get(nodeName)
 	if err != nil {
-		log.Printf("Failed to get node %s: %v", nodeName, err)
+		delay := baseRetryDelay * (1 << retryCount)
+		log.Printf("Failed to get node %s: %v. retry in %v", nodeName, err, delay)
+		time.Sleep(delay)
+		if retryCount < maxRetryCount {
+			c.callConfigMapHandler(cm, retryCount+1)
+		}
 		return
 	}
 	util.LogErrorIfExist(c.handler.HandleAdd(cm, node), "Failed to handle cm addition")
