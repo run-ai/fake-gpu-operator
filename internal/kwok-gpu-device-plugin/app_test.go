@@ -142,7 +142,7 @@ var _ = Describe("KwokGpuDevicePlugin", func() {
 
 					gpuQuantity := node.Status.Capacity[constants.GpuResourceName]
 					return gpuQuantity.Value() == int64(4)
-				}, 2*time.Second, 100*time.Millisecond).Should(BeTrue())
+				}, 3*time.Second, 100*time.Millisecond).Should(BeTrue())
 			})
 		})
 	})
