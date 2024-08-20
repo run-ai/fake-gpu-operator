@@ -11,7 +11,6 @@ import (
 	cmhandler "github.com/run-ai/fake-gpu-operator/internal/kwok-gpu-device-plugin/handlers/configmap"
 
 	v1 "k8s.io/api/core/v1"
-	listersv1 "k8s.io/client-go/listers/core/v1"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -19,11 +18,9 @@ import (
 )
 
 type ConfigMapController struct {
-	kubeClient      kubernetes.Interface
-	cmInformer      cache.SharedIndexInformer
-	nodeLister      listersv1.NodeLister
-	informerFactory informers.SharedInformerFactory
-	handler         cmhandler.Interface
+	kubeClient kubernetes.Interface
+	cmInformer cache.SharedIndexInformer
+	handler    cmhandler.Interface
 
 	clusterTopology *topology.ClusterTopology
 }
@@ -43,8 +40,6 @@ func NewConfigMapController(
 	c := &ConfigMapController{
 		kubeClient:      kubeClient,
 		cmInformer:      informerFactory.Core().V1().ConfigMaps().Informer(),
-		nodeLister:      informerFactory.Core().V1().Nodes().Lister(),
-		informerFactory: informerFactory,
 		handler:         cmhandler.NewConfigMapHandler(kubeClient, clusterTopology),
 		clusterTopology: clusterTopology,
 	}
@@ -75,7 +70,7 @@ func NewConfigMapController(
 
 func (c *ConfigMapController) Run(stopCh <-chan struct{}) {
 	log.Println("Starting config map controller")
-	c.informerFactory.Start(stopCh)
+	c.cmInformer.Run(stopCh)
 }
 
 func (c *ConfigMapController) isFakeGpuKWOKNodeConfigMap(cm *v1.ConfigMap) bool {
