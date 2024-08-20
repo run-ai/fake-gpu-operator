@@ -74,7 +74,7 @@ var _ = Describe("StatusExporter", func() {
 	time.Sleep(1000 * time.Millisecond)
 
 	initialTopology := createNodeTopology()
-	cm, err := topology.ToNodeTopologyCM(initialTopology, nodeName)
+	cm, _, err := topology.ToNodeTopologyCM(initialTopology, nodeName)
 	Expect(err).To(Not(HaveOccurred()))
 	_, err = clientset.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 	Expect(err).To(Not(HaveOccurred()))
@@ -86,7 +86,7 @@ var _ = Describe("StatusExporter", func() {
 		caseDetails := caseDetails
 
 		It(caseName, func() {
-			cm, err := topology.ToNodeTopologyCM(caseDetails.nodeTopologies[nodeName], nodeName)
+			cm, _, err := topology.ToNodeTopologyCM(caseDetails.nodeTopologies[nodeName], nodeName)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = clientset.CoreV1().ConfigMaps(topologyCmNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})

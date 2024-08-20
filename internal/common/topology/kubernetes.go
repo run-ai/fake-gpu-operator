@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apcorev1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -25,10 +26,16 @@ func GetNodeTopologyFromCM(kubeclient kubernetes.Interface, nodeName string) (*N
 	return FromNodeTopologyCM(cm)
 }
 
-func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTopology, nodeName string) error {
-	cm, err := ToNodeTopologyCM(nodeTopology, nodeName)
+func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTopology, node *corev1.Node) error {
+	cm, _, err := ToNodeTopologyCM(nodeTopology, node.Name)
 	if err != nil {
 		return err
+	}
+	if value, found := node.Annotations[constants.AnnotationKwokNode]; found {
+		if cm.Annotations == nil {
+			cm.Annotations = make(map[string]string)
+		}
+		cm.Annotations[constants.AnnotationKwokNode] = value
 	}
 
 	_, err = kubeclient.CoreV1().ConfigMaps(
@@ -37,13 +44,13 @@ func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTop
 }
 
 func UpdateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTopology, nodeName string) error {
-	cm, err := ToNodeTopologyCM(nodeTopology, nodeName)
+	_, cm, err := ToNodeTopologyCM(nodeTopology, nodeName)
 	if err != nil {
 		return err
 	}
 
 	_, err = kubeclient.CoreV1().ConfigMaps(
-		viper.GetString(constants.EnvTopologyCmNamespace)).Update(context.TODO(), cm, metav1.UpdateOptions{})
+		viper.GetString(constants.EnvTopologyCmNamespace)).Apply(context.TODO(), cm, metav1.ApplyOptions{})
 	return err
 }
 
@@ -108,7 +115,7 @@ func ToClusterTopologyCM(clusterTopology *ClusterTopology) (*corev1.ConfigMap, e
 	return cm, nil
 }
 
-func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.ConfigMap, error) {
+func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.ConfigMap, *apcorev1.ConfigMapApplyConfiguration, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GetNodeTopologyCMName(nodeName),
@@ -120,15 +127,18 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 		},
 		Data: make(map[string]string),
 	}
+	cmApplyConfig := apcorev1.ConfigMap(cm.Name, cm.Namespace).WithLabels(cm.Labels)
 
 	topologyData, err := yaml.Marshal(nodeTopology)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cm.Data[cmTopologyKey] = string(topologyData)
 
-	return cm, nil
+	cmApplyConfig = cmApplyConfig.WithData(cm.Data)
+
+	return cm, cmApplyConfig, nil
 }
 
 func GetNodeTopologyCMName(nodeName string) string {

@@ -14,7 +14,7 @@ import (
 )
 
 type Interface interface {
-	HandleAdd(cm *v1.ConfigMap, node *v1.Node) error
+	HandleAdd(cm *v1.ConfigMap) error
 }
 
 type ConfigMapHandler struct {
@@ -32,24 +32,25 @@ func NewConfigMapHandler(kubeClient kubernetes.Interface, clusterTopology *topol
 	}
 }
 
-func (p *ConfigMapHandler) HandleAdd(cm *v1.ConfigMap, node *v1.Node) error {
+func (p *ConfigMapHandler) HandleAdd(cm *v1.ConfigMap) error {
 	log.Printf("Handling config map addition: %s\n", cm.Name)
 
 	nodeTopology, err := topology.FromNodeTopologyCM(cm)
 	if err != nil {
 		return fmt.Errorf("failed to read node topology ConfigMap: %w", err)
 	}
+	nodeName := cm.Labels[constants.LabelTopologyCMNodeName]
 
-	return p.applyFakeDevicePlugin(len(nodeTopology.Gpus), node)
+	return p.applyFakeDevicePlugin(len(nodeTopology.Gpus), nodeName)
 }
 
-func (p *ConfigMapHandler) applyFakeDevicePlugin(gpuCount int, node *v1.Node) error {
+func (p *ConfigMapHandler) applyFakeDevicePlugin(gpuCount int, nodeName string) error {
 	patch := fmt.Sprintf(
 		`{"status": {"capacity": {"%s": "%d"}, "allocatable": {"%s": "%d"}}}`,
 		constants.GpuResourceName, gpuCount, constants.GpuResourceName, gpuCount,
 	)
 	_, err := p.kubeClient.CoreV1().Nodes().Patch(
-		context.TODO(), node.Name, types.MergePatchType, []byte(patch), metav1.PatchOptions{}, "status",
+		context.TODO(), nodeName, types.MergePatchType, []byte(patch), metav1.PatchOptions{}, "status",
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update node capacity and allocatable: %v", err)

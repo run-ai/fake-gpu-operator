@@ -124,9 +124,12 @@ var _ = Describe("KwokGpuDevicePlugin", func() {
 						{ID: "fake-gpu-id-4", Status: topology.GpuStatus{}},
 					},
 				}
-				cm, err := topology.ToNodeTopologyCM(&nodeTopology, node1.Name)
+				cm, _, err := topology.ToNodeTopologyCM(&nodeTopology, node1.Name)
 				Expect(err).ToNot(HaveOccurred())
 				cm.Namespace = gpuOperatorNamespace
+				cm.Annotations = map[string]string{
+					constants.AnnotationKwokNode: "fake",
+				}
 
 				_, err = kubeClient.CoreV1().ConfigMaps(gpuOperatorNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
