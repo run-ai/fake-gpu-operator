@@ -54,6 +54,19 @@ statusExporter:
       memory: "200Mi"
   topologyMaxExportInterval: 10s
 
+kwokGpuDevicePlugin:
+  image:
+    pullPolicy: Always
+    repository: gcr.io/run-ai-lab/fake-gpu-operator/kwok-gpu-device-plugin
+    tag: 0.0.1
+  resources: 
+    requests:
+      cpu: "100m"
+      memory: "200Mi"
+    limits:
+      cpu: "200m"
+      memory: "400Mi"
+
 migFaker:
   image:
     pullPolicy: Always

@@ -31,7 +31,7 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 		MigStrategy: p.clusterTopology.MigStrategy,
 	}
 
-	err := topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node.Name)
+	err := topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology: %w", err)
 	}
