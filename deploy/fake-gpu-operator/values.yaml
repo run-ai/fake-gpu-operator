@@ -57,7 +57,7 @@ statusExporter:
 kwokGpuDevicePlugin:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-lab/fake-gpu-operator/kwok-gpu-device-plugin
+    repository: gcr.io/run-ai-staging/fake-gpu-operator/kwok-gpu-device-plugin
     tag: 0.0.1
   resources: 
     requests:
