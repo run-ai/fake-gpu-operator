@@ -50,7 +50,7 @@ func UpdateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTop
 	}
 
 	_, err = kubeclient.CoreV1().ConfigMaps(
-		viper.GetString(constants.EnvTopologyCmNamespace)).Apply(context.TODO(), cm, metav1.ApplyOptions{})
+		viper.GetString(constants.EnvTopologyCmNamespace)).Apply(context.TODO(), cm, metav1.ApplyOptions{FieldManager: "fake-gpu-operator", Force: true})
 	return err
 }
 
