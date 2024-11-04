@@ -20,6 +20,7 @@ rules:
     verbs:
       - get
       - update
+      - patch
       - create
       - list
       - delete
