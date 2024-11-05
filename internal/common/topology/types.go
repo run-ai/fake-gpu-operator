@@ -1,8 +1,6 @@
 package topology
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -55,7 +53,3 @@ type Range struct {
 	Min int `yaml:"min"`
 	Max int `yaml:"max"`
 }
-
-// Errors
-var ErrNoNodes = fmt.Errorf("no nodes found")
-var ErrNoNode = fmt.Errorf("node not found")
