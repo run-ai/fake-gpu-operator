@@ -54,7 +54,7 @@ func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
 			log.Printf("Exporting pod %s gpu stats to filesystem", podUuid)
 
 			path := fmt.Sprintf("/runai/proc/pod/%s/metrics/gpu/%d", podUuid, gpuIdx)
-			if err := os.MkdirAll(path, 0644); err != nil {
+			if err := os.MkdirAll(path, 0755); err != nil {
 				log.Printf("Failed creating directory for pod %s: %s", podUuid, err.Error())
 			}
 
