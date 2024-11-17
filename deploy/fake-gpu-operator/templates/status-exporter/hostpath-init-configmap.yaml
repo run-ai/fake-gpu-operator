@@ -10,10 +10,6 @@ data:
 
         RUNAI_DIR=/runai
 
-        # Print the current date, and user running the script (GuyRemove)
-        date
-        whoami
-
         # Allow containers to read/write to RUNAI_DIR
         chmod 777 $RUNAI_DIR
         chcon -Rt svirt_sandbox_file_t $RUNAI_DIR
