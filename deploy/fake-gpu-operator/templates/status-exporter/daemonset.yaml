@@ -12,5 +12,18 @@ spec:
       {{- include "fake-gpu-operator.status-exporter.common.podTemplate.metadata" . | nindent 6 }}
     spec:
       {{- include "fake-gpu-operator.status-exporter.common.podTemplate.spec" . | nindent 6 }}
+      initContainers:
+      - name: hostpath-init
+        image: "ubuntu:24.04"
+        command: ["/bin/bash", "/hostpath-init/init.sh"]
+        volumeMounts:
+        - name: runai-data
+          mountPath: /runai
+        - name: hostpath-init-script
+          mountPath: /hostpath-init
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
+          privileged: true
       nodeSelector:
         nvidia.com/gpu.deploy.dcgm-exporter: "true"
