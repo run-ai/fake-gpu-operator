@@ -17,6 +17,8 @@ matchLabels:
 labels:
   app: nvidia-dcgm-exporter
   app.kubernetes.io/name: nvidia-container-toolkit
+annotations:
+  checksum/hostpath-init-configmap: {{ include (print $.Template.BasePath "/status-exporter/hostpath-init-configmap.yaml") . | sha256sum }}
 {{- end -}}
 
 {{- define "fake-gpu-operator.status-exporter.common.podTemplate.spec" -}}
@@ -41,8 +43,8 @@ containers:
     - containerPort: 9400
       name: http
   volumeMounts:
-    - mountPath: /runai/proc
-      name: runai-proc-directory
+    - mountPath: /runai
+      name: runai-data
 restartPolicy: Always
 schedulerName: default-scheduler
 serviceAccount: status-exporter
@@ -54,8 +56,11 @@ tolerations:
 imagePullSecrets:
   - name: gcr-secret
 volumes:
-  - name: runai-proc-directory
+  - name: runai-data
     hostPath:
-      path: /var/lib/runai/proc
+      path: /var/lib/runai
       type: DirectoryOrCreate
+  - name: hostpath-init-script
+    configMap:
+      name: hostpath-init
 {{- end -}}

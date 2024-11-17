@@ -40,8 +40,14 @@ func (e *FsExporter) Run(stopCh <-chan struct{}) {
 }
 
 func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
-	if err := os.RemoveAll("/runai/proc/pod"); err != nil {
-		log.Printf("Failed deleting runai/proc/pod directory: %s", err.Error())
+	exportPods(nodeTopology)
+	exportEvents()
+}
+
+func exportPods(nodeTopology *topology.NodeTopology) {
+	podProcDir := "/runai/proc/pod"
+	if err := os.RemoveAll(podProcDir); err != nil {
+		log.Printf("Failed deleting %s directory: %s", podProcDir, err.Error())
 	}
 
 	for gpuIdx, gpu := range nodeTopology.Gpus {
@@ -53,7 +59,7 @@ func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
 		for podUuid, gpuUsageStatus := range gpu.Status.PodGpuUsageStatus {
 			log.Printf("Exporting pod %s gpu stats to filesystem", podUuid)
 
-			path := fmt.Sprintf("/runai/proc/pod/%s/metrics/gpu/%d", podUuid, gpuIdx)
+			path := fmt.Sprintf("%s/%s/metrics/gpu/%d", podProcDir, podUuid, gpuIdx)
 			if err := os.MkdirAll(path, 0755); err != nil {
 				log.Printf("Failed creating directory for pod %s: %s", podUuid, err.Error())
 			}
@@ -66,6 +72,15 @@ func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
 				log.Printf("Failed exporting memory for pod %s: %s", podUuid, err.Error())
 			}
 		}
+	}
+}
+
+func exportEvents() {
+	// For now, only creating the directory without exporting any events.
+	// In the future, we might want to export events to the filesystem as well.
+	eventsDir := "/runai/proc/events"
+	if err := os.MkdirAll(eventsDir, 0755); err != nil {
+		log.Printf("Failed creating directory for events: %s", err.Error())
 	}
 }
 
