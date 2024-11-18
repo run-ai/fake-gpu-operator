@@ -47,11 +47,10 @@ upload() {
         echo "[ERROR] Exiting because unable to copy index locally. Not safe to proceed."
         exit 1
     fi
-    sed -i "s/"CHART_VERSION"/$CHART_VERSION/g" Chart.yaml
     helm repo add ingress-nginx "https://kubernetes.github.io/ingress-nginx"
     helm repo update
     helm dep update .
-    helm package . -n runai --destination "$sync_dir"
+    helm package . -n runai --destination "$sync_dir" --version "$CHART_VERSION" --app-version "$CHART_VERSION"
     if helm repo index --url "$REPO_URL" --merge "$index_dir/index.yaml" "$sync_dir"; then
         # Move updated index.yaml to sync folder so we don't push the old one again
         mv -f "$sync_dir/index.yaml" "$index_dir/index.yaml"
