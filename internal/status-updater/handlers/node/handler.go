@@ -38,9 +38,9 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return fmt.Errorf("failed to create node topology ConfigMap: %w", err)
 	}
 
-	err = p.applyFakeNodeDeployments(node)
+	err = p.applyFakeNodeResources(node)
 	if err != nil {
-		return fmt.Errorf("failed to apply fake node deployments: %w", err)
+		return fmt.Errorf("failed to apply fake node resources: %w", err)
 	}
 
 	err = p.labelNode(node)
@@ -59,7 +59,7 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 		return fmt.Errorf("failed to delete node topology: %w", err)
 	}
 
-	err = p.deleteFakeNodeDeployments(node)
+	err = p.deleteFakeNodeResources(node)
 	if err != nil {
 		return fmt.Errorf("failed to delete fake node deployments: %w", err)
 	}
