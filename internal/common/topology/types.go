@@ -14,16 +14,18 @@ type ClusterTopology struct {
 }
 
 type NodePoolTopology struct {
-	GpuCount   int    `yaml:"gpuCount"`
-	GpuMemory  int    `yaml:"gpuMemory"`
-	GpuProduct string `yaml:"gpuProduct"`
+	GpuCount     int             `yaml:"gpuCount"`
+	GpuMemory    int             `yaml:"gpuMemory"`
+	GpuProduct   string          `yaml:"gpuProduct"`
+	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty"`
 }
 
 type NodeTopology struct {
-	GpuMemory   int          `yaml:"gpuMemory"`
-	GpuProduct  string       `yaml:"gpuProduct"`
-	Gpus        []GpuDetails `yaml:"gpus"`
-	MigStrategy string       `yaml:"migStrategy"`
+	GpuMemory    int             `yaml:"gpuMemory"`
+	GpuProduct   string          `yaml:"gpuProduct"`
+	Gpus         []GpuDetails    `yaml:"gpus"`
+	MigStrategy  string          `yaml:"migStrategy"`
+	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty"`
 }
 
 type GpuDetails struct {
@@ -54,6 +56,11 @@ type GpuUsageStatus struct {
 type Range struct {
 	Min int `yaml:"min"`
 	Max int `yaml:"max"`
+}
+
+type GenericDevice struct {
+	Name  string `yaml:"name"`
+	Count int    `yaml:"count"`
 }
 
 // Errors

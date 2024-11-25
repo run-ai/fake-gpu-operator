@@ -18,11 +18,15 @@ type FakeNodeDevicePlugin struct {
 }
 
 func (f *FakeNodeDevicePlugin) Serve() error {
-	patch := fmt.Sprintf(`{"status": {"capacity": {"%s": "%d"}, "allocatable": {"%s": "%d"}}}`, resourceName, f.gpuCount, resourceName, f.gpuCount)
+	patch := fmt.Sprintf(`{"status": {"capacity": {"%s": "%d"}, "allocatable": {"%s": "%d"}}}`, nvidiaGPUResourceName, f.gpuCount, nvidiaGPUResourceName, f.gpuCount)
 	_, err := f.kubeClient.CoreV1().Nodes().Patch(context.TODO(), os.Getenv(constants.EnvNodeName), types.MergePatchType, []byte(patch), metav1.PatchOptions{}, "status")
 	if err != nil {
 		return fmt.Errorf("failed to update node capacity and allocatable: %v", err)
 	}
 
 	return nil
+}
+
+func (f *FakeNodeDevicePlugin) Name() string {
+	return "FakeNodeDevicePlugin"
 }
