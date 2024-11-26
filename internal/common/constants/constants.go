@@ -24,4 +24,5 @@ const (
 	EnvTopologyCmName      = "TOPOLOGY_CM_NAME"
 	EnvTopologyCmNamespace = "TOPOLOGY_CM_NAMESPACE"
 	EnvFakeGpuOperatorNs   = "FAKE_GPU_OPERATOR_NAMESPACE"
+	EnvImpersonateIP       = "IMPERSONATE_IP"
 )

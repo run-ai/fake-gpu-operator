@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/utils/ptr"
 )
 
@@ -64,7 +67,11 @@ func (p *NodeHandler) generateFakeNodeDeployments(node *v1.Node) ([]appsv1.Deplo
 
 	deployments := []appsv1.Deployment{}
 	for i := range deploymentTemplates.Items {
-		deployments = append(deployments, *generateFakeNodeDeploymentFromTemplate(&deploymentTemplates.Items[i], node))
+		generatedDeployment, err := p.generateFakeNodeDeploymentFromTemplate(&deploymentTemplates.Items[i], node)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate fake node deployment from template: %w", err)
+		}
+		deployments = append(deployments, *generatedDeployment)
 	}
 
 	return deployments, nil
@@ -94,7 +101,12 @@ func (p *NodeHandler) applyDeployment(deployment appsv1.Deployment) error {
 	return nil
 }
 
-func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v1.Node) *appsv1.Deployment {
+func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v1.Node) (*appsv1.Deployment, error) {
+	dummyDcgmExporterPod, err := p.getDummyDcgmExporterPod(node.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dummy dcgm exporter IP: %w", err)
+	}
+
 	deployment := template.DeepCopy()
 
 	delete(deployment.Labels, constants.LabelFakeNodeDeploymentTemplate)
@@ -106,6 +118,9 @@ func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v
 	}, v1.EnvVar{
 		Name:  constants.EnvFakeNode,
 		Value: "true",
+	}, v1.EnvVar{
+		Name:  constants.EnvImpersonateIP,
+		Value: dummyDcgmExporterPod.Status.PodIP,
 	})
 
 	deployment.Spec.Template.Spec.Containers[0].Resources.Limits = v1.ResourceList{
@@ -117,7 +132,45 @@ func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v
 		v1.ResourceCPU:    resource.MustParse("10m"),
 	}
 
-	return deployment
+	return deployment, nil
+}
+
+func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) {
+	clientset := p.kubeClient // Assuming p.kubeClient is of type kubernetes.Interface
+
+	// Define the label selector and field selector
+	labelSelector := "app=nvidia-dcgm-exporter"
+	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
+
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	// Create a watch for pods with the specified label and field selectors
+	watcher, err := clientset.CoreV1().Pods(v1.NamespaceAll).Watch(ctx, metav1.ListOptions{
+		LabelSelector: labelSelector,
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pod watcher: %w", err)
+	}
+	defer watcher.Stop()
+
+	// Wait for the pod to be created
+	for {
+		select {
+		case event := <-watcher.ResultChan():
+			if event.Type == watch.Added {
+				pod, ok := event.Object.(*v1.Pod)
+				if !ok {
+					return nil, fmt.Errorf("unexpected type")
+				}
+				return pod, nil
+			}
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timeout waiting for pod to be created")
+		}
+	}
 }
 
 func isFakeNode(node *v1.Node) bool {

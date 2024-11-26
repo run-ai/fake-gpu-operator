@@ -38,14 +38,15 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return fmt.Errorf("failed to create node topology ConfigMap: %w", err)
 	}
 
-	err = p.applyFakeNodeDeployments(node)
-	if err != nil {
-		return fmt.Errorf("failed to apply fake node deployments: %w", err)
-	}
-
 	err = p.labelNode(node)
 	if err != nil {
 		return fmt.Errorf("failed to label node: %w", err)
+	}
+
+	// Should run after labeling the node since it relies on the node's labels
+	err = p.applyFakeNodeDeployments(node)
+	if err != nil {
+		return fmt.Errorf("failed to apply fake node deployments: %w", err)
 	}
 
 	return nil
