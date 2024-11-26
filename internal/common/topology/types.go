@@ -25,7 +25,7 @@ type NodeTopology struct {
 	GpuProduct   string          `yaml:"gpuProduct"`
 	Gpus         []GpuDetails    `yaml:"gpus"`
 	MigStrategy  string          `yaml:"migStrategy"`
-	OtherDevices []GenericDevice `yaml:"otherDevices"`
+	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty"`
 }
 
 type GpuDetails struct {
