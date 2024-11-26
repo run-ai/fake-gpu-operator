@@ -2,12 +2,15 @@ package configmap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -41,16 +44,33 @@ func (p *ConfigMapHandler) HandleAdd(cm *v1.ConfigMap) error {
 	}
 	nodeName := cm.Labels[constants.LabelTopologyCMNodeName]
 
-	return p.applyFakeDevicePlugin(len(nodeTopology.Gpus), nodeName)
+	return p.applyFakeDevicePlugin(nodeTopology, nodeName)
 }
 
-func (p *ConfigMapHandler) applyFakeDevicePlugin(gpuCount int, nodeName string) error {
-	patch := fmt.Sprintf(
-		`{"status": {"capacity": {"%s": "%d"}, "allocatable": {"%s": "%d"}}}`,
-		constants.GpuResourceName, gpuCount, constants.GpuResourceName, gpuCount,
-	)
-	_, err := p.kubeClient.CoreV1().Nodes().Patch(
-		context.TODO(), nodeName, types.MergePatchType, []byte(patch), metav1.PatchOptions{}, "status",
+func (p *ConfigMapHandler) applyFakeDevicePlugin(nodeTopology *topology.NodeTopology, nodeName string) error {
+	nodePatch := &v1.Node{
+		Status: v1.NodeStatus{
+			Capacity: v1.ResourceList{
+				v1.ResourceName(constants.GpuResourceName): *resource.NewQuantity(int64(len(nodeTopology.Gpus)), resource.DecimalSI),
+			},
+			Allocatable: v1.ResourceList{
+				v1.ResourceName(constants.GpuResourceName): *resource.NewQuantity(int64(len(nodeTopology.Gpus)), resource.DecimalSI),
+			},
+		},
+	}
+
+	for _, otherDevice := range nodeTopology.OtherDevices {
+		nodePatch.Status.Capacity[v1.ResourceName(otherDevice.Name)] = *resource.NewQuantity(int64(otherDevice.Count), resource.DecimalSI)
+		nodePatch.Status.Allocatable[v1.ResourceName(otherDevice.Name)] = *resource.NewQuantity(int64(otherDevice.Count), resource.DecimalSI)
+	}
+
+	patchBytes, err := json.Marshal(nodePatch)
+	if err != nil {
+		return fmt.Errorf("failed to update node: failed to marshal patch: %v", err)
+	}
+
+	_, err = p.kubeClient.CoreV1().Nodes().Patch(
+		context.TODO(), nodeName, types.MergePatchType, patchBytes, metav1.PatchOptions{}, "status",
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update node capacity and allocatable: %v", err)

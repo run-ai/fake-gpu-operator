@@ -78,7 +78,7 @@ func GetClusterTopologyFromCM(kubeclient kubernetes.Interface) (*ClusterTopology
 
 func FromClusterTopologyCM(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 	var clusterTopology ClusterTopology
-	err := yaml.Unmarshal([]byte(cm.Data[cmTopologyKey]), &clusterTopology)
+	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func FromClusterTopologyCM(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 
 func FromNodeTopologyCM(cm *corev1.ConfigMap) (*NodeTopology, error) {
 	var nodeTopology NodeTopology
-	err := yaml.Unmarshal([]byte(cm.Data[cmTopologyKey]), &nodeTopology)
+	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &nodeTopology)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func ToClusterTopologyCM(clusterTopology *ClusterTopology) (*corev1.ConfigMap, e
 		return nil, err
 	}
 
-	cm.Data[cmTopologyKey] = string(topologyData)
+	cm.Data[CmTopologyKey] = string(topologyData)
 
 	return cm, nil
 }
@@ -134,7 +134,7 @@ func ToNodeTopologyCM(nodeTopology *NodeTopology, nodeName string) (*corev1.Conf
 		return nil, nil, err
 	}
 
-	cm.Data[cmTopologyKey] = string(topologyData)
+	cm.Data[CmTopologyKey] = string(topologyData)
 
 	cmApplyConfig = cmApplyConfig.WithData(cm.Data)
 

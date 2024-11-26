@@ -17,7 +17,7 @@ type NodePoolTopology struct {
 	GpuCount     int             `yaml:"gpuCount"`
 	GpuMemory    int             `yaml:"gpuMemory"`
 	GpuProduct   string          `yaml:"gpuProduct"`
-	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty"`
+	OtherDevices []GenericDevice `yaml:"otherDevices"`
 }
 
 type NodeTopology struct {
@@ -25,7 +25,7 @@ type NodeTopology struct {
 	GpuProduct   string          `yaml:"gpuProduct"`
 	Gpus         []GpuDetails    `yaml:"gpus"`
 	MigStrategy  string          `yaml:"migStrategy"`
-	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty"`
+	OtherDevices []GenericDevice `yaml:"otherDevices"`
 }
 
 type GpuDetails struct {
