@@ -26,9 +26,15 @@ func NewDevicePlugins(topology *topology.NodeTopology, kubeClient kubernetes.Int
 	}
 
 	if viper.GetBool(constants.EnvFakeNode) {
+		otherDevices := make(map[string]int)
+		for _, genericDevice := range topology.OtherDevices {
+			otherDevices[genericDevice.Name] = genericDevice.Count
+		}
+
 		return []Interface{&FakeNodeDevicePlugin{
-			kubeClient: kubeClient,
-			gpuCount:   getGpuCount(topology),
+			kubeClient:   kubeClient,
+			gpuCount:     getGpuCount(topology),
+			otherDevices: otherDevices,
 		}}
 	}
 
