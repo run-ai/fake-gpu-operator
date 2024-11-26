@@ -121,5 +121,5 @@ func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v
 }
 
 func isFakeNode(node *v1.Node) bool {
-	return node != nil && node.Annotations[constants.AnnotationKwokNode] == "fake"
+	return node != nil && node.Annotations[constants.LabelKwokNode] == "fake"
 }

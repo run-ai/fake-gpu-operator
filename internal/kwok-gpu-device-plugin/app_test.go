@@ -104,10 +104,8 @@ var _ = Describe("KwokGpuDevicePlugin", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "node1",
 						Labels: map[string]string{
-							nodePoolLabelKey: defaultNodePoolName,
-						},
-						Annotations: map[string]string{
-							constants.AnnotationKwokNode: "fake",
+							nodePoolLabelKey:        defaultNodePoolName,
+							constants.LabelKwokNode: "fake",
 						},
 					},
 				}
@@ -127,9 +125,7 @@ var _ = Describe("KwokGpuDevicePlugin", func() {
 				cm, _, err := topology.ToNodeTopologyCM(&nodeTopology, node1.Name)
 				Expect(err).ToNot(HaveOccurred())
 				cm.Namespace = gpuOperatorNamespace
-				cm.Annotations = map[string]string{
-					constants.AnnotationKwokNode: "fake",
-				}
+				cm.Labels[constants.LabelKwokNode] = "fake"
 
 				_, err = kubeClient.CoreV1().ConfigMaps(gpuOperatorNamespace).Create(context.TODO(), cm, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())

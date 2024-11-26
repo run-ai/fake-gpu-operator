@@ -31,11 +31,11 @@ func CreateNodeTopologyCM(kubeclient kubernetes.Interface, nodeTopology *NodeTop
 	if err != nil {
 		return err
 	}
-	if value, found := node.Annotations[constants.AnnotationKwokNode]; found {
-		if cm.Annotations == nil {
-			cm.Annotations = make(map[string]string)
+	if value, found := node.Labels[constants.LabelKwokNode]; found {
+		if cm.Labels == nil {
+			cm.Labels = make(map[string]string)
 		}
-		cm.Annotations[constants.AnnotationKwokNode] = value
+		cm.Labels[constants.LabelKwokNode] = value
 	}
 
 	_, err = kubeclient.CoreV1().ConfigMaps(

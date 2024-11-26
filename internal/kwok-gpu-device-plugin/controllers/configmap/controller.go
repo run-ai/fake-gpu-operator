@@ -74,7 +74,7 @@ func (c *ConfigMapController) Run(stopCh <-chan struct{}) {
 }
 
 func (c *ConfigMapController) isFakeGpuKWOKNodeConfigMap(cm *v1.ConfigMap) bool {
-	if cm == nil || cm.Labels == nil || cm.Annotations == nil {
+	if cm == nil || cm.Labels == nil {
 		return false
 	}
 	_, foundNodeName := cm.Labels[constants.LabelTopologyCMNodeName]
@@ -82,5 +82,5 @@ func (c *ConfigMapController) isFakeGpuKWOKNodeConfigMap(cm *v1.ConfigMap) bool 
 		return false
 	}
 
-	return cm.Annotations[constants.AnnotationKwokNode] == "fake"
+	return cm.Labels[constants.LabelKwokNode] == "fake"
 }
