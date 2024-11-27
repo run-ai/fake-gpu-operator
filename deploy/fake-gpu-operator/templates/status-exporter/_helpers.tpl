@@ -51,13 +51,6 @@ restartPolicy: Always
 schedulerName: default-scheduler
 serviceAccount: status-exporter
 serviceAccountName: status-exporter
-tolerations:
-  - effect: NoSchedule
-    key: nvidia.com/gpu
-    operator: Exists
-  {{- if .Values.kwok.tolerations }}
-  {{ .Values.kwok.tolerations | toYaml | nindent 2 }}
-  {{- end }}
 imagePullSecrets:
   - name: gcr-secret
 volumes:

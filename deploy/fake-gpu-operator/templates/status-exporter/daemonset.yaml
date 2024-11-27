@@ -27,3 +27,10 @@ spec:
           privileged: true
       nodeSelector:
         nvidia.com/gpu.deploy.dcgm-exporter: "true"
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+      {{- if .Values.kwok.tolerations }}
+      {{ .Values.kwok.tolerations | toYaml | nindent 6 }}
+      {{- end }}

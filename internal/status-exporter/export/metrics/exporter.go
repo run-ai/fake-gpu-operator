@@ -29,6 +29,8 @@ type MetricsExporter struct {
 var _ export.Interface = &MetricsExporter{}
 
 func NewMetricsExporter(watcher watch.Interface) *MetricsExporter {
+	initMetrics()
+
 	topologyChan := make(chan *topology.NodeTopology)
 	watcher.Subscribe(topologyChan)
 
@@ -120,7 +122,6 @@ func generateFakeHostname(nodeName string) string {
 }
 
 func (e *MetricsExporter) enrichWithPrometheusLabels(labels prometheus.Labels) prometheus.Labels {
-	// If the labels are already set, move the existing values to "exported_" prefixed labels.
 	for _, label := range []string{"container", "namespace", "pod", "instance"} {
 		if val, ok := labels[label]; ok {
 			labels["exported_"+label] = val
