@@ -19,10 +19,12 @@ const (
 
 	GpuResourceName = "nvidia.com/gpu"
 
-	EnvFakeNode            = "FAKE_NODE"
-	EnvNodeName            = "NODE_NAME"
-	EnvTopologyCmName      = "TOPOLOGY_CM_NAME"
-	EnvTopologyCmNamespace = "TOPOLOGY_CM_NAMESPACE"
-	EnvFakeGpuOperatorNs   = "FAKE_GPU_OPERATOR_NAMESPACE"
-	EnvImpersonateIP       = "IMPERSONATE_IP"
+	EnvFakeNode                         = "FAKE_NODE"
+	EnvNodeName                         = "NODE_NAME"
+	EnvTopologyCmName                   = "TOPOLOGY_CM_NAME"
+	EnvTopologyCmNamespace              = "TOPOLOGY_CM_NAMESPACE"
+	EnvFakeGpuOperatorNs                = "FAKE_GPU_OPERATOR_NAMESPACE"
+	EnvImpersonatePodName               = "IMPERSONATE_POD_NAME"
+	EnvImpersonatePodIP                 = "IMPERSONATE_IP"
+	EnvExportPrometheusLabelEnrichments = "EXPORT_PROMETHEUS_LABEL_ENRICHMENTS"
 )

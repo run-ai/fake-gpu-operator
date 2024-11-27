@@ -53,6 +53,10 @@ statusExporter:
       cpu: "200m"
       memory: "200Mi"
   topologyMaxExportInterval: 10s
+  serviceMonitor:
+    enabled: false
+  config:
+    exportPrometheusLabelEnrichments: false
 
 kwokGpuDevicePlugin:
   image:
@@ -86,3 +90,11 @@ topology:
       gpuMemory: 11441
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: mixed
+
+# GuyTodo: Test each
+kwok:
+  tolerations:
+    - key: kwok.x-k8s.io/node
+      operator: Equal
+      value: fake
+      effect: NoSchedule

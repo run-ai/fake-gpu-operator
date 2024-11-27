@@ -119,8 +119,11 @@ func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.De
 		Name:  constants.EnvFakeNode,
 		Value: "true",
 	}, v1.EnvVar{
-		Name:  constants.EnvImpersonateIP,
+		Name:  constants.EnvImpersonatePodIP,
 		Value: dummyDcgmExporterPod.Status.PodIP,
+	}, v1.EnvVar{
+		Name:  constants.EnvImpersonatePodName,
+		Value: dummyDcgmExporterPod.Name,
 	})
 
 	deployment.Spec.Template.Spec.Containers[0].Resources.Limits = v1.ResourceList{
@@ -135,6 +138,7 @@ func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.De
 	return deployment, nil
 }
 
+// Waits for the dummy dcgm exporter pod to be ready and returns it
 func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) {
 	clientset := p.kubeClient // Assuming p.kubeClient is of type kubernetes.Interface
 
@@ -143,7 +147,7 @@ func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) 
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 
 	// Create a context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	// Create a watch for pods with the specified label and field selectors
@@ -156,19 +160,21 @@ func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) 
 	}
 	defer watcher.Stop()
 
-	// Wait for the pod to be created
+	// Wait for the pod to be ready
 	for {
 		select {
 		case event := <-watcher.ResultChan():
-			if event.Type == watch.Added {
-				pod, ok := event.Object.(*v1.Pod)
-				if !ok {
-					return nil, fmt.Errorf("unexpected type")
+			pod, ok := event.Object.(*v1.Pod)
+			if !ok {
+				return nil, fmt.Errorf("unexpected object type: %T", event.Object)
+			}
+			if event.Type == watch.Added || event.Type == watch.Modified {
+				if pod.Status.Phase == v1.PodRunning {
+					return pod, nil
 				}
-				return pod, nil
 			}
 		case <-ctx.Done():
-			return nil, fmt.Errorf("timeout waiting for pod to be created")
+			return nil, fmt.Errorf("timeout waiting for pod to be ready")
 		}
 	}
 }

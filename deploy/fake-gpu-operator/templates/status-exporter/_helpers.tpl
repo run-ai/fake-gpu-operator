@@ -39,6 +39,8 @@ containers:
       value: "{{ .Release.Namespace }}"
     - name: TOPOLOGY_MAX_EXPORT_INTERVAL
       value: "{{ .Values.statusExporter.topologyMaxExportInterval }}"
+    - name: EXPORT_PROMETHEUS_LABEL_ENRICHMENTS
+      value: "{{ .Values.statusExporter.config.exportPrometheusLabelEnrichments }}"
   ports:
     - containerPort: 9400
       name: http
@@ -53,6 +55,9 @@ tolerations:
   - effect: NoSchedule
     key: nvidia.com/gpu
     operator: Exists
+  {{- if .Values.kwok.tolerations }}
+  {{ .Values.kwok.tolerations | toYaml | nindent 2 }}
+  {{- end }}
 imagePullSecrets:
   - name: gcr-secret
 volumes:

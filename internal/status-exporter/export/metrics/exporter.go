@@ -17,6 +17,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	exporterPort          = 9400
+	exporterContainerName = "nvidia-dcgm-exporter"
+)
+
 type MetricsExporter struct {
 	topologyChan <-chan *topology.NodeTopology
 }
@@ -63,6 +68,7 @@ func (e *MetricsExporter) Run(stopCh <-chan struct{}) {
 
 func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
 	nodeName := viper.GetString(constants.EnvNodeName)
+	shouldExportPrometheusLabelEnrichments := viper.GetBool(constants.EnvExportPrometheusLabelEnrichments)
 
 	gpuUtilization.Reset()
 	gpuFbUsed.Reset()
@@ -81,6 +87,11 @@ func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
 			"container": gpu.Status.AllocatedBy.Container,
 		}
 
+		if shouldExportPrometheusLabelEnrichments {
+			// GuyTodo: Test this
+			labels = e.enrichWithPrometheusLabels(labels)
+		}
+
 		utilization := gpu.Status.PodGpuUsageStatus.Utilization()
 		fbUsed := gpu.Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)
 
@@ -94,7 +105,7 @@ func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
 
 func setupServer() {
 	http.Handle("/metrics", promhttp.Handler())
-	err := http.ListenAndServe(":9400", nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", exporterPort), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -106,4 +117,20 @@ func generateFakeHostname(nodeName string) string {
 	nodeNameSHA1 := h.Sum(nil)
 	nodeHostname := fmt.Sprintf("%s-%x", "nvidia-dcgm-exporter", nodeNameSHA1[:3])
 	return nodeHostname
+}
+
+func (e *MetricsExporter) enrichWithPrometheusLabels(labels prometheus.Labels) prometheus.Labels {
+	// If the labels are already set, move the existing values to "exported_" prefixed labels.
+	for _, label := range []string{"container", "namespace", "pod", "instance"} {
+		if val, ok := labels[label]; ok {
+			labels["exported_"+label] = val
+		}
+	}
+
+	labels["namespace"] = viper.GetString(constants.EnvFakeGpuOperatorNs)
+	labels["pod"] = viper.GetString(constants.EnvImpersonatePodName)
+	labels["container"] = exporterContainerName
+	labels["instance"] = fmt.Sprintf("%s:%d", viper.GetString(constants.EnvImpersonatePodIP), exporterPort)
+
+	return labels
 }
