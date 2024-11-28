@@ -12,5 +12,6 @@ data:
 
         # Allow containers to read/write to RUNAI_DIR
         chmod 777 $RUNAI_DIR
-        chcon -Rt svirt_sandbox_file_t $RUNAI_DIR
+        chcon -Rt svirt_sandbox_file_t $RUNAI_DIR || echo "Failed to set SELinux context, this is expected if SELinux is not enabled"
+
 
