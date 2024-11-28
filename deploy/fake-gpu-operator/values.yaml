@@ -91,7 +91,6 @@ topology:
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: mixed
 
-# GuyTodo: Test each
 kwok:
   tolerations:
     - key: kwok.x-k8s.io/node

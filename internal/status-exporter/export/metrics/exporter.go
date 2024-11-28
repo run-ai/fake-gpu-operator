@@ -90,7 +90,6 @@ func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
 		}
 
 		if shouldExportPrometheusLabelEnrichments {
-			// GuyTodo: Test this
 			labels = e.enrichWithPrometheusLabels(labels)
 		}
 
