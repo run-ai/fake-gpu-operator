@@ -178,7 +178,3 @@ func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) 
 		}
 	}
 }
-
-func isFakeNode(node *v1.Node) bool {
-	return node != nil && node.Annotations[constants.AnnotationKwokNode] == "fake"
-}

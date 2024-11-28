@@ -28,6 +28,8 @@ type RealNodeDevicePlugin struct {
 	stop   chan interface{}
 	health chan *pluginapi.Device
 	server *grpc.Server
+
+	resourceName string
 }
 
 func getGpuCount(nodeTopology *topology.NodeTopology) int {
@@ -115,7 +117,7 @@ func (m *RealNodeDevicePlugin) Stop() error {
 	return m.cleanup()
 }
 
-func (m *RealNodeDevicePlugin) Register(kubeletEndpoint, resourceName string) error {
+func (m *RealNodeDevicePlugin) Register(kubeletEndpoint string) error {
 	conn, err := dial(kubeletEndpoint, 5*time.Second)
 	if err != nil {
 		return err
@@ -126,7 +128,7 @@ func (m *RealNodeDevicePlugin) Register(kubeletEndpoint, resourceName string) er
 	reqt := &pluginapi.RegisterRequest{
 		Version:      pluginapi.Version,
 		Endpoint:     path.Base(m.socket),
-		ResourceName: resourceName,
+		ResourceName: m.resourceName,
 	}
 
 	_, err = client.Register(context.Background(), reqt)
@@ -202,7 +204,7 @@ func (m *RealNodeDevicePlugin) Serve() error {
 	}
 	log.Println("Starting to serve on", m.socket)
 
-	err = m.Register(pluginapi.KubeletSocket, resourceName)
+	err = m.Register(pluginapi.KubeletSocket)
 	if err != nil {
 		log.Printf("Could not register device plugin: %s", err)
 		stopErr := m.Stop()
@@ -214,4 +216,8 @@ func (m *RealNodeDevicePlugin) Serve() error {
 	log.Println("Registered device plugin with Kubelet")
 
 	return nil
+}
+
+func (m *RealNodeDevicePlugin) Name() string {
+	return "RealNodeDevicePlugin-" + m.resourceName
 }
