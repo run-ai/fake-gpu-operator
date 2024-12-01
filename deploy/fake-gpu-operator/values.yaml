@@ -55,8 +55,6 @@ statusExporter:
   topologyMaxExportInterval: 10s
   serviceMonitor:
     enabled: false
-  config:
-    exportPrometheusLabelEnrichments: false
 
 kwokGpuDevicePlugin:
   image:

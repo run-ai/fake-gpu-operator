@@ -15,3 +15,21 @@ spec:
   selector:
     app: nvidia-dcgm-exporter
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    app: kwok-nvidia-dcgm-exporter
+  name: kwok-nvidia-dcgm-exporter
+spec:
+  ports:
+    - name: gpu-metrics
+      port: 9400
+      protocol: TCP
+      targetPort: 9400
+  selector:
+    app: kwok-nvidia-dcgm-exporter
+  type: ClusterIP

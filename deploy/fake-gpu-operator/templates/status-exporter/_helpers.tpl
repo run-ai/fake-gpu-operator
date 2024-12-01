@@ -39,8 +39,8 @@ containers:
       value: "{{ .Release.Namespace }}"
     - name: TOPOLOGY_MAX_EXPORT_INTERVAL
       value: "{{ .Values.statusExporter.topologyMaxExportInterval }}"
-    - name: EXPORT_PROMETHEUS_LABEL_ENRICHMENTS
-      value: "{{ .Values.statusExporter.config.exportPrometheusLabelEnrichments }}"
+    - name: FAKE_GPU_OPERATOR_NAMESPACE
+      value: "{{ .Release.Namespace }}"
   ports:
     - containerPort: 9400
       name: http

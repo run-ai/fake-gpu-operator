@@ -8,12 +8,16 @@ const (
 	AnnotationMigMapping           = "run.ai/mig-mapping"
 	AnnotationKwokNode             = "kwok.x-k8s.io/node"
 
+	// Label Keys
 	LabelGpuGroup                   = "runai-gpu-group"
 	LabelGpuProduct                 = "nvidia.com/gpu.product"
 	LabelMigConfigState             = "nvidia.com/mig.config.state"
 	LabelFakeNodeDeploymentTemplate = "run.ai/fake-node-deployment-template"
 	LabelTopologyCMNodeTopology     = "node-topology"
 	LabelTopologyCMNodeName         = "node-name"
+	LabelApp                        = "app"
+
+	KwokDCGMExporterApp = "kwok-nvidia-dcgm-exporter"
 
 	ReservationNs = "runai-reservation"
 

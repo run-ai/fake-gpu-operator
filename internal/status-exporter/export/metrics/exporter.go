@@ -121,16 +121,19 @@ func generateFakeHostname(nodeName string) string {
 }
 
 func (e *MetricsExporter) enrichWithPrometheusLabels(labels prometheus.Labels) prometheus.Labels {
-	for _, label := range []string{"container", "namespace", "pod", "instance"} {
+	for _, label := range []string{"container", "namespace", "pod"} {
 		if val, ok := labels[label]; ok {
 			labels["exported_"+label] = val
 		}
 	}
 
+	labels["container"] = exporterContainerName
 	labels["namespace"] = viper.GetString(constants.EnvFakeGpuOperatorNs)
 	labels["pod"] = viper.GetString(constants.EnvImpersonatePodName)
-	labels["container"] = exporterContainerName
+
 	labels["instance"] = fmt.Sprintf("%s:%d", viper.GetString(constants.EnvImpersonatePodIP), exporterPort)
+	labels["job"] = "nvidia-dcgm-exporter"
+	labels["service"] = "nvidia-dcgm-exporter"
 
 	return labels
 }

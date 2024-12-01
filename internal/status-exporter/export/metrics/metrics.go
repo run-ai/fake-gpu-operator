@@ -39,7 +39,7 @@ func initMetrics() {
 func getLabelNames() []string {
 	labelNames := []string{"gpu", "UUID", "device", "modelName", "Hostname", "container", "namespace", "pod"}
 	if viper.GetBool(constants.EnvExportPrometheusLabelEnrichments) {
-		labelNames = append(labelNames, "instance", "exported_container", "exported_namespace", "exported_pod")
+		labelNames = append(labelNames, "instance", "exported_container", "exported_namespace", "exported_pod", "job", "service")
 	}
 
 	return labelNames

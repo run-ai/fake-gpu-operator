@@ -12,5 +12,19 @@ spec:
   endpoints:
     - port: gpu-metrics
       interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kwok-nvidia-dcgm-exporter
+  labels:
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: kwok-nvidia-dcgm-exporter
+  endpoints:
+    - port: gpu-metrics
+      interval: 30s
       honorLabels: true
 {{- end }}

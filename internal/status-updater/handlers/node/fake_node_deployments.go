@@ -112,6 +112,9 @@ func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.De
 	delete(deployment.Labels, constants.LabelFakeNodeDeploymentTemplate)
 	deployment.Name = fmt.Sprintf("%s-%s", deployment.Name, node.Name)
 	deployment.Spec.Replicas = ptr.To(int32(1))
+
+	deployment.Spec.Selector.MatchLabels[constants.LabelApp] = constants.KwokDCGMExporterApp
+	deployment.Spec.Template.Labels[constants.LabelApp] = constants.KwokDCGMExporterApp
 	deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, v1.EnvVar{
 		Name:  constants.EnvNodeName,
 		Value: node.Name,
@@ -124,6 +127,9 @@ func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.De
 	}, v1.EnvVar{
 		Name:  constants.EnvImpersonatePodName,
 		Value: dummyDcgmExporterPod.Name,
+	}, v1.EnvVar{
+		Name:  constants.EnvExportPrometheusLabelEnrichments,
+		Value: "true",
 	})
 
 	deployment.Spec.Template.Spec.Containers[0].Resources.Limits = v1.ResourceList{
@@ -138,20 +144,14 @@ func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.De
 	return deployment, nil
 }
 
-// Waits for the dummy dcgm exporter pod to be ready and returns it
 func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) {
-	clientset := p.kubeClient // Assuming p.kubeClient is of type kubernetes.Interface
-
-	// Define the label selector and field selector
 	labelSelector := "app=nvidia-dcgm-exporter"
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 
-	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	// Create a watch for pods with the specified label and field selectors
-	watcher, err := clientset.CoreV1().Pods(v1.NamespaceAll).Watch(ctx, metav1.ListOptions{
+	watcher, err := p.kubeClient.CoreV1().Pods(v1.NamespaceAll).Watch(ctx, metav1.ListOptions{
 		LabelSelector: labelSelector,
 		FieldSelector: fieldSelector,
 	})
