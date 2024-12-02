@@ -3,10 +3,10 @@ package node
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/spf13/viper"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	dummyDcgmExporterPodTimeout = 5 * time.Minute
+	dummyDcgmExporterPodTimeout = 20 * time.Second
 )
 
 func (p *NodeHandler) applyFakeNodeDeployments(node *v1.Node) error {
@@ -62,7 +62,7 @@ func (p *NodeHandler) deleteFakeNodeDeployments(node *v1.Node) error {
 }
 
 func (p *NodeHandler) generateFakeNodeDeployments(node *v1.Node) ([]appsv1.Deployment, error) {
-	deploymentTemplates, err := p.kubeClient.AppsV1().Deployments(os.Getenv(constants.EnvFakeGpuOperatorNs)).List(context.TODO(), metav1.ListOptions{
+	deploymentTemplates, err := p.kubeClient.AppsV1().Deployments(viper.GetString(constants.EnvFakeGpuOperatorNs)).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=true", constants.LabelFakeNodeDeploymentTemplate),
 	})
 	if err != nil {
@@ -108,13 +108,14 @@ func (p *NodeHandler) applyDeployment(deployment appsv1.Deployment) error {
 func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v1.Node) (*appsv1.Deployment, error) {
 	dummyDcgmExporterPod, err := p.getDummyDcgmExporterPod(node.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get dummy dcgm exporter IP: %w", err)
+		return nil, fmt.Errorf("failed to get dummy dcgm exporter: %w", err)
 	}
 
 	deployment := template.DeepCopy()
 
 	delete(deployment.Labels, constants.LabelFakeNodeDeploymentTemplate)
 	deployment.Name = fmt.Sprintf("%s-%s", deployment.Name, node.Name)
+	deployment.Labels[constants.LabelFakeNodeDeployment] = "true"
 	deployment.Spec.Replicas = ptr.To(int32(1))
 
 	deployment.Spec.Selector.MatchLabels[constants.LabelApp] = constants.KwokDCGMExporterApp
@@ -155,7 +156,7 @@ func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), dummyDcgmExporterPodTimeout)
 	defer cancel()
 
-	watcher, err := p.kubeClient.CoreV1().Pods(v1.NamespaceAll).Watch(ctx, metav1.ListOptions{
+	watcher, err := p.kubeClient.CoreV1().Pods(viper.GetString(constants.EnvFakeGpuOperatorNs)).Watch(ctx, metav1.ListOptions{
 		LabelSelector: labelSelector,
 		FieldSelector: fieldSelector,
 	})
