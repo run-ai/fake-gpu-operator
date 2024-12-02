@@ -17,6 +17,10 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+const (
+	dummyDcgmExporterPodTimeout = 5 * time.Minute
+)
+
 func (p *NodeHandler) applyFakeNodeDeployments(node *v1.Node) error {
 	if !isFakeNode(node) {
 		return nil
@@ -145,10 +149,10 @@ func (p *NodeHandler) generateFakeNodeDeploymentFromTemplate(template *appsv1.De
 }
 
 func (p *NodeHandler) getDummyDcgmExporterPod(nodeName string) (*v1.Pod, error) {
-	labelSelector := "app=nvidia-dcgm-exporter"
+	labelSelector := fmt.Sprintf("%s=%s", constants.LabelApp, constants.DCGMExporterApp)
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), dummyDcgmExporterPodTimeout)
 	defer cancel()
 
 	watcher, err := p.kubeClient.CoreV1().Pods(v1.NamespaceAll).Watch(ctx, metav1.ListOptions{

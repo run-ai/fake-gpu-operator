@@ -18,8 +18,12 @@ import (
 )
 
 const (
-	exporterPort          = 9400
-	exporterContainerName = "nvidia-dcgm-exporter"
+	exporterPort = 9400
+
+	exporterJobName        = constants.DCGMExporterApp
+	exporterServiceName    = constants.DCGMExporterApp
+	exporterContainerName  = constants.DCGMExporterApp
+	exporterHostnamePrefix = constants.DCGMExporterApp
 )
 
 type MetricsExporter struct {
@@ -116,7 +120,7 @@ func generateFakeHostname(nodeName string) string {
 	h := sha1.New()
 	h.Write([]byte(nodeName))
 	nodeNameSHA1 := h.Sum(nil)
-	nodeHostname := fmt.Sprintf("%s-%x", "nvidia-dcgm-exporter", nodeNameSHA1[:3])
+	nodeHostname := fmt.Sprintf("%s-%x", exporterHostnamePrefix, nodeNameSHA1[:3])
 	return nodeHostname
 }
 
@@ -132,8 +136,8 @@ func (e *MetricsExporter) enrichWithPrometheusLabels(labels prometheus.Labels) p
 	labels["pod"] = viper.GetString(constants.EnvImpersonatePodName)
 
 	labels["instance"] = fmt.Sprintf("%s:%d", viper.GetString(constants.EnvImpersonatePodIP), exporterPort)
-	labels["job"] = "nvidia-dcgm-exporter"
-	labels["service"] = "nvidia-dcgm-exporter"
+	labels["job"] = exporterJobName
+	labels["service"] = exporterServiceName
 
 	return labels
 }

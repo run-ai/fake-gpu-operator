@@ -17,6 +17,7 @@ const (
 	LabelTopologyCMNodeName         = "node-name"
 	LabelApp                        = "app"
 
+	DCGMExporterApp     = "nvidia-dcgm-exporter"
 	KwokDCGMExporterApp = "kwok-nvidia-dcgm-exporter"
 
 	ReservationNs = "runai-reservation"
