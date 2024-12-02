@@ -126,15 +126,6 @@ var _ = Describe("NodeHandler", func() {
 			Expect(err).To(BeNil())
 			watcher.Add(dcgmExporterPod)
 
-			// Watch for dcgmExporterPod creation
-			// podWatcher, err := kubeClient.CoreV1().Pods(viper.GetString(constants.EnvFakeGpuOperatorNs)).Watch(ctx, metav1.ListOptions{
-			// 	LabelSelector: "app=dcgm-exporter",
-			// 	FieldSelector: "spec.nodeName=test-node",
-			// })
-			// Expect(err).To(BeNil())
-			// defer podWatcher.Stop()
-			// Eventually(podWatcher.ResultChan()).Should(Receive())
-
 			err = nodeHandler.HandleAdd(node)
 			Expect(err).To(BeNil())
 
