@@ -49,7 +49,7 @@ resources:
 
 Verify that it has been scheduled on one of the __CPU__ nodes. 
 
-You can also test by running the example deployment YAML under the `example` folder
+You can also test by running the example deployment YAML under the [example](./example) folder
 
 ## Troubleshooting
 

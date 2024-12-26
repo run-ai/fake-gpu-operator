@@ -1,8 +1,6 @@
 package topology
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -62,7 +60,3 @@ type GenericDevice struct {
 	Name  string `yaml:"name"`
 	Count int    `yaml:"count"`
 }
-
-// Errors
-var ErrNoNodes = fmt.Errorf("no nodes found")
-var ErrNoNode = fmt.Errorf("node not found")
