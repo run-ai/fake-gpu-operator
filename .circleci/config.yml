@@ -9,7 +9,6 @@ commands:
     steps:
       - setup_remote_docker:
           docker_layer_caching: true
-          version: 20.10.14
   install_project_dependencies:
     steps:
       - checkout

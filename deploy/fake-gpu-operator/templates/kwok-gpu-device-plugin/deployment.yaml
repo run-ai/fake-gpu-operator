@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kwok-gpu-device-plugin
+  annotations:
+    checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+  labels:
+    app: kwok-gpu-device-plugin
+spec:
+  selector:
+    matchLabels:
+      app: kwok-gpu-device-plugin
+      component: kwok-gpu-device-plugin
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+      labels:
+        app: kwok-gpu-device-plugin
+        component: kwok-gpu-device-plugin
+    spec:
+      containers:
+        - name: kwok-gpu-device-plugin
+          image: "{{ .Values.kwokGpuDevicePlugin.image.repository }}:{{ .Values.kwokGpuDevicePlugin.image.tag }}"
+          imagePullPolicy: "{{ .Values.kwokGpuDevicePlugin.image.pullPolicy }}"
+          resources:
+            {{- toYaml .Values.kwokGpuDevicePlugin.resources | nindent 12 }}
+          env:
+            - name: TOPOLOGY_CM_NAME
+              value: topology
+            - name: TOPOLOGY_CM_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+            - name: FAKE_GPU_OPERATOR_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+      restartPolicy: Always
+      serviceAccountName: kwok-gpu-device-plugin
+      imagePullSecrets:
+        - name: gcr-secret

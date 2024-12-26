@@ -119,7 +119,3 @@ func generateFakeNodeDeploymentFromTemplate(template *appsv1.Deployment, node *v
 
 	return deployment
 }
-
-func isFakeNode(node *v1.Node) bool {
-	return node != nil && node.Annotations[constants.AnnotationKwokNode] == "fake"
-}

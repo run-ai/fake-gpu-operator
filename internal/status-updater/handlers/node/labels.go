@@ -18,10 +18,14 @@ const (
 
 // labelNode labels the node with required labels for the fake-gpu-operator to function.
 func (p *NodeHandler) labelNode(node *v1.Node) error {
-	err := p.patchNodeLabels(node, map[string]interface{}{
+	labels := map[string]interface{}{
 		dcgmExporterLabelKey: "true",
-		devicePluginLabelKey: "true",
-	})
+	}
+	if !isFakeNode(node) {
+		labels[devicePluginLabelKey] = "true"
+	}
+
+	err := p.patchNodeLabels(node, labels)
 	if err != nil {
 		return fmt.Errorf("failed to label node %s: %w", node.Name, err)
 	}

@@ -30,10 +30,11 @@ rules:
 {{- if .Values.environment.openshift }}
   - apiGroups:
     - security.openshift.io
-    resourceNames:
-    - hostaccess
     resources:
     - securitycontextconstraints
+    resourceNames:
+    # Required for chmod and chcon to runai host directory
+    - privileged
     verbs:
     - use
 {{ end }}

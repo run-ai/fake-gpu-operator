@@ -1,16 +1,17 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: fake-status-updater
+  name: fake-kwok-gpu-device-plugin
 rules:
   - apiGroups:
       - ""
     resources:
-      - pods
       - nodes
+      - nodes/status
     verbs:
-      - get
+      - update
       - list
+      - get
       - watch
       - patch
   - apiGroups:
@@ -20,13 +21,6 @@ rules:
     verbs:
       - get
       - update
-      - patch
       - create
       - list
       - delete
-  - apiGroups:
-      - scheduling.run.ai
-    resources:
-      - podgroups
-    verbs:
-      - get
