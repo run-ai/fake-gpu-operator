@@ -49,13 +49,21 @@ resources:
 
 Verify that it has been scheduled on one of the __CPU__ nodes. 
 
-You can also test by running the example deployment YAML under the [example](./example) folder
+You can also test by running the example deployment YAML under the [example](./example) folder.
+
+**Note:** If you want to execute `nvidia-smi` in the example deployment, you need to add the following snippet to the `deployment.yml` file. Replace `<node-name>` with the node name you labeled during installation:
+
+```yaml
+env:
+  - name: NODE_NAME
+    value: <node-name>
+```
 
 ## Troubleshooting
 
 [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) should be disabled on the gpu-operator namespace 
 
-```
+```sh
 kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
 ```
 
