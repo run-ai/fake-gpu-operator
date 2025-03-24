@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -24,10 +25,28 @@ type nvidiaSmiArgs struct {
 	ProcessName string
 }
 
+type config struct {
+	Debug bool
+}
+
+var conf config = config{}
+
 // main is the entry point for the application.
 func main() {
+	flag.BoolVar(&conf.Debug, "debug", false, "enable debug mode")
+	flag.Parse()
+
+	if conf.Debug {
+		fmt.Println("Debug mode enabled")
+	}
+
 	os.Setenv(constants.EnvTopologyCmNamespace, "gpu-operator")
 	os.Setenv(constants.EnvTopologyCmName, "topology")
+
+	if conf.Debug {
+		fmt.Printf("Set topology configmap namespace: %s\n", constants.EnvTopologyCmNamespace)
+		fmt.Printf("Set topology configmap name: %s\n", constants.EnvTopologyCmName)
+	}
 
 	args := getNvidiaSmiArgs()
 
@@ -36,9 +55,16 @@ func main() {
 
 func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	nodeName := os.Getenv(constants.EnvNodeName)
+	if conf.Debug {
+		fmt.Printf("Node name: %s\n", nodeName)
+	}
 
 	// Send http request to topology-server to get the topology
-	resp, err := http.Get("http://topology-server.gpu-operator/topology/nodes/" + nodeName)
+	topologyUrl := "http://topology-server.gpu-operator/topology/nodes/" + nodeName
+	if conf.Debug {
+		fmt.Printf("Requesting topology from: %s\n", topologyUrl)
+	}
+	resp, err := http.Get(topologyUrl)
 	if err != nil {
 		panic(err)
 	}
@@ -48,6 +74,9 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	err = json.NewDecoder(resp.Body).Decode(&nodeTopology)
 	if err != nil {
 		panic(err)
+	}
+	if conf.Debug {
+		fmt.Printf("Received topology: %+v\n", nodeTopology)
 	}
 
 	args.GpuProduct = nodeTopology.GpuProduct
@@ -60,21 +89,34 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 		if err != nil {
 			panic(err)
 		}
+		if conf.Debug {
+			fmt.Printf("GPU portion from RUNAI_NUM_OF_GPUS: %f\n", gpuPortion)
+		}
 	}
 	args.GpuTotalMem = int(float64(nodeTopology.GpuMemory) * gpuPortion)
 
 	var gpuIdx int
 	currentPodName := os.Getenv("HOSTNAME")
 	currentPodUuid := os.Getenv("POD_UUID")
+	if conf.Debug {
+		fmt.Printf("Current pod name: %s, UUID: %s\n", currentPodName, currentPodUuid)
+	}
+
 	for idx, gpu := range nodeTopology.Gpus {
 		if gpu.Status.AllocatedBy.Pod == currentPodName {
 			gpuIdx = idx
+			if conf.Debug {
+				fmt.Printf("Found GPU %d allocated to pod %s\n", idx, currentPodName)
+			}
 			break
 		}
 
 		for podUuid := range gpu.Status.PodGpuUsageStatus {
 			if string(podUuid) == currentPodUuid {
 				gpuIdx = idx
+				if conf.Debug {
+					fmt.Printf("Found GPU %d used by pod UUID %s\n", idx, currentPodUuid)
+				}
 				break
 			}
 		}
@@ -83,6 +125,10 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	args.GpuIdx = gpuIdx
 	args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion)
 	args.GpuUtil = nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.Utilization()
+
+	if conf.Debug {
+		fmt.Printf("GPU stats - Index: %d, Used Memory: %f, Utilization: %d%%\n", args.GpuIdx, args.GpuUsedMem, args.GpuUtil)
+	}
 
 	// Read /proc/1/cmdline to get the process name
 	cmdlineFile, err := os.Open("/proc/1/cmdline")
@@ -99,6 +145,9 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	args.ProcessName = string(bytes.Trim(cmdlineBytes, "\x00"))
+	if conf.Debug {
+		fmt.Printf("Process name from /proc/1/cmdline: %s\n", args.ProcessName)
+	}
 
 	return args
 }
@@ -126,6 +175,10 @@ func printArgs(args nvidiaSmiArgs) {
 	// |=============================================================================|
 	// |    0   N/A  N/A       964      G   /usr/lib/xorg/Xorg                  4MiB |
 	// +-----------------------------------------------------------------------------+
+
+	if conf.Debug {
+		fmt.Println("Printing nvidia-smi output")
+	}
 
 	// Print date
 	fmt.Println(time.Now().Format(time.ANSIC))
