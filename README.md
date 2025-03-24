@@ -69,3 +69,20 @@ By default, the DCGM exporter will report maximum GPU utilization for every pod 
 
 To customize GPU utilization, add a `run.ai/simulated-gpu-utilization` annotation to the pod with a value representing the desired range of GPU utilization.
 For example, add `run.ai/simulated-gpu-utilization: 10-30` to simulate a pod that utilizes between 10% and 30% of the GPU.
+
+## nvidia-smi
+
+The `nvidia-smi` command is a tool that provides information about the NVIDIA GPU. It is used to monitor and manage the GPU resources in a Kubernetes cluster.
+
+Fake GPU Operator injects a fake `nvidia-smi` tool to GPU pods that simulates the real `nvidia-smi` tool.
+
+The fake `nvidia-smi` tool requires the `NODE_NAME` environment variable to be set.
+This can be done by adding the following to the pod's container spec:
+
+```
+env:
+  - name: NODE_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: spec.nodeName
+```
