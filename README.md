@@ -32,7 +32,7 @@ To install the operator:
 
 
 ```sh
-helm repo add fake-gpu-operator https://fake-gpu-operator.storage.googleapis.com
+helm repo add fake-gpu-operator https://runai.jfrog.io/artifactory/api/helm/fake-gpu-operator-charts-prod --force-update
 helm repo update
 helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace
 ```
