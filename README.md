@@ -1,88 +1,151 @@
 # Fake GPU Operator
 
-The purpose of the _fake GPU Operator_ or GPU Operator Simulator is to simulate the NVIDIA GPU Operator without a GPU. The software has been created by Run:ai in order to save money on actual machines in situations that do not require the GPU itself and allow for larger scale tests. This simulator:
+<div align="center">
 
-* Allows a CPU-only node to be represented as if it has one or more GPUs.
-* Simulates all features of the NVIDIA GPU Operator, including feature discovery and NVIDIA MIG.
-* Emits metrics to Prometheus, simulating actual GPU behavior.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Releases](https://img.shields.io/github/v/release/run-ai/fake-gpu-operator)](https://github.com/run-ai/fake-gpu-operator/releases)
+[![CI](https://github.com/run-ai/fake-gpu-operator/workflows/CI/badge.svg)](https://github.com/run-ai/fake-gpu-operator/actions)
 
-You can configure the simulator to have any NVIDIA GPU topology, including the type and amount of GPU memory.
+🎮 Simulate NVIDIA GPUs in Kubernetes without actual hardware
+</div>
 
+## 🚀 Overview
 
+The Fake GPU Operator (GPU Operator Simulator) enables you to simulate NVIDIA GPUs in a Kubernetes cluster without requiring physical GPU hardware. Created by Run:ai, this tool helps developers and testers:
 
-## Prerequisites
+- 💻 Transform CPU-only nodes to simulate one or more virtual GPUs
+- 🔄 Replicate all NVIDIA GPU Operator features including feature discovery and NVIDIA MIG
+- 📊 Generate Prometheus metrics that mirror real GPU behavior
+- 💰 Save costs on GPU hardware for testing and development
 
-Ensure that the real Nvidia GPU Operator is not present in the Kubernetes cluster.
+Perfect for:
+- Development and testing of GPU-dependent applications
+- CI/CD pipelines requiring GPU validation
+- Large-scale testing environments
+- Training and educational purposes
 
-## Installation
+## ✨ Features
 
-Assign the nodes you want to simulate GPUs on to a node pool by labeling them with the `run.ai/simulated-gpu-node-pool` label. For example:
+- **Full GPU Simulation**: Emulate any NVIDIA GPU topology
+- **Metric Generation**: Prometheus metrics that simulate real GPU behavior
+- **MIG Support**: Complete NVIDIA Multi-Instance GPU simulation
+- **Flexible Configuration**: Customize GPU types and memory configurations
+- **nvidia-smi Support**: Simulated nvidia-smi tool for GPU monitoring
 
-```sh
+## 🏃 Quick Start
+
+### Prerequisites
+
+- Kubernetes cluster without NVIDIA GPU Operator
+- Helm 3.x
+- kubectl CLI tool
+
+### 1. Label Your Nodes
+
+```bash
 kubectl label node <node-name> run.ai/simulated-gpu-node-pool=default
 ```
 
-NodePools are used to group nodes that should have the same GPU topology.
-These are defined in the `topology.nodePools` section of the Helm `values.yaml` file.
-By default, a node pool with 2 Tesla K80 GPUs will be created for all nodes labeled with `run.ai/simulated-gpu-node-pool=default`.
-To create a different GPU topology, refer to the __customization__ section below.
+### 2. Install the Operator
 
-
-To install the operator:
-
-
-```sh
+```bash
+# Add the Helm repository
 helm repo add fake-gpu-operator https://runai.jfrog.io/artifactory/api/helm/fake-gpu-operator-charts-prod --force-update
 helm repo update
-helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace
+
+# Install the operator
+helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator \
+  --namespace gpu-operator \
+  --create-namespace
 ```
 
-## Usage
+### 3. Deploy a Test Workload
 
-Submit any workload with a request for an NVIDIA GPU:
-
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-pod
+spec:
+  containers:
+  - name: gpu-container
+    image: nvidia/cuda-vector-add:v0.1
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+    env:
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
 ```
-resources:
-  limits:
-    nvidia.com/gpu: 1
+
+## 🛠️ Configuration
+
+### GPU Topology
+
+Customize GPU configurations in your `values.yaml`:
+
+```yaml
+topology:
+  nodePools:
+    default:
+      gpus:
+        - type: "Tesla K80"
+          memory: "12GB"
+          count: 2
 ```
 
-Verify that it has been scheduled on one of the __CPU__ nodes. 
+### GPU Utilization
 
-You can also test by running the example deployment YAML under the [example](./example) folder
+Control GPU utilization metrics with pod annotations:
 
-## Troubleshooting
-
-[Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) should be disabled on the gpu-operator namespace 
-
+```yaml
+metadata:
+  annotations:
+    run.ai/simulated-gpu-utilization: "10-30"  # Simulate 10-30% GPU usage
 ```
+
+## 🔍 Troubleshooting
+
+### Pod Security Admission
+
+To ensure proper functionality, configure Pod Security Admission for the gpu-operator namespace:
+
+```bash
 kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
 ```
 
-## Customization
+## 📊 Monitoring
 
-The GPU topology can be customized by editing the `values.yaml` file on the `topology` section before installing/upgrading the helm chart.
+### nvidia-smi Support
 
-## GPU metrics
+The operator injects a simulated `nvidia-smi` tool into GPU pods. Ensure your pods include the required environment variable:
 
-By default, the DCGM exporter will report maximum GPU utilization for every pod requesting GPUs.
-
-To customize GPU utilization, add a `run.ai/simulated-gpu-utilization` annotation to the pod with a value representing the desired range of GPU utilization.
-For example, add `run.ai/simulated-gpu-utilization: 10-30` to simulate a pod that utilizes between 10% and 30% of the GPU.
-
-## nvidia-smi
-
-The `nvidia-smi` command is a tool that provides information about the NVIDIA GPU. It is used to monitor and manage the GPU resources in a Kubernetes cluster.
-
-Fake GPU Operator injects a fake `nvidia-smi` tool to GPU pods that simulates the real `nvidia-smi` tool.
-
-The fake `nvidia-smi` tool requires the `NODE_NAME` environment variable to be set.
-This can be done by adding the following to the pod's container spec:
-
-```
+```yaml
 env:
   - name: NODE_NAME
     valueFrom:
       fieldRef:
         fieldPath: spec.nodeName
 ```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📝 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 🙋 Support
+
+- 📚 [Documentation](https://docs.run.ai)
+- 🐛 [Issue Tracker](https://github.com/run-ai/fake-gpu-operator/issues)
+- 💬 [Community Discussions](https://github.com/run-ai/fake-gpu-operator/discussions)
+
+---
+
+<div align="center">
+Created with ❤️ by <a href="https://run.ai">Run:ai</a>
+</div>
