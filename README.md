@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Releases](https://img.shields.io/github/v/release/run-ai/fake-gpu-operator)](https://github.com/run-ai/fake-gpu-operator/releases)
-[![CI](https://github.com/run-ai/fake-gpu-operator/workflows/CI/badge.svg)](https://github.com/run-ai/fake-gpu-operator/actions)
+[![CI](https://github.com/run-ai/fake-gpu-operator/actions/workflows/ci.yml/badge.svg)](https://github.com/run-ai/fake-gpu-operator/actions/workflows/ci.yml)
 
 🎮 Simulate NVIDIA GPUs in Kubernetes without actual hardware
 </div>
