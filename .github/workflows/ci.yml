@@ -142,4 +142,4 @@ jobs:
           helm plugin install https://github.com/chartmuseum/helm-push.git
           helm repo add fake-gpu-operator ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.vars.outputs.REPO }} --username ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }}
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
-          helm push fake-gpu-operator-*.tgz fake-gpu-operator
+          helm cm-push fake-gpu-operator-*.tgz fake-gpu-operator
