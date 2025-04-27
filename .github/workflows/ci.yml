@@ -138,5 +138,5 @@ jobs:
         uses: azure/setup-helm@v4.3.0
       - name: Build and push helm
         run: |
-          helm package charts/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
+          helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
           helm push fake-gpu-operator-*.tgz ${{ steps.vars.outputs.REPO }}/fake-gpu-operator
