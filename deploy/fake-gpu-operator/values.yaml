@@ -4,8 +4,8 @@ environment:
 devicePlugin:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-staging/fake-gpu-operator/device-plugin
-    tag: 0.0.1
+    repository: runai.jfrog.io/fake-gpu-operator-charts-prod/device-plugin
+    tag: ""
   resources: 
     requests:
       cpu: "100m"
@@ -17,8 +17,8 @@ devicePlugin:
 statusUpdater:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-staging/fake-gpu-operator/status-updater
-    tag: 0.0.1
+    repository: runai.jfrog.io/fake-gpu-operator-charts-prod/status-updater
+    tag: ""
   resources: 
     requests:
       cpu: "200m"
@@ -30,8 +30,8 @@ statusUpdater:
 topologyServer:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-staging/fake-gpu-operator/topology-server
-    tag: 0.0.1
+    repository: runai.jfrog.io/fake-gpu-operator-charts-prod/topology-server
+    tag: ""
   resources: 
     requests:
       cpu: "100m"
@@ -43,8 +43,8 @@ topologyServer:
 statusExporter:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-staging/fake-gpu-operator/status-exporter
-    tag: 0.0.1
+    repository: runai.jfrog.io/fake-gpu-operator-charts-prod/status-exporter
+    tag: ""
   resources: 
     requests:
       cpu: "100m"
@@ -57,8 +57,8 @@ statusExporter:
 kwokGpuDevicePlugin:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-staging/fake-gpu-operator/kwok-gpu-device-plugin
-    tag: 0.0.1
+    repository: runai.jfrog.io/fake-gpu-operator-charts-prod/kwok-gpu-device-plugin
+    tag: ""
   resources: 
     requests:
       cpu: "100m"
@@ -70,8 +70,8 @@ kwokGpuDevicePlugin:
 migFaker:
   image:
     pullPolicy: Always
-    repository: gcr.io/run-ai-staging/fake-gpu-operator/mig-faker
-    tag: 0.0.1
+    repository: runai.jfrog.io/fake-gpu-operator-charts-prod/mig-faker
+    tag: ""
 
 topology:
   # nodePools is a map of node pool name to node pool configuration.

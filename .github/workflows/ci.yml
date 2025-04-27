@@ -39,78 +39,76 @@ jobs:
       - name: Run lint
         run: make lint
 
-  # GuyDebug
-  # test:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Set up Go
-  #       uses: actions/setup-go@v5
-  #       with:
-  #         go-version: '1.22'
-  #         cache: true
-  #     - name: Run tests
-  #       run: make test
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Run tests
+        run: make test
 
-  # release-docker:
-  #   runs-on: ubuntu-latest
-  #   needs: [lint, test]
-  #   if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-  #   # Matrix of all components to build and push
-  #   strategy:
-  #     matrix:
-  #       component: [
-  #         device-plugin,
-  #         status-updater,
-  #         kwok-gpu-device-plugin,
-  #         status-exporter,
-  #         topology-server,
-  #         mig-faker,
-  #         jupyter-notebook
-  #       ]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Set dynamic variables
-  #       id: vars
-  #       run: |
-  #         if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  #           # Version tag
-  #           echo "REPO=fake-gpu-operator-containers-prod" >> $GITHUB_OUTPUT
-  #           echo "VERSION=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-  #         elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
-  #           # Pull request
-  #           echo "REPO=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
-  #           echo "VERSION=0.0.0-${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
-  #         else
-  #           # Push to main
-  #           echo "REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
-  #           echo "VERSION=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
-  #         fi
-  #     - name: Artifactory login
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
-  #         username: ${{ secrets.ARTIFACTORY_USERNAME }}
-  #         password: ${{ secrets.ARTIFACTORY_TOKEN }}
-  #     - name: Set up QEMU
-  #       uses: docker/setup-qemu-action@v3
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
+  release-docker:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    # Matrix of all components to build and push
+    strategy:
+      matrix:
+        component: [
+          device-plugin,
+          status-updater,
+          kwok-gpu-device-plugin,
+          status-exporter,
+          topology-server,
+          mig-faker,
+          jupyter-notebook
+        ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set dynamic variables
+        id: vars
+        run: |
+          if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # Version tag
+            echo "REPO=fake-gpu-operator-containers-prod" >> $GITHUB_OUTPUT
+            echo "VERSION=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            # Pull request
+            echo "REPO=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
+            echo "VERSION=0.0.0-${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          else
+            # Push to main
+            echo "REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
+            echo "VERSION=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
+          fi
+      - name: Artifactory login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
+          username: ${{ secrets.ARTIFACTORY_USERNAME }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  #     - name: Build and push docker
-  #       uses: docker/build-push-action@v6
-  #       with:
-  #         push: true
-  #         tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.vars.outputs.REPO }}/${{ matrix.component }}:${{ steps.vars.outputs.VERSION }}
-  #         target: ${{ matrix.component }}
-  #         platforms: linux/amd64,linux/arm64
-  #         cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
-  #         cache-to: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache,mode=max
+      - name: Build and push docker
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.vars.outputs.REPO }}/${{ matrix.component }}:${{ steps.vars.outputs.VERSION }}
+          target: ${{ matrix.component }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
+          cache-to: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache,mode=max
 
   release-helm:
     runs-on: ubuntu-latest
-    # GuyDebug
-    # needs: [release-docker]
+    needs: [release-docker]
     steps:
       - uses: actions/checkout@v4
       - name: Set dynamic variables
@@ -134,13 +132,6 @@ jobs:
       - name: Install jfrog cli
         run: |
           curl -fL https://install-cli.jfrog.io | sh
-      # - name: Set tmate session
-      #   uses: mxschmitt/action-tmate@v3
-      #   with:
-      #     secrets: |
-      #       ARTIFACTORY_ENDPOINT: ${{ secrets.ARTIFACTORY_ENDPOINT }}
-      #       ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
-      #       ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Add artifactory repo
         run: |
           jf c add runai --url https://${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false

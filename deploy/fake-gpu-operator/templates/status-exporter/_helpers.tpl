@@ -23,7 +23,7 @@ annotations:
 
 {{- define "fake-gpu-operator.status-exporter.common.podTemplate.spec" -}}
 containers:
-- image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag }}"
+- image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag | default .Chart.AppVersion }}"
   imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
   resources:
     {{- toYaml .Values.statusExporter.resources | nindent 8 }}
