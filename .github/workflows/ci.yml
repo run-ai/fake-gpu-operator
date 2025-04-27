@@ -13,12 +13,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CONTAINER_REGISTRY_TEST: https://runai.jfrog.io/artifactory/fake-gpu-operator-containers-test
-  HELM_REGISTRY_TEST: https://runai.jfrog.io/artifactory/fake-gpu-operator-charts-test
-  CONTAINER_REGISTRY_LAB: https://runai.jfrog.io/artifactory/fake-gpu-operator-containers-lab
-  HELM_REGISTRY_LAB: https://runai.jfrog.io/artifactory/fake-gpu-operator-charts-lab
-
 jobs:
   lint:
     runs-on: ubuntu-latest
