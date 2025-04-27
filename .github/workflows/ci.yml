@@ -139,5 +139,6 @@ jobs:
         uses: azure/setup-helm@v4.3.0
       - name: Build and push helm
         run: |
+          helm repo add fake-gpu-operator ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.vars.outputs.REPO }} --username ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }}
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
-          helm push fake-gpu-operator-*.tgz ${{ steps.vars.outputs.REPO }}/fake-gpu-operator
+          helm push fake-gpu-operator-*.tgz fake-gpu-operator
