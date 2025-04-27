@@ -143,7 +143,7 @@ jobs:
             ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Add artifactory repo
         run: |
-          jf c add runai --url ${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
+          jf c add runai --url https://${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
       - name: Build and push helm
         run: |
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }} --destination fake-gpu-operator.tgz
