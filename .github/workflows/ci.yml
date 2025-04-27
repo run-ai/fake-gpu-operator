@@ -3,6 +3,8 @@ name: CI/CD
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main ]
 
@@ -44,7 +46,7 @@ jobs:
       - name: Run tests
         run: make test
 
-  docker-build-and-push:
+  docker-release:
     runs-on: ubuntu-latest
     needs: [lint, test]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
@@ -61,12 +63,22 @@ jobs:
           jupyter-notebook
         ]
     steps:
+      - name: Calculate Docker Repository
+        id: repo
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            echo "REPO=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} == 'refs/heads/main' ]]; then
+            echo "REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "REPO=fake-gpu-operator-containers-prod" >> $GITHUB_OUTPUT
+          fi
       - name: Docker login
         uses: docker/login-action@v3
         with:
-          registry: ${{ github.event_name == 'pull_request' && env.CONTAINER_REGISTRY_LAB || env.CONTAINER_REGISTRY_TEST }}
-          username: ${{ github.event_name == 'pull_request' && secrets.CONTAINER_REGISTRY_LAB_USERNAME || secrets.CONTAINER_REGISTRY_TEST_USERNAME }}
-          password: ${{ github.event_name == 'pull_request' && secrets.CONTAINER_REGISTRY_LAB_PASSWORD || secrets.CONTAINER_REGISTRY_TEST_PASSWORD }}
+          registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
+          username: ${{ secrets.ARTIFACTORY_USERNAME }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -75,10 +87,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ github.event_name == 'pull_request' && env.CONTAINER_REGISTRY_LAB || env.CONTAINER_REGISTRY_TEST }}/{{ matrix.component }}:${{ github.sha }}
+          tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.repo.outputs.REPO }}/{{ matrix.component }}:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=${{ github.event_name == 'pull_request' && env.CONTAINER_REGISTRY_LAB || env.CONTAINER_REGISTRY_TEST }}/cache/fake-gpu-operator:cache
-          cache-to: type=registry,ref=${{ github.event_name == 'pull_request' && env.CONTAINER_REGISTRY_LAB || env.CONTAINER_REGISTRY_TEST }}/cache/fake-gpu-operator:cache,mode=max
+          cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
+          cache-to: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache,mode=max
 
   # publish-helm-chart:
   #   runs-on: ubuntu-latest
