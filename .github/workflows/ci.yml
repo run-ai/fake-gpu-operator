@@ -112,6 +112,7 @@ jobs:
     # GuyDebug
     # needs: [release-docker]
     steps:
+      - uses: actions/checkout@v4
       - name: Set dynamic variables
         id: vars
         run: |
