@@ -69,7 +69,7 @@ jobs:
         ]
     steps:
       - uses: actions/checkout@v4
-      - name: Calculate Docker Repository and Version
+      - name: Set dynamic variables
         id: vars
         run: |
           # Calculate repository and version based on event type
