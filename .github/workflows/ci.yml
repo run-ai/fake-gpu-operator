@@ -85,9 +85,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # - name: Debug SSH Connection
-      #   uses: mxschmitt/action-tmate@v3
-      #   if: ${{ github.event_name == 'pull_request' }}
+      - name: Debug SSH Connection
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'pull_request' }}
 
       - name: Build and push docker
         uses: docker/build-push-action@v6
