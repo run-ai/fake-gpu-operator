@@ -141,3 +141,15 @@ jobs:
 
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
           jf rt upload "*.tgz" ${{ steps.vars.outputs.REPO }}
+  
+  # In case of a PR, publish a PR comment on the PR with the helm chart version
+  publish-pr-comment:
+    runs-on: ubuntu-latest
+    needs: [release-helm]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish PR comment
+        run: |
+          echo "Helm chart version: ${{ steps.vars.outputs.VERSION }}" >> $GITHUB_OUTPUT
+        
