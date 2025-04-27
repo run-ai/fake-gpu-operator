@@ -129,17 +129,15 @@ jobs:
             echo "REPO=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
             echo "VERSION=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
-      # - name: Artifactory login
-      #   uses: docker/login-action@v3
-      #   with:
-      #     registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
-      #     username: ${{ secrets.ARTIFACTORY_USERNAME }}
-      #     password: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Install helm
         uses: azure/setup-helm@v4.3.0
-      - name: Build and push helm
+      - name: Install jfrog cli
         run: |
           curl -fL https://install-cli.jfrog.io | sh
-          jf c add artifactory --url ${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
-          helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
-          jf rt helm-push --helm-repo-name ${{ steps.vars.outputs.REPO }} --helm-chart-version ${{ steps.vars.outputs.VERSION }} --helm-chart-path deploy/fake-gpu-operator
+      - name: Add artifactory repo
+        run: |
+          jf c add runai --url ${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
+      - name: Build and push helm
+        run: |
+          helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }} --destination fake-gpu-operator.tgz
+          jf rt upload "fake-gpu-operator.tgz" ${{ steps.vars.outputs.REPO }}
