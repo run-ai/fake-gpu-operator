@@ -80,11 +80,11 @@ jobs:
   #         elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
   #           # Pull request
   #           echo "REPO=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
-  #           echo "VERSION=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+  #           echo "VERSION=0.0.0-${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
   #         else
   #           # Push to main
   #           echo "REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
-  #           echo "VERSION=$GITHUB_SHA" >> $GITHUB_OUTPUT
+  #           echo "VERSION=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
   #         fi
   #     - name: Artifactory login
   #       uses: docker/login-action@v3
@@ -123,11 +123,11 @@ jobs:
           elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
             # Pull request
             echo "REPO=fake-gpu-operator-charts-lab" >> $GITHUB_OUTPUT
-            echo "VERSION=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+            echo "VERSION=0.0.0-${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
           else
             # Push to main
             echo "REPO=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
-            echo "VERSION=$GITHUB_SHA" >> $GITHUB_OUTPUT
+            echo "VERSION=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
       - name: Artifactory login
         uses: docker/login-action@v3
