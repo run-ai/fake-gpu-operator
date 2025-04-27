@@ -137,5 +137,7 @@ jobs:
           jf c add runai --url https://${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
       - name: Build and push helm
         run: |
+          sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-charts-prod/repository: ${{ steps.vars.outputs.REPO }}/' deploy/fake-gpu-operator/values.yaml
+
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
           jf rt upload "*.tgz" ${{ steps.vars.outputs.REPO }}
