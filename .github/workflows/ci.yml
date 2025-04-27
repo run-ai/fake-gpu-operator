@@ -129,16 +129,17 @@ jobs:
             echo "REPO=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
             echo "VERSION=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
-      - name: Artifactory login
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
-          username: ${{ secrets.ARTIFACTORY_USERNAME }}
-          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+      # - name: Artifactory login
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
+      #     username: ${{ secrets.ARTIFACTORY_USERNAME }}
+      #     password: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Install helm
         uses: azure/setup-helm@v4.3.0
       - name: Build and push helm
         run: |
+          helm plugin install https://github.com/chartmuseum/helm-push.git
           helm repo add fake-gpu-operator ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.vars.outputs.REPO }} --username ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }}
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
           helm push fake-gpu-operator-*.tgz fake-gpu-operator
