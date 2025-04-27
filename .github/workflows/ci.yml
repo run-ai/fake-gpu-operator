@@ -103,8 +103,8 @@ jobs:
           tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.vars.outputs.REPO }}/${{ matrix.component }}:${{ steps.vars.outputs.VERSION }}
           target: ${{ matrix.component }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
-          cache-to: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   release-helm:
     runs-on: ubuntu-latest
@@ -137,7 +137,7 @@ jobs:
           jf c add runai --url https://${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
       - name: Build and push helm
         run: |
-          sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-charts-prod/repository: ${{ steps.vars.outputs.REPO }}/' deploy/fake-gpu-operator/values.yaml
+          sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-charts-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ steps.vars.outputs.REPO }}/' deploy/fake-gpu-operator/values.yaml
 
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
           jf rt upload "*.tgz" ${{ steps.vars.outputs.REPO }}
