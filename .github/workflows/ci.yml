@@ -57,7 +57,7 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars]
+    needs: [set-release-vars, lint, test]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     # Matrix of all components to build and push
     strategy:
