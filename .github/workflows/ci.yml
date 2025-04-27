@@ -85,7 +85,7 @@ jobs:
             echo "REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
             echo "VERSION=$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
-      - name: Docker login
+      - name: Artifactory login
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
@@ -127,12 +127,14 @@ jobs:
             echo "REPO=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
             echo "VERSION=$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
-      - name: Helm login
-        uses: helm/login-action@v3
+      - name: Artifactory login
+        uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
           username: ${{ secrets.ARTIFACTORY_USERNAME }}
           password: ${{ secrets.ARTIFACTORY_TOKEN }}
+      - name: Install helm
+        uses: azure/setup-helm@v4.3.0
       - name: Build and push helm
         run: |
           helm package charts/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
