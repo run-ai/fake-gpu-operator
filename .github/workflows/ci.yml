@@ -115,15 +115,18 @@ jobs:
         run: |
           if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Version tag
-            echo "REPO=fake-gpu-operator-charts-prod" >> $GITHUB_OUTPUT
+            echo "CONTAINER_REPO=fake-gpu-operator-containers-prod" >> $GITHUB_OUTPUT
+            echo "HELM_REPO=fake-gpu-operator-charts-prod" >> $GITHUB_OUTPUT
             echo "VERSION=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
           elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
             # Pull request
-            echo "REPO=fake-gpu-operator-charts-lab" >> $GITHUB_OUTPUT
+            echo "CONTAINER_REPO=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
+            echo "HELM_REPO=fake-gpu-operator-charts-lab" >> $GITHUB_OUTPUT
             echo "VERSION=0.0.0-${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
           else
             # Push to main
-            echo "REPO=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
+            echo "CONTAINER_REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
+            echo "HELM_REPO=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
             echo "VERSION=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
       - name: Install helm
@@ -136,7 +139,7 @@ jobs:
           jf c add runai --url https://${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
       - name: Build and push helm
         run: |
-          sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-charts-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ steps.vars.outputs.REPO }}/' deploy/fake-gpu-operator/values.yaml
+          sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-containers-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ steps.vars.outputs.CONTAINER_REPO }}/' deploy/fake-gpu-operator/values.yaml
 
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
           jf rt upload "*.tgz" ${{ steps.vars.outputs.REPO }}
