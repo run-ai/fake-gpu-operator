@@ -142,5 +142,5 @@ jobs:
           sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-containers-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ steps.vars.outputs.CONTAINER_REPO }}/' deploy/fake-gpu-operator/values.yaml
 
           helm package deploy/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
-          jf rt upload "*.tgz" ${{ steps.vars.outputs.REPO }}
+          jf rt upload "*.tgz" ${{ steps.vars.outputs.HELM_REPO }}
 
