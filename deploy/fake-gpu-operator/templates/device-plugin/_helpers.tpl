@@ -26,7 +26,7 @@ labels:
 
 {{- define "fake-gpu-operator.device-plugin.common.podTemplate.spec" }}
 containers:
-  - image: "{{ .Values.devicePlugin.image.repository }}:{{ .Values.devicePlugin.image.tag }}"
+  - image: "{{ .Values.devicePlugin.image.repository }}:{{ .Values.devicePlugin.image.tag | default .Chart.AppVersion }}"
     imagePullPolicy: "{{ .Values.devicePlugin.image.pullPolicy }}"
     resources:
       {{- toYaml .Values.devicePlugin.resources | nindent 12 }}
