@@ -7,6 +7,11 @@ on:
       - 'v*'
   pull_request:
     branches: [ main ]
+    types: [opened, synchronize]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CONTAINER_REGISTRY_TEST: https://runai.jfrog.io/artifactory/fake-gpu-operator-containers-test
@@ -84,10 +89,6 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      # - name: Debug SSH Connection
-      #   uses: mxschmitt/action-tmate@v3
-      #   if: ${{ github.event_name == 'pull_request' }}
 
       - name: Build and push docker
         uses: docker/build-push-action@v6
