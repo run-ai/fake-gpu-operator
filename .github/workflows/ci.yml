@@ -54,7 +54,7 @@ jobs:
   set-release-vars:
     needs: [lint, test]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/set-dynamic-vars.yml
+    uses: ./.github/workflows/set-release-vars.yml
 
   release-docker:
     runs-on: ubuntu-latest
