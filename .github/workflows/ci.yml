@@ -105,8 +105,6 @@ jobs:
         with:
           cache-source: go-build-cache
 
-
-
       - name: Build and push docker
         uses: docker/build-push-action@v6
         with:
