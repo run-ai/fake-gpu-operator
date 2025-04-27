@@ -51,14 +51,14 @@ jobs:
       - name: Run tests
         run: make test
 
-  set-vars:
+  set-release-vars:
     needs: [lint, test]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/internal/set-dynamic-vars.yml
+    uses: ./.github/workflows/set-dynamic-vars.yml
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-vars]
+    needs: [set-release-vars]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     # Matrix of all components to build and push
     strategy:
@@ -88,7 +88,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ needs.set-vars.outputs.container_repo }}/${{ matrix.component }}:${{ needs.set-vars.outputs.version }}
+          tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ needs.set-release-vars.outputs.container_repo }}/${{ matrix.component }}:${{ needs.set-release-vars.outputs.version }}
           target: ${{ matrix.component }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
@@ -96,7 +96,7 @@ jobs:
 
   release-helm:
     runs-on: ubuntu-latest
-    needs: [release-docker, set-vars]
+    needs: [release-docker, set-release-vars]
     steps:
       - uses: actions/checkout@v4
       - name: Install helm
@@ -111,6 +111,6 @@ jobs:
         run: |
           sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-containers-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ needs.set-vars.outputs.container_repo }}/' deploy/fake-gpu-operator/values.yaml
 
-          helm package deploy/fake-gpu-operator --version ${{ needs.set-vars.outputs.version }} --app-version ${{ needs.set-vars.outputs.version }}
-          jf rt upload "*.tgz" ${{ needs.set-vars.outputs.helm_repo }}
+          helm package deploy/fake-gpu-operator --version ${{ needs.set-release-vars.outputs.version }} --app-version ${{ needs.set-release-vars.outputs.version }}
+          jf rt upload "*.tgz" ${{ needs.set-release-vars.outputs.helm_repo }}
 

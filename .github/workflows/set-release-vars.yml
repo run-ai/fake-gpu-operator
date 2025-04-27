@@ -1,4 +1,4 @@
-name: "[Internal] Set Dynamic Variables"
+name: "[Internal] Set Release Variables"
 
 on:
   workflow_call:
@@ -14,14 +14,14 @@ on:
         value: ${{ jobs.set-vars.outputs.version }}
 
 jobs:
-  set-vars:
+  set-release-vars:
     runs-on: ubuntu-latest
     outputs:
       container_repo: ${{ steps.vars.outputs.container_repo }}
       helm_repo: ${{ steps.vars.outputs.helm_repo }}
       version: ${{ steps.vars.outputs.version }}
     steps:
-      - name: Set dynamic variables
+      - name: Set release variables
         id: vars
         run: |
           if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
