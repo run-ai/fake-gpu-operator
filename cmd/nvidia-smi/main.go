@@ -40,8 +40,14 @@ func main() {
 		fmt.Println("Debug mode enabled")
 	}
 
-	os.Setenv(constants.EnvTopologyCmNamespace, "gpu-operator")
-	os.Setenv(constants.EnvTopologyCmName, "topology")
+	err := os.Setenv(constants.EnvTopologyCmNamespace, "gpu-operator")
+	if err != nil {
+		panic(err)
+	}
+	err = os.Setenv(constants.EnvTopologyCmName, "topology")
+	if err != nil {
+		panic(err)
+	}
 
 	if conf.Debug {
 		fmt.Printf("Set topology configmap namespace: %s\n", constants.EnvTopologyCmNamespace)
@@ -135,7 +141,11 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	if err != nil {
 		panic(err)
 	}
-	defer cmdlineFile.Close()
+	defer func() {
+		if err := cmdlineFile.Close(); err != nil {
+			fmt.Printf("Error closing cmdline file: %v\n", err)
+		}
+	}()
 
 	// Read the file
 	cmdlineBytes := make([]byte, 50)

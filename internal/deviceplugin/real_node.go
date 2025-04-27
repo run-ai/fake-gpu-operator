@@ -100,7 +100,9 @@ func (m *RealNodeDevicePlugin) Start() error {
 	if err != nil {
 		return err
 	}
-	conn.Close()
+	if err := conn.Close(); err != nil {
+		return fmt.Errorf("error closing connection: %v", err)
+	}
 
 	return nil
 }
@@ -122,7 +124,11 @@ func (m *RealNodeDevicePlugin) Register(kubeletEndpoint string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("Error closing connection: %v\n", err)
+		}
+	}()
 
 	client := pluginapi.NewRegistrationClient(conn)
 	reqt := &pluginapi.RegisterRequest{

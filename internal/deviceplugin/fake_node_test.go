@@ -19,7 +19,8 @@ var _ = Describe("FakeNodeDevicePlugin.Serve", func() {
 				Name: "node1",
 			},
 		}
-		os.Setenv("NODE_NAME", "node1")
+		err := os.Setenv("NODE_NAME", "node1")
+		Expect(err).ToNot(HaveOccurred())
 
 		fakeClient := fake.NewSimpleClientset(node)
 
@@ -29,7 +30,7 @@ var _ = Describe("FakeNodeDevicePlugin.Serve", func() {
 			otherDevices: map[string]int{"device1": 2},
 		}
 
-		err := fakeNodeDevicePlugin.Serve()
+		err = fakeNodeDevicePlugin.Serve()
 		Expect(err).ToNot(HaveOccurred())
 
 		updateNode, err := fakeClient.CoreV1().Nodes().Get(context.TODO(), "node1", metav1.GetOptions{})
