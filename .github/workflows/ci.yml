@@ -69,15 +69,22 @@ jobs:
         ]
     steps:
       - uses: actions/checkout@v4
-      - name: Calculate Docker Repository
-        id: repo
+      - name: Calculate Docker Repository and Version
+        id: vars
         run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            echo "REPO=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} == 'refs/heads/main' ]]; then
-            echo "REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          # Calculate repository and version based on event type
+          if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # Version tag
             echo "REPO=fake-gpu-operator-containers-prod" >> $GITHUB_OUTPUT
+            echo "VERSION=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            # Pull request
+            echo "REPO=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
+            echo "VERSION=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          else
+            # Push to main
+            echo "REPO=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
+            echo "VERSION=$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
       - name: Docker login
         uses: docker/login-action@v3
@@ -94,7 +101,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.repo.outputs.REPO }}/${{ matrix.component }}:${{ github.sha }}
+          tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ steps.vars.outputs.REPO }}/${{ matrix.component }}:${{ steps.vars.outputs.VERSION }}
           target: ${{ matrix.component }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
