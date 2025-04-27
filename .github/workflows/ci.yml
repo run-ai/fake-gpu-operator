@@ -134,6 +134,13 @@ jobs:
       - name: Install jfrog cli
         run: |
           curl -fL https://install-cli.jfrog.io | sh
+      - name: Set tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          secrets: |
+            ARTIFACTORY_ENDPOINT
+            ARTIFACTORY_USERNAME
+            ARTIFACTORY_TOKEN
       - name: Add artifactory repo
         run: |
           jf c add runai --url ${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
