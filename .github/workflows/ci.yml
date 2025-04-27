@@ -51,7 +51,7 @@ jobs:
       - name: Run tests
         run: make test
 
-  docker-release:
+  release-docker:
     runs-on: ubuntu-latest
     needs: [lint, test]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
@@ -72,7 +72,6 @@ jobs:
       - name: Set dynamic variables
         id: vars
         run: |
-          # Calculate repository and version based on event type
           if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Version tag
             echo "REPO=fake-gpu-operator-containers-prod" >> $GITHUB_OUTPUT
@@ -107,9 +106,34 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
           cache-to: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache,mode=max
 
-  # publish-helm-chart:
-  #   runs-on: ubuntu-latest
-  #   needs: [docker-build-and-push]
-  #   if: github.ref == 'refs/heads/main'
-  #   steps:
-  #     - name: Helm login
+  release-helm:
+    runs-on: ubuntu-latest
+    needs: [release-docker]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Set dynamic variables
+        id: vars
+        run: |
+          if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # Version tag
+            echo "REPO=fake-gpu-operator-charts-prod" >> $GITHUB_OUTPUT
+            echo "VERSION=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            # Pull request
+            echo "REPO=fake-gpu-operator-charts-lab" >> $GITHUB_OUTPUT
+            echo "VERSION=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+          else
+            # Push to main
+            echo "REPO=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
+            echo "VERSION=$GITHUB_SHA" >> $GITHUB_OUTPUT
+          fi
+      - name: Helm login
+        uses: helm/login-action@v3
+        with:
+          registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
+          username: ${{ secrets.ARTIFACTORY_USERNAME }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+      - name: Build and push helm
+        run: |
+          helm package charts/fake-gpu-operator --version ${{ steps.vars.outputs.VERSION }} --app-version ${{ steps.vars.outputs.VERSION }}
+          helm push fake-gpu-operator-*.tgz ${{ steps.vars.outputs.REPO }}/fake-gpu-operator
