@@ -138,9 +138,9 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         with:
           secrets: |
-            ARTIFACTORY_ENDPOINT
-            ARTIFACTORY_USERNAME
-            ARTIFACTORY_TOKEN
+            ARTIFACTORY_ENDPOINT: ${{ secrets.ARTIFACTORY_ENDPOINT }}
+            ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+            ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Add artifactory repo
         run: |
           jf c add runai --url ${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
