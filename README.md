@@ -11,26 +11,26 @@
 
 ## 🚀 Overview
 
-The Fake GPU Operator (GPU Operator Simulator) enables you to simulate NVIDIA GPUs in a Kubernetes cluster without requiring physical GPU hardware. Created by Run:ai, this tool helps developers and testers:
+The Fake GPU Operator is a simple tool that helps simulate NVIDIA GPUs in Kubernetes clusters without physical hardware. It provides basic functionality for developers and testers:
 
-- 💻 Transform CPU-only nodes to simulate one or more virtual GPUs
-- 🔄 Replicate all NVIDIA GPU Operator features including feature discovery and NVIDIA MIG
-- 📊 Generate Prometheus metrics that mirror real GPU behavior
-- 💰 Save costs on GPU hardware for testing and development
+- 💻 Simulate virtual GPUs on CPU-only nodes
+- 🔄 Basic feature discovery and NVIDIA MIG support
+- 📊 Generate Prometheus metrics for GPU monitoring
+- 💰 Reduce hardware costs for testing environments
 
-Perfect for:
-- Development and testing of GPU-dependent applications
-- CI/CD pipelines requiring GPU validation
-- Large-scale testing environments
-- Training and educational purposes
+Use cases include:
+- Testing GPU-dependent applications
+- CI/CD pipeline testing
+- Development environments
+- Learning and experimentation
 
 ## ✨ Features
 
-- **Full GPU Simulation**: Emulate any NVIDIA GPU topology
-- **Metric Generation**: Prometheus metrics that simulate real GPU behavior
-- **MIG Support**: Complete NVIDIA Multi-Instance GPU simulation
-- **Flexible Configuration**: Customize GPU types and memory configurations
-- **nvidia-smi Support**: Simulated nvidia-smi tool for GPU monitoring
+- Basic GPU topology simulation
+- Prometheus metrics generation
+- MIG simulation support
+- Configurable GPU types and memory
+- Basic nvidia-smi simulation
 
 ## 🏃 Quick Start
 
@@ -115,8 +115,6 @@ To ensure proper functionality, configure Pod Security Admission for the gpu-ope
 ```bash
 kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
 ```
-
-## 📊 Monitoring
 
 ### nvidia-smi Support
 
