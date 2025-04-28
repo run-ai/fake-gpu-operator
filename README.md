@@ -138,9 +138,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## 🙋 Support
 
-- 📚 [Documentation](https://docs.run.ai)
 - 🐛 [Issue Tracker](https://github.com/run-ai/fake-gpu-operator/issues)
-- 💬 [Community Discussions](https://github.com/run-ai/fake-gpu-operator/discussions)
 
 ---
 
