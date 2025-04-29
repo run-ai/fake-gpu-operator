@@ -82,10 +82,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and push docker image
-        run: make image SHOULD_PUSH=true DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} DOCKER_TAG=${{ needs.set-release-vars.outputs.release_version }} COMPONENTS=${{ matrix.component }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ env.DOCKER_REGISTRY }}/${{ matrix.component }}:${{ needs.set-release-vars.outputs.release_version }}
+          target: ${{ matrix.component }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,name=${{ matrix.component }}-cache
 
   release-helm:
     runs-on: ubuntu-latest
