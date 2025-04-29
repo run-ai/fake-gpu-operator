@@ -30,7 +30,7 @@ lint: golangci-lint
 
 image:
 	for component in $(COMPONENTS); do \
-		docker buildx --builder=fgo-multi-platform build -t ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG} --target $$component --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .; \
+		docker buildx build -t ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG} --target $$component --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .; \
 	done
 .PHONY: image
 
