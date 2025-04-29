@@ -28,11 +28,7 @@ lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --timeout 5m
 .PHONY: lint
 
-init-buildx:
-	docker buildx inspect fgo-multi-platform > /dev/null || docker buildx create --name=fgo-multi-platform
-.PHONY: init-buildx
-
-image: init-buildx
+image:
 	for component in $(COMPONENTS); do \
 		docker buildx --builder=fgo-multi-platform build -t ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG} --target $$component --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .; \
 	done
