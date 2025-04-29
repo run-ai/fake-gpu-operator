@@ -2,9 +2,7 @@ BUILD_DIR=$(shell pwd)/bin
 COMPONENTS?=device-plugin status-updater kwok-gpu-device-plugin status-exporter topology-server mig-faker jupyter-notebook
 
 DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
-DOCKER_REPO_FULL=${DOCKER_REPO_BASE}/${COMPONENTS}
 DOCKER_TAG?=0.0.0-dev
-DOCKER_IMAGE_NAME=${DOCKER_REPO_FULL}:${DOCKER_TAG}
 NAMESPACE=gpu-operator
 
 SHOULD_PUSH?=false
@@ -36,7 +34,7 @@ init-buildx:
 
 image: init-buildx
 	for component in $(COMPONENTS); do \
-		docker buildx --builder=fgo-multi-platform build -t ${DOCKER_IMAGE_NAME} --target $$component --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .; \
+		docker buildx --builder=fgo-multi-platform build -t ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG} --target $$component --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .; \
 	done
 .PHONY: image
 
