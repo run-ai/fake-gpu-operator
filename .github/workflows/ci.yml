@@ -56,10 +56,10 @@ jobs:
       - name: Set release variables
         id: vars
         run: |
-          if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Version tag
+          if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            # Version tag (including pre-release)
             echo "release_version=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-          else
+          elif [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
             # Push to main
             echo "release_version=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
           fi
