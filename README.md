@@ -43,3 +43,101 @@ Use cases include:
 - kubectl CLI tool
 
 ### 1. Label Your Nodes
+
+```bash
+kubectl label node <node-name> run.ai/simulated-gpu-node-pool=default
+```
+
+### 2. Install the Operator
+
+```bash
+# Install the operator
+helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator --namespace gpu-operator --create-namespace --version <VERSION>
+```
+
+### 3. Deploy a Test Workload
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-pod
+spec:
+  containers:
+  - name: gpu-container
+    image: nvidia/cuda-vector-add:v0.1
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+    env:
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+```
+
+## 🛠️ Configuration
+
+### GPU Topology
+
+Customize GPU configurations in your `values.yaml`:
+
+```yaml
+topology:
+  nodePools:
+    default:
+      gpus:
+        - type: "Tesla K80"
+          memory: "12GB"
+          count: 2
+```
+
+### GPU Utilization
+
+Control GPU utilization metrics with pod annotations:
+
+```yaml
+metadata:
+  annotations:
+    run.ai/simulated-gpu-utilization: "10-30"  # Simulate 10-30% GPU usage
+```
+
+## 🔍 Troubleshooting
+
+### Pod Security Admission
+
+To ensure proper functionality, configure Pod Security Admission for the gpu-operator namespace:
+
+```bash
+kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
+```
+
+### nvidia-smi Support
+
+The operator injects a simulated `nvidia-smi` tool into GPU pods. Ensure your pods include the required environment variable:
+
+```yaml
+env:
+  - name: NODE_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: spec.nodeName
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📝 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 🙋 Support
+
+- 🐛 [Issue Tracker](https://github.com/run-ai/fake-gpu-operator/issues)
+
+---
+
+<div align="center">
+Created with ❤️ by <a href="https://run.ai">Run:ai</a>
+</div>
