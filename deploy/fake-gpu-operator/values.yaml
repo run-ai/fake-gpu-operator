@@ -4,7 +4,7 @@ environment:
 devicePlugin:
   image:
     pullPolicy: Always
-    repository: runai.jfrog.io/fake-gpu-operator-containers-prod/device-plugin
+    repository: ghcr.io/run-ai/fake-gpu-operator/device-plugin
     tag: ""
   resources: 
     requests:
@@ -17,7 +17,7 @@ devicePlugin:
 statusUpdater:
   image:
     pullPolicy: Always
-    repository: runai.jfrog.io/fake-gpu-operator-containers-prod/status-updater
+    repository: ghcr.io/run-ai/fake-gpu-operator/status-updater
     tag: ""
   resources: 
     requests:
@@ -30,7 +30,7 @@ statusUpdater:
 topologyServer:
   image:
     pullPolicy: Always
-    repository: runai.jfrog.io/fake-gpu-operator-containers-prod/topology-server
+    repository: ghcr.io/run-ai/fake-gpu-operator/topology-server
     tag: ""
   resources: 
     requests:
@@ -43,7 +43,7 @@ topologyServer:
 statusExporter:
   image:
     pullPolicy: Always
-    repository: runai.jfrog.io/fake-gpu-operator-containers-prod/status-exporter
+    repository: ghcr.io/run-ai/fake-gpu-operator/status-exporter
     tag: ""
   resources: 
     requests:
@@ -57,7 +57,7 @@ statusExporter:
 kwokGpuDevicePlugin:
   image:
     pullPolicy: Always
-    repository: runai.jfrog.io/fake-gpu-operator-containers-prod/kwok-gpu-device-plugin
+    repository: ghcr.io/run-ai/fake-gpu-operator/kwok-gpu-device-plugin
     tag: ""
   resources: 
     requests:
@@ -70,7 +70,7 @@ kwokGpuDevicePlugin:
 migFaker:
   image:
     pullPolicy: Always
-    repository: runai.jfrog.io/fake-gpu-operator-containers-prod/mig-faker
+    repository: ghcr.io/run-ai/fake-gpu-operator/mig-faker
     tag: ""
 
 topology:
