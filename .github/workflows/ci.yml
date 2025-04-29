@@ -105,6 +105,12 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build
         run: |
           helm package deploy/fake-gpu-operator -d ./charts --version ${{ needs.set-release-vars.outputs.version }} --app-version ${{ needs.set-release-vars.outputs.version }}
