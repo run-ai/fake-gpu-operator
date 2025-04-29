@@ -19,9 +19,10 @@ const (
 
 	GpuResourceName = "nvidia.com/gpu"
 
-	EnvFakeNode            = "FAKE_NODE"
-	EnvNodeName            = "NODE_NAME"
-	EnvTopologyCmName      = "TOPOLOGY_CM_NAME"
-	EnvTopologyCmNamespace = "TOPOLOGY_CM_NAMESPACE"
-	EnvFakeGpuOperatorNs   = "FAKE_GPU_OPERATOR_NAMESPACE"
+	EnvFakeNode                     = "FAKE_NODE"
+	EnvNodeName                     = "NODE_NAME"
+	EnvTopologyCmName               = "TOPOLOGY_CM_NAME"
+	EnvTopologyCmNamespace          = "TOPOLOGY_CM_NAMESPACE"
+	EnvFakeGpuOperatorNs            = "FAKE_GPU_OPERATOR_NAMESPACE"
+	EnvResourceReservationNamespace = "RESOURCE_RESERVATION_NAMESPACE"
 )

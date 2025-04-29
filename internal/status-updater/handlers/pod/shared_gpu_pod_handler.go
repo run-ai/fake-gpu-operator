@@ -7,12 +7,14 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
+	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 )
 
 func (p *PodHandler) handleSharedGpuPodAddition(pod *v1.Pod, nodeTopology *topology.NodeTopology) error {
@@ -150,5 +152,6 @@ func getMatchingReservationPodNameByRunaiGpuGroupLabel(kubeclient kubernetes.Int
 }
 
 func getNodeReservationPods(kubeclient kubernetes.Interface, nodeName string) (*v1.PodList, error) {
-	return kubeclient.CoreV1().Pods(constants.ReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
+	resourceReservationNs := viper.GetString(constants.EnvResourceReservationNamespace)
+	return kubeclient.CoreV1().Pods(resourceReservationNs).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.nodeName=" + nodeName})
 }

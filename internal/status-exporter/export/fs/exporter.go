@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/spf13/viper"
+
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
@@ -14,7 +16,8 @@ import (
 )
 
 type FsExporter struct {
-	topologyChan <-chan *topology.NodeTopology
+	topologyChan          <-chan *topology.NodeTopology
+	resourceReservationNs string
 }
 
 var _ export.Interface = &FsExporter{}
@@ -24,7 +27,8 @@ func NewFsExporter(watcher watch.Interface) *FsExporter {
 	watcher.Subscribe(topologyChan)
 
 	return &FsExporter{
-		topologyChan: topologyChan,
+		topologyChan:          topologyChan,
+		resourceReservationNs: viper.GetString(constants.EnvResourceReservationNamespace),
 	}
 }
 
@@ -40,11 +44,11 @@ func (e *FsExporter) Run(stopCh <-chan struct{}) {
 }
 
 func (e *FsExporter) export(nodeTopology *topology.NodeTopology) {
-	exportPods(nodeTopology)
+	exportPods(nodeTopology, e.resourceReservationNs)
 	exportEvents()
 }
 
-func exportPods(nodeTopology *topology.NodeTopology) {
+func exportPods(nodeTopology *topology.NodeTopology, resourceReservationNs string) {
 	podProcDir := "/runai/proc/pod"
 	if err := os.RemoveAll(podProcDir); err != nil {
 		log.Printf("Failed deleting %s directory: %s", podProcDir, err.Error())
@@ -52,7 +56,7 @@ func exportPods(nodeTopology *topology.NodeTopology) {
 
 	for gpuIdx, gpu := range nodeTopology.Gpus {
 		// Ignoring pods that are not supposed to be seen by runai-container-toolkit
-		if gpu.Status.AllocatedBy.Namespace != constants.ReservationNs {
+		if gpu.Status.AllocatedBy.Namespace != resourceReservationNs {
 			continue
 		}
 

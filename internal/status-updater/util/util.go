@@ -1,9 +1,11 @@
 package util
 
 import (
-	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 )
 
 func IsSharedGpuPod(pod *v1.Pod) bool {
@@ -31,5 +33,6 @@ func IsPodScheduled(pod *v1.Pod) bool {
 }
 
 func IsGpuReservationPod(pod *v1.Pod) bool {
-	return pod.Namespace == constants.ReservationNs
+	resourceReservationNs := viper.GetString(constants.EnvResourceReservationNamespace)
+	return pod.Namespace == resourceReservationNs
 }

@@ -1,5 +1,6 @@
 environment:
   openshift: false
+  resourceReservationNamespace: runai-reservation
 
 devicePlugin:
   image:

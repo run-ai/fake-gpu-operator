@@ -9,8 +9,9 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/mitchellh/mapstructure"
-	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/spf13/viper"
+
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 )
 
 type AppRunner struct {
@@ -98,4 +99,5 @@ func bindStruct(input interface{}) error {
 func setDefaults() {
 	viper.SetDefault(constants.EnvTopologyCmName, "topology")
 	viper.SetDefault(constants.EnvTopologyCmNamespace, "gpu-operator")
+	viper.SetDefault(constants.EnvResourceReservationNamespace, "runai-reservation")
 }
