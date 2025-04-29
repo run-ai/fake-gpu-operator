@@ -91,9 +91,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+          key: ${{ runner.os }}-buildx-${{ matrix.component }}
       - name: Build and push docker image
         run: make image SHOULD_PUSH=true DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} DOCKER_TAG=${{ needs.set-release-vars.outputs.version }} COMPONENTS=${{ matrix.component }}
 
