@@ -58,10 +58,10 @@ jobs:
         run: |
           if [[ ${{ github.ref }} =~ ^refs/tags/ ]]; then
             # Version tag
-            echo "release_version=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+            echo "release_version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
           elif [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
             # Push to main
-            echo "release_version=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
+            echo "release_version=0.0.0-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           fi
 
   release-docker:
