@@ -40,13 +40,13 @@ Use cases include:
 - Helm 3.x
 - kubectl CLI tool
 
-1. Label Your Nodes
+### 1. Label Your Nodes
 
 ```bash
 kubectl label node <node-name> run.ai/simulated-gpu-node-pool=default
 ```
 
-2. Install the Operator
+### 2. Install the Operator
 
 ```bash
 # Add the Helm repository
@@ -59,7 +59,7 @@ helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator \
   --create-namespace
 ```
 
-3. Deploy a Test Workload
+### 3. Deploy a Test Workload
 
 ```yaml
 apiVersion: v1
