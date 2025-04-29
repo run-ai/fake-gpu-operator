@@ -13,6 +13,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOCKER_REGISTRY: "ghcr.io/runai/fake-gpu-operator"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -60,73 +63,53 @@ jobs:
             echo "container_repo=fake-gpu-operator-containers-prod" >> $GITHUB_OUTPUT
             echo "helm_repo=fake-gpu-operator-charts-prod" >> $GITHUB_OUTPUT
             echo "version=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            # Pull request
-            echo "container_repo=fake-gpu-operator-containers-lab" >> $GITHUB_OUTPUT
-            echo "helm_repo=fake-gpu-operator-charts-lab" >> $GITHUB_OUTPUT
-            echo "version=0.0.0-${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
           else
             # Push to main
             echo "container_repo=fake-gpu-operator-containers-test" >> $GITHUB_OUTPUT
             echo "helm_repo=fake-gpu-operator-charts-test" >> $GITHUB_OUTPUT
             echo "version=0.0.0-$GITHUB_SHA" >> $GITHUB_OUTPUT
-          fi 
+          fi
 
 
-  release-docker:
+  release:
     runs-on: ubuntu-latest
     needs: [set-release-vars, lint, test]
-    # Matrix of all components to build and push
-    strategy:
-      matrix:
-        component: [
-          device-plugin,
-          status-updater,
-          kwok-gpu-device-plugin,
-          status-exporter,
-          topology-server,
-          mig-faker,
-          jupyter-notebook
-        ]
     steps:
       - uses: actions/checkout@v4
-      - name: Artifactory login
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.ARTIFACTORY_ENDPOINT }}
-          username: ${{ secrets.ARTIFACTORY_USERNAME }}
-          password: ${{ secrets.ARTIFACTORY_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build and push docker
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: ${{ secrets.ARTIFACTORY_ENDPOINT }}/${{ needs.set-release-vars.outputs.container_repo }}/${{ matrix.component }}:${{ needs.set-release-vars.outputs.version }}
-          target: ${{ matrix.component }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache
-          cache-to: type=registry,ref=${{ secrets.ARTIFACTORY_ENDPOINT }}/cache/fake-gpu-operator:cache,mode=max
-
-  release-helm:
-    runs-on: ubuntu-latest
-    needs: [release-docker, set-release-vars]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install helm
-        uses: azure/setup-helm@v4.3.0
-      - name: Install jfrog cli
-        run: |
-          curl -fL https://install-cli.jfrog.io | sh
-      - name: Add artifactory repo
-        run: |
-          jf c add runai --url https://${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
-      - name: Build and push helm
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
+      - name: Build and push docker image
+        run: make image SHOULD_PUSH=true DOCKER_REPO_BASE=ghcr.io/runai/fake-gpu-operator DOCKER_TAG=${{ needs.set-release-vars.outputs.version }}
+      - name: Build and push helm chart
         run: |
           sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-containers-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ needs.set-release-vars.outputs.container_repo }}/' deploy/fake-gpu-operator/values.yaml
-
           helm package deploy/fake-gpu-operator --version ${{ needs.set-release-vars.outputs.version }} --app-version ${{ needs.set-release-vars.outputs.version }}
           jf rt upload "*.tgz" ${{ needs.set-release-vars.outputs.helm_repo }}
+
+  # release-helm:
+  #   runs-on: ubuntu-latest
+  #   needs: [release-docker, set-release-vars]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install helm
+  #       uses: azure/setup-helm@v4.3.0
+  #     - name: Install jfrog cli
+  #       run: |
+  #         curl -fL https://install-cli.jfrog.io | sh
+  #     - name: Add artifactory repo
+  #       run: |
+  #         jf c add runai --url https://${{ secrets.ARTIFACTORY_ENDPOINT }} --user ${{ secrets.ARTIFACTORY_USERNAME }} --password ${{ secrets.ARTIFACTORY_TOKEN }} --interactive=false
+  #     - name: Build and push helm
+  #       run: |
+  #         sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-containers-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ needs.set-release-vars.outputs.container_repo }}/' deploy/fake-gpu-operator/values.yaml
+  #         helm package deploy/fake-gpu-operator --version ${{ needs.set-release-vars.outputs.version }} --app-version ${{ needs.set-release-vars.outputs.version }}
+  #         jf rt upload "*.tgz" ${{ needs.set-release-vars.outputs.helm_repo }}
 
