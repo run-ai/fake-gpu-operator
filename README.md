@@ -49,14 +49,8 @@ kubectl label node <node-name> run.ai/simulated-gpu-node-pool=default
 ### 2. Install the Operator
 
 ```bash
-# Add the Helm repository
-helm repo add fake-gpu-operator https://runai.jfrog.io/artifactory/api/helm/fake-gpu-operator-charts-prod --force-update
-helm repo update
-
 # Install the operator
-helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator \
-  --namespace gpu-operator \
-  --create-namespace
+helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator --namespace gpu-operator --create-namespace --version <VERSION>
 ```
 
 ### 3. Deploy a Test Workload
