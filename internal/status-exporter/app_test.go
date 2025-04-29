@@ -2,6 +2,7 @@ package status_exporter_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"testing"
@@ -103,11 +104,21 @@ func setupConfig() {
 }
 
 func setupEnvs() {
-	os.Setenv(constants.EnvTopologyCmName, topologyCmName)
-	os.Setenv(constants.EnvTopologyCmNamespace, topologyCmNamespace)
-	os.Setenv(constants.EnvNodeName, nodeName)
-	os.Setenv("KUBERNETES_SERVICE_HOST", "fake-k8s-service-host")
-	os.Setenv("KUBERNETES_SERVICE_PORT", "fake-k8s-service-port")
+	if err := os.Setenv(constants.EnvTopologyCmName, topologyCmName); err != nil {
+		panic(fmt.Sprintf("Failed to set topology CM name: %v", err))
+	}
+	if err := os.Setenv(constants.EnvTopologyCmNamespace, topologyCmNamespace); err != nil {
+		panic(fmt.Sprintf("Failed to set topology CM namespace: %v", err))
+	}
+	if err := os.Setenv(constants.EnvNodeName, nodeName); err != nil {
+		panic(fmt.Sprintf("Failed to set node name: %v", err))
+	}
+	if err := os.Setenv("KUBERNETES_SERVICE_HOST", "fake-k8s-service-host"); err != nil {
+		panic(fmt.Sprintf("Failed to set k8s service host: %v", err))
+	}
+	if err := os.Setenv("KUBERNETES_SERVICE_PORT", "fake-k8s-service-port"); err != nil {
+		panic(fmt.Sprintf("Failed to set k8s service port: %v", err))
+	}
 }
 
 func getNodeLabelsFromKube(kubeclient kubernetes.Interface) func() (map[string]string, error) {

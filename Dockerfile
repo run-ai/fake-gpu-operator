@@ -10,36 +10,36 @@ ARG TARGETOS TARGETARCH
 FROM common-builder AS device-plugin-builder
 COPY ./cmd/device-plugin/ ./cmd/device-plugin/
 COPY ./internal/deviceplugin/ ./internal/deviceplugin/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENT=device-plugin
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=device-plugin
 
 FROM common-builder AS status-updater-builder
 COPY ./cmd/status-updater/ ./cmd/status-updater/
 COPY ./internal/status-updater/ ./internal/status-updater/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENT=status-updater
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=status-updater
 
 FROM common-builder AS kwok-gpu-device-plugin-builder
 COPY ./cmd/kwok-gpu-device-plugin/ ./cmd/kwok-gpu-device-plugin/
 COPY ./internal/status-updater/ ./internal/status-updater/
 COPY ./internal/kwok-gpu-device-plugin/ ./internal/kwok-gpu-device-plugin/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENT=kwok-gpu-device-plugin
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=kwok-gpu-device-plugin
 
 FROM common-builder AS status-exporter-builder
 COPY ./cmd/status-exporter/ ./cmd/status-exporter/
 COPY ./internal/ ./internal/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENT=status-exporter
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=status-exporter
 
 FROM common-builder AS topology-server-builder
 COPY ./cmd/topology-server/ ./cmd/topology-server/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENT=topology-server
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=topology-server
 
 FROM common-builder AS nvidia-smi-builder
 COPY ./cmd/nvidia-smi/ ./cmd/nvidia-smi/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENT=nvidia-smi
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=nvidia-smi
 
 FROM common-builder AS mig-faker-builder
 COPY ./cmd/mig-faker/ ./cmd/mig-faker/
 COPY ./internal/ ./internal/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENT=mig-faker
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=mig-faker
 
 FROM common-builder AS preloader-builder 
 COPY ./cmd/preloader/ ./cmd/preloader/

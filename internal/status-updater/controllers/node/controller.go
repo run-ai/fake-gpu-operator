@@ -151,7 +151,7 @@ func (c *NodeController) pruneTopologyConfigMap(cm *v1.ConfigMap, isValidNodeTop
 		}
 	}
 
-	nodeName, ok := cm.ObjectMeta.Labels[constants.LabelTopologyCMNodeName]
+	nodeName, ok := cm.Labels[constants.LabelTopologyCMNodeName]
 	if !ok {
 		return fmt.Errorf("node topology cm %s does not have node name label", cm.Name)
 	}

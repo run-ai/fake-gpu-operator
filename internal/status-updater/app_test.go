@@ -494,8 +494,12 @@ func setupConfig() {
 }
 
 func setupEnvs() {
-	os.Setenv(constants.EnvTopologyCmName, "fake-cm-name")
-	os.Setenv(constants.EnvTopologyCmNamespace, "fake-cm-namespace")
+	if err := os.Setenv(constants.EnvTopologyCmName, "fake-cm-name"); err != nil {
+		panic(fmt.Sprintf("Failed to set topology CM name: %v", err))
+	}
+	if err := os.Setenv(constants.EnvTopologyCmNamespace, "fake-cm-namespace"); err != nil {
+		panic(fmt.Sprintf("Failed to set topology CM namespace: %v", err))
+	}
 }
 
 func createTopology(gpuCount int64, nodeName string) *topology.NodeTopology {

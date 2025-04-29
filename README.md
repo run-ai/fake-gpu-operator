@@ -9,6 +9,8 @@
 🎮 Simulate NVIDIA GPUs in Kubernetes without actual hardware
 </div>
 
+> **Note:** Container images and Helm charts are now available at `ghcr.io/run-ai/fake-gpu-operator`.
+
 ## 🚀 Overview
 
 The Fake GPU Operator is a lightweight tool that simulates NVIDIA GPUs in Kubernetes clusters without requiring physical hardware. It provides basic functionality for developers and testers:
@@ -49,14 +51,7 @@ kubectl label node <node-name> run.ai/simulated-gpu-node-pool=default
 ### 2. Install the Operator
 
 ```bash
-# Add the Helm repository
-helm repo add fake-gpu-operator https://runai.jfrog.io/artifactory/api/helm/fake-gpu-operator-charts-prod --force-update
-helm repo update
-
-# Install the operator
-helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator \
-  --namespace gpu-operator \
-  --create-namespace
+helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator --namespace gpu-operator --create-namespace --version <VERSION>
 ```
 
 ### 3. Deploy a Test Workload

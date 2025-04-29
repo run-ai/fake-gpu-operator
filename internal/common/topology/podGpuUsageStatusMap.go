@@ -43,7 +43,11 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 		log.Printf("Error: %v\n", err)
 		return 0
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			log.Printf("Error closing response body: %v\n", err)
+		}
+	}()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {

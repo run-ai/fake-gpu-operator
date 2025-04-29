@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: topology-server
-          image: "{{ .Values.topologyServer.image.repository }}:{{ .Values.topologyServer.image.tag }}"
+          image: "{{ .Values.topologyServer.image.repository }}:{{ .Values.topologyServer.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: "{{ .Values.topologyServer.image.pullPolicy }}"
           resources:
             {{- toYaml .Values.topologyServer.resources | nindent 12 }}
