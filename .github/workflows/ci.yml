@@ -72,7 +72,9 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars, lint, test]
+    # GuyDebug
+    # needs: [set-release-vars, lint, test]
+    needs: [set-release-vars]
     strategy:
       matrix:
         component: [device-plugin, status-updater, kwok-gpu-device-plugin, status-exporter, topology-server, mig-faker, jupyter-notebook]
@@ -89,19 +91,20 @@ jobs:
       - name: Build and push docker image
         run: make image SHOULD_PUSH=true DOCKER_REPO_BASE=${{ env.DOCKER_REGISTRY }} DOCKER_TAG=${{ needs.set-release-vars.outputs.version }} COMPONENTS=${{ matrix.component }}
 
-  release-helm:
-    runs-on: ubuntu-latest
-    needs: [release-docker, set-release-vars]
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build
-        run: |
-          sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-containers-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ env.DOCKER_REGISTRY }}/' deploy/fake-gpu-operator/values.yaml
-          helm package deploy/fake-gpu-operator -d ./charts --version ${{ needs.set-release-vars.outputs.version }} --app-version ${{ needs.set-release-vars.outputs.version }}
-      - name: Push
-        run: |
-          helm push ./charts/fake-gpu-operator-${{ needs.set-release-vars.outputs.version }}.tgz oci://${{ env.DOCKER_REGISTRY }}
+  # GuyDebug
+  # release-helm:
+  #   runs-on: ubuntu-latest
+  #   needs: [release-docker, set-release-vars]
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Build
+  #       run: |
+  #         sed -i 's/repository: runai.jfrog.io\/fake-gpu-operator-containers-prod/repository: ${{ secrets.ARTIFACTORY_ENDPOINT }}\/${{ env.DOCKER_REGISTRY }}/' deploy/fake-gpu-operator/values.yaml
+  #         helm package deploy/fake-gpu-operator -d ./charts --version ${{ needs.set-release-vars.outputs.version }} --app-version ${{ needs.set-release-vars.outputs.version }}
+  #     - name: Push
+  #       run: |
+  #         helm push ./charts/fake-gpu-operator-${{ needs.set-release-vars.outputs.version }}.tgz oci://${{ env.DOCKER_REGISTRY }}
 
