@@ -9,7 +9,7 @@
 🎮 Simulate NVIDIA GPUs in Kubernetes without actual hardware
 </div>
 
-> **Note:** We have moved our container images to GitHub Container Registry (GHCR). All images are now available at `ghcr.io/run-ai/fake-gpu-operator/*`. See the [Installation](#installation) section for details.
+> **Note:** Container images and Helm charts are now available at `ghcr.io/run-ai/fake-gpu-operator`.
 
 ## 🚀 Overview
 
