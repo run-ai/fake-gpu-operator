@@ -11,12 +11,12 @@
 
 ## 🚀 Overview
 
-The Fake GPU Operator is a simple tool that helps simulate NVIDIA GPUs in Kubernetes clusters without physical hardware. It provides basic functionality for developers and testers:
+The Fake GPU Operator is a lightweight tool that simulates NVIDIA GPUs in Kubernetes clusters without requiring physical hardware. It provides basic functionality for developers and testers:
 
-- 💻 Simulate virtual GPUs on CPU-only nodes
-- 🔄 Basic feature discovery and NVIDIA MIG support
-- 📊 Generate Prometheus metrics for GPU monitoring
-- 💰 Reduce hardware costs for testing environments
+- Simulates virtual GPUs on CPU-only nodes
+- Supports basic feature discovery and NVIDIA MIG support
+- Generates Prometheus metrics for GPU monitoring
+- Reduces hardware costs for testing environments
 
 Use cases include:
 - Testing GPU-dependent applications
@@ -28,7 +28,7 @@ Use cases include:
 
 - Basic GPU topology simulation
 - Prometheus metrics generation
-- MIG simulation support
+- NVIDIA MIG simulation support
 - Configurable GPU types and memory
 - Basic nvidia-smi simulation
 
@@ -40,13 +40,13 @@ Use cases include:
 - Helm 3.x
 - kubectl CLI tool
 
-### 1. Label Your Nodes
+1. Label Your Nodes
 
 ```bash
 kubectl label node <node-name> run.ai/simulated-gpu-node-pool=default
 ```
 
-### 2. Install the Operator
+2. Install the Operator
 
 ```bash
 # Add the Helm repository
@@ -59,7 +59,7 @@ helm upgrade -i gpu-operator fake-gpu-operator/fake-gpu-operator \
   --create-namespace
 ```
 
-### 3. Deploy a Test Workload
+3. Deploy a Test Workload
 
 ```yaml
 apiVersion: v1
