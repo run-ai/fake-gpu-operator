@@ -14,9 +14,6 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,6 +29,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	status_updater "github.com/run-ai/fake-gpu-operator/internal/status-updater"
 )
 
 const (
@@ -46,6 +46,7 @@ const (
 	podGroupName                = "pg"
 	node                        = "fake-node"
 	nodeGpuCount                = 2
+	resourceReservationNs       = "runai-reservation"
 )
 
 func TestStatusUpdater(t *testing.T) {
@@ -258,12 +259,12 @@ var _ = Describe("StatusUpdater", func() {
 					gpuIdx := 0
 
 					reservationPod := createGpuIdxReservationPod(ptr.To(gpuIdx))
-					_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
+					_, err := kubeclient.CoreV1().Pods(resourceReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 					Expect(err).ToNot(HaveOccurred())
 
 					// Expect the pod to consistently contain the GPU Index annotation
 					Consistently(func() (string, error) {
-						pod, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Get(context.TODO(), reservationPodName, metav1.GetOptions{})
+						pod, err := kubeclient.CoreV1().Pods(resourceReservationNs).Get(context.TODO(), reservationPodName, metav1.GetOptions{})
 						if err != nil {
 							return "", err
 						}
@@ -275,11 +276,11 @@ var _ = Describe("StatusUpdater", func() {
 			When("Gpu Index annotation is not set (post 2.17)", func() {
 				It("should set the GPU Index annotation with the GPU UUID", func() {
 					reservationPod := createGpuIdxReservationPod(nil)
-					_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
+					_, err := kubeclient.CoreV1().Pods(resourceReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 					Expect(err).ToNot(HaveOccurred())
 
 					Eventually(func() (bool, error) {
-						pod, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Get(context.TODO(), reservationPodName, metav1.GetOptions{})
+						pod, err := kubeclient.CoreV1().Pods(resourceReservationNs).Get(context.TODO(), reservationPodName, metav1.GetOptions{})
 						if err != nil {
 							return false, err
 						}
@@ -312,7 +313,7 @@ var _ = Describe("StatusUpdater", func() {
 				expectedTopology = createTopology(nodeGpuCount, node)
 				expectedTopology.Gpus[0].Status.AllocatedBy.Pod = reservationPodName
 				expectedTopology.Gpus[0].Status.AllocatedBy.Container = reservationPodContainerName
-				expectedTopology.Gpus[0].Status.AllocatedBy.Namespace = constants.ReservationNs
+				expectedTopology.Gpus[0].Status.AllocatedBy.Namespace = resourceReservationNs
 				Eventually(getTopologyNodeFromKube(kubeclient, node)).Should(Equal(expectedTopology))
 			}
 			expectTopologyToBeUpdatedWithSharedGpuPod = func() {
@@ -336,7 +337,7 @@ var _ = Describe("StatusUpdater", func() {
 
 				// Test reservation pod handling
 				reservationPod := createGpuIdxReservationPod(ptr.To(gpuIdx))
-				_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
+				_, err := kubeclient.CoreV1().Pods(resourceReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				expectTopologyToBeUpdatedWithReservationPod()
@@ -360,7 +361,7 @@ var _ = Describe("StatusUpdater", func() {
 
 				// Test reservation pod handling
 				reservationPod := createGpuGroupReservationPod(gpuGroup)
-				_, err := kubeclient.CoreV1().Pods(constants.ReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
+				_, err := kubeclient.CoreV1().Pods(resourceReservationNs).Create(context.TODO(), reservationPod, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				expectTopologyToBeUpdatedWithReservationPod()
@@ -500,6 +501,9 @@ func setupEnvs() {
 	if err := os.Setenv(constants.EnvTopologyCmNamespace, "fake-cm-namespace"); err != nil {
 		panic(fmt.Sprintf("Failed to set topology CM namespace: %v", err))
 	}
+	if err := os.Setenv(constants.EnvResourceReservationNamespace, "runai-reservation"); err != nil {
+		panic(fmt.Sprintf("Failed to set resource reservation namespace: %v", err))
+	}
 }
 
 func createTopology(gpuCount int64, nodeName string) *topology.NodeTopology {
@@ -616,7 +620,7 @@ func createBaseReservationPod() *v1.Pod {
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        reservationPodName,
-			Namespace:   constants.ReservationNs,
+			Namespace:   resourceReservationNs,
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
 		},

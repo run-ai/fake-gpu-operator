@@ -39,6 +39,8 @@ containers:
       value: "{{ .Release.Namespace }}"
     - name: TOPOLOGY_MAX_EXPORT_INTERVAL
       value: "{{ .Values.statusExporter.topologyMaxExportInterval }}"
+    - name: RESOURCE_RESERVATION_NAMESPACE
+      value: "{{ .Values.environment.resourceReservationNamespace }}"
   ports:
     - containerPort: 9400
       name: http

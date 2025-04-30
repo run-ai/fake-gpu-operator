@@ -8,7 +8,8 @@ import (
 )
 
 func main() {
-	requiredEnvVars := []string{constants.EnvTopologyCmName, constants.EnvTopologyCmNamespace, constants.EnvFakeGpuOperatorNs}
+	requiredEnvVars := []string{constants.EnvTopologyCmName, constants.EnvTopologyCmNamespace,
+		constants.EnvFakeGpuOperatorNs, constants.EnvResourceReservationNamespace}
 	config.ValidateConfig(requiredEnvVars)
 
 	appRunner := app.NewAppRunner(&status_updater.StatusUpdaterApp{})

@@ -33,6 +33,8 @@ spec:
               value: "{{ .Release.Namespace }}"
             - name: FAKE_GPU_OPERATOR_NAMESPACE
               value: "{{ .Release.Namespace }}"
+            - name: RESOURCE_RESERVATION_NAMESPACE
+              value: "{{ .Values.environment.resourceReservationNamespace }}"
       restartPolicy: Always
       serviceAccountName: status-updater
       imagePullSecrets:
