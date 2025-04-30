@@ -109,7 +109,7 @@ func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
 		return "", fmt.Errorf("pod %s has no constants.PodGroupNameAnnotation annotation", pod.Name)
 	}
 
-	gvr := schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}
+	gvr := schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v2alpha2", Resource: "podgroups"}
 	podGroup, err := dynamicClient.Resource(gvr).Namespace(pod.Namespace).Get(context.TODO(), podGroupName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("error getting podgroup %s: %v", podGroupName, err)

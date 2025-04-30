@@ -88,7 +88,7 @@ var _ = Describe("StatusUpdater", func() {
 
 		kubeclient = kfake.NewSimpleClientset()
 		scheme := runtime.NewScheme()
-		scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "scheduling.run.ai", Version: "v1", Kind: "PodGroup"}, &unstructured.UnstructuredList{})
+		scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "scheduling.run.ai", Version: "v2alpha2", Kind: "PodGroup"}, &unstructured.UnstructuredList{})
 		dynamicClient = dfake.NewSimpleDynamicClient(scheme)
 
 		_, err = kubeclient.CoreV1().ConfigMaps(topologyCmNamespace).Create(context.TODO(), topologyConfigMap, metav1.CreateOptions{})
@@ -177,7 +177,7 @@ var _ = Describe("StatusUpdater", func() {
 						_, err := kubeclient.CoreV1().Pods(podNamespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 						Expect(err).ToNot(HaveOccurred())
 						podGroup := createPodGroup(caseDetails.workloadType)
-						_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+						_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v2alpha2", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
 						Expect(err).ToNot(HaveOccurred())
 
 						expectedTopology := createTopology(nodeGpuCount, node)
@@ -218,7 +218,7 @@ var _ = Describe("StatusUpdater", func() {
 						Expect(err).ToNot(HaveOccurred())
 						workloadType := "train"
 						podGroup := createPodGroup(workloadType)
-						_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+						_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v2alpha2", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
 						Expect(err).ToNot(HaveOccurred())
 
 						expectedTopology := createTopology(nodeGpuCount, node)
@@ -347,7 +347,7 @@ var _ = Describe("StatusUpdater", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				podGroup := createPodGroup("train")
-				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v2alpha2", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				expectTopologyToBeUpdatedWithSharedGpuPod()
@@ -371,7 +371,7 @@ var _ = Describe("StatusUpdater", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				podGroup := createPodGroup("train")
-				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v1", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
+				_, err = dynamicClient.Resource(schema.GroupVersionResource{Group: "scheduling.run.ai", Version: "v2alpha2", Resource: "podgroups"}).Namespace(podNamespace).Create(context.TODO(), podGroup, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
 
 				expectTopologyToBeUpdatedWithSharedGpuPod()
@@ -643,7 +643,7 @@ func createBaseReservationPod() *v1.Pod {
 func createPodGroup(workloadType string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "scheduling.run.ai/v1",
+			"apiVersion": "scheduling.run.ai/v2alpha2",
 			"kind":       "PodGroup",
 			"metadata": map[string]interface{}{
 				"name":      podGroupName,
