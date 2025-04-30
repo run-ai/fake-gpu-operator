@@ -643,7 +643,7 @@ func createBaseReservationPod() *v1.Pod {
 func createPodGroup(workloadType string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "scheduling.run.ai/v1",
+			"apiVersion": "scheduling.run.ai/v2alpha2",
 			"kind":       "PodGroup",
 			"metadata": map[string]interface{}{
 				"name":      podGroupName,
