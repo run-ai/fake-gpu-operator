@@ -2,6 +2,11 @@ environment:
   openshift: false
   resourceReservationNamespace: runai-reservation
 
+ubuntu:
+  image:
+    repository: "ubuntu"
+    tag: "24.04"
+
 devicePlugin:
   image:
     pullPolicy: Always
