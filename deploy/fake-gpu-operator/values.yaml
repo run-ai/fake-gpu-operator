@@ -2,11 +2,6 @@ environment:
   openshift: false
   resourceReservationNamespace: runai-reservation
 
-ubuntu:
-  image:
-    repository: "ubuntu"
-    tag: "24.04"
-
 devicePlugin:
   image:
     pullPolicy: Always
@@ -78,6 +73,11 @@ migFaker:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/mig-faker
     tag: ""
+
+ubuntu:
+  image:
+    repository: "ubuntu"
+    tag: "24.04"
 
 topology:
   # nodePools is a map of node pool name to node pool configuration.
