@@ -122,7 +122,13 @@ jobs:
       - name: Gcloud authentication
         uses: "google-github-actions/auth@v2"
         with:
-          credentials_json: ${{ secrets[format('{0}_STAGING_GCLOUD_SERVICE_JSON_CONTENT')] }}
+          credentials_json: ${{ secrets.STAGING_GCLOUD_SERVICE_JSON_CONTENT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: run-ai-staging
+
       - name: Upload to GCS
         run: | 
           gcloud storage cp ./charts/fake-gpu-operator-${{ needs.set-release-vars.outputs.release_version }}.tgz gs://fake-gpu-operator
