@@ -118,18 +118,13 @@ jobs:
       - name: Push
         run: |
           helm push ./charts/fake-gpu-operator-${{ needs.set-release-vars.outputs.release_version }}.tgz oci://${{ env.DOCKER_REGISTRY }}
-
-      - name: Gcloud authentication
-        uses: "google-github-actions/auth@v2"
-        with:
-          credentials_json: ${{ secrets.STAGING_GCLOUD_SERVICE_JSON_CONTENT }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: run-ai-staging
-
-      - name: Upload to GCS
-        run: | 
-          gcloud storage cp ./charts/fake-gpu-operator-${{ needs.set-release-vars.outputs.release_version }}.tgz gs://fake-gpu-operator
+  sync-chart:
+    needs: [release-helm,set-release-vars,release-docker]
+    uses: run-ai/devops/.github/workflows/sync-fgo-gcs.yaml@master
+    with:
+      chart_name: fake-gpu-operator
+      chart_version: ${{ needs.set-release-vars.outputs.release_version }}
+      gcs_bucket: fake-gpu-operator
+    secrets:
+      GCLOUD_CREDENTIALS_JSON: ${{ secrets.STAGING_GCLOUD_SERVICE_JSON_CONTENT }}
 
