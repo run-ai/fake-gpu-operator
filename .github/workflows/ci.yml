@@ -120,7 +120,7 @@ jobs:
           helm push ./charts/fake-gpu-operator-${{ needs.set-release-vars.outputs.release_version }}.tgz oci://${{ env.DOCKER_REGISTRY }}
   sync-chart:
     needs: [release-helm,set-release-vars,release-docker]
-    uses: run-ai/devops/.github/workflows/sync-fgo-gcs.yaml@master
+    uses: run-ai/internal-actions/.github/workflows/sync-fgo-gcs.yaml@master
     with:
       chart_name: fake-gpu-operator
       chart_version: ${{ needs.set-release-vars.outputs.release_version }}
