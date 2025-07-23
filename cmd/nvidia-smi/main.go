@@ -40,11 +40,14 @@ func main() {
 		fmt.Println("Debug mode enabled")
 	}
 
-	err := os.Setenv(constants.EnvTopologyCmNamespace, "gpu-operator")
-	if err != nil {
-		panic(err)
+	if _, ok := os.LookupEnv(constants.EnvTopologyCmNamespace); !ok {
+		err := os.Setenv(constants.EnvTopologyCmNamespace, "gpu-operator")
+		if err != nil {
+			panic(err)
+		}
 	}
-	err = os.Setenv(constants.EnvTopologyCmName, "topology")
+
+	err := os.Setenv(constants.EnvTopologyCmName, "topology")
 	if err != nil {
 		panic(err)
 	}
@@ -66,7 +69,8 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	// Send http request to topology-server to get the topology
-	topologyUrl := "http://topology-server.gpu-operator/topology/nodes/" + nodeName
+	topologyUrl := fmt.Sprintf("http://topology-server.%s/topology/nodes/%s",
+		os.Getenv(constants.EnvTopologyCmNamespace), nodeName)
 	if conf.Debug {
 		fmt.Printf("Requesting topology from: %s\n", topologyUrl)
 	}

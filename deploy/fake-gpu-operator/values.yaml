@@ -92,3 +92,6 @@ topology:
       gpuMemory: 11441
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: mixed
+
+runtimeClass:
+  name: fake-nvidia
