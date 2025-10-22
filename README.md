@@ -30,7 +30,7 @@ Use cases include:
 
 - Basic GPU topology simulation
 - Prometheus metrics generation
-- NVIDIA MIG simulation support
+- Basic NVIDIA MIG resource scheduling (metrics monitoring not yet supported)
 - Configurable GPU types and memory
 - Basic nvidia-smi simulation
 
