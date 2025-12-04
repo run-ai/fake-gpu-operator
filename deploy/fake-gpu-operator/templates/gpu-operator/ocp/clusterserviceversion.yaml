@@ -1,0 +1,22 @@
+{{- if .Values.environment.openshift }}
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: gpu-operator-fake.{{ .Values.environment.fakeCSVVersion }}
+  namespace: openshift-operator-lifecycle-manager
+spec:
+  description: Represents the fake-gpu-operator
+  displayName: Fake GPU Operator
+  install:
+    strategy: deployment
+  links:
+  - name: Fake GPU Operator
+    url: https://github.com/run-ai/fake-gpu-operator
+  maintainers:
+  - email: support@run.ai
+    name: Run:AI
+  maturity: alpha
+  provider:
+    name: Run:AI
+  version: {{ .Values.environment.fakeCSVVersion }}
+{{- end }}
