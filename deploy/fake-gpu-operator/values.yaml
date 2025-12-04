@@ -1,5 +1,6 @@
 environment:
   openshift: false
+  fakeCSVVersion: 25.10.0
   resourceReservationNamespace: runai-reservation
 
 devicePlugin:
