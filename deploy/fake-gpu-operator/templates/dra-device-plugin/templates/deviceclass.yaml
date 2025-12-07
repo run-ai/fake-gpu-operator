@@ -1,0 +1,10 @@
+{{- if .Values.draPlugin.enabled -}}
+apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
+kind: DeviceClass
+metadata:
+  name: gpu.example.com
+spec:
+  selectors:
+  - cel: 
+      expression: "device.driver == 'gpu.example.com'"
+{{- end -}}

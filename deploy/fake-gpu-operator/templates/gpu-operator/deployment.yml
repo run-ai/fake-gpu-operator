@@ -1,3 +1,4 @@
+{{- if .Values.gpuOperator.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,3 +26,4 @@ spec:
       restartPolicy: Always
       imagePullSecrets:
         - name: gcr-secret
+{{- end -}}

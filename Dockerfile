@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.22.1 AS common-builder
+FROM --platform=$BUILDPLATFORM golang:1.24.0 AS common-builder
 WORKDIR $GOPATH/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
@@ -41,6 +41,10 @@ COPY ./cmd/mig-faker/ ./cmd/mig-faker/
 COPY ./internal/ ./internal/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=mig-faker
 
+FROM common-builder AS dra-plugin-gpu-builder
+COPY ./cmd/dra-plugin-gpu/ ./cmd/dra-plugin-gpu/
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=dra-plugin-gpu
+
 FROM common-builder AS preloader-builder 
 COPY ./cmd/preloader/ ./cmd/preloader/
 RUN make build-preloader
@@ -74,3 +78,8 @@ ENTRYPOINT ["/bin/mig-faker"]
 FROM ubuntu AS kwok-gpu-device-plugin
 COPY --from=kwok-gpu-device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/kwok-gpu-device-plugin /bin/
 ENTRYPOINT ["/bin/kwok-gpu-device-plugin"]
+
+FROM ubuntu AS dra-plugin-gpu
+COPY --from=dra-plugin-gpu-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/dra-plugin-gpu /bin/
+COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
+ENTRYPOINT ["/bin/dra-plugin-gpu"]

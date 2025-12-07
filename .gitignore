@@ -60,3 +60,4 @@ bin/
 .env
 .vscode/
 .local/
+.cursor/

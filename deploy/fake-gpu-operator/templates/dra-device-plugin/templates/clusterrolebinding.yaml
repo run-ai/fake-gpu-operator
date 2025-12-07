@@ -1,0 +1,15 @@
+{{- if .Values.draPlugin.enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "dra-example-driver.fullname" . }}-role-binding
+  namespace: {{ include "dra-example-driver.namespace" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "dra-example-driver.serviceAccountName" . }}
+  namespace: {{ include "dra-example-driver.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "dra-example-driver.fullname" . }}-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}

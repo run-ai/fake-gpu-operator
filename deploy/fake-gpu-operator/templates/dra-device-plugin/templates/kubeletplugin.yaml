@@ -1,0 +1,153 @@
+{{- if .Values.draPlugin.enabled }}
+{{- $draPlugin := .Values.draPlugin }}
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "dra-example-driver.fullname" . }}-kubeletplugin
+  namespace: {{ include "dra-example-driver.namespace" . }}
+  labels:
+    {{- include "dra-example-driver.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kubeletplugin
+spec:
+  selector:
+    matchLabels:
+      {{- include "dra-example-driver.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kubeletplugin
+
+  {{- with $draPlugin.kubeletPlugin.updateStrategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+  template:
+    metadata:
+      {{- with $draPlugin.kubeletPlugin.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "dra-example-driver.templateLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kubeletplugin
+
+    spec:
+      {{- if $draPlugin.kubeletPlugin.priorityClassName }}
+      priorityClassName: {{ $draPlugin.kubeletPlugin.priorityClassName }}
+      {{- end }}
+
+      {{- with $draPlugin.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      serviceAccountName: {{ include "dra-example-driver.serviceAccountName" . }}
+
+      securityContext:
+        {{- toYaml $draPlugin.kubeletPlugin.podSecurityContext | nindent 8 }}
+
+      initContainers:
+        - name: init-nvidia-smi
+          image: {{ include "dra-example-driver.fullimage" . }}
+          imagePullPolicy: {{ $draPlugin.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              mkdir -p /host/var/lib/runai/bin
+              cp /bin/nvidia-smi /host/var/lib/runai/bin/nvidia-smi
+              chmod 755 /host/var/lib/runai/bin/nvidia-smi
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            capabilities:
+              add:
+                - CHOWN
+                - FOWNER
+                - MKNOD
+          volumeMounts:
+            - name: nvidia-smi-host
+              mountPath: /host
+
+      containers:
+        - name: plugin
+          securityContext:
+            {{- toYaml $draPlugin.kubeletPlugin.containers.plugin.securityContext | nindent 12 }}
+          image: {{ include "dra-example-driver.fullimage" . }}
+          imagePullPolicy: {{ $draPlugin.image.pullPolicy }}
+          command: ["dra-plugin-gpu"]
+          resources:
+            {{- toYaml $draPlugin.kubeletPlugin.containers.plugin.resources | nindent 12 }}
+
+          {{- if (gt (int $draPlugin.kubeletPlugin.containers.plugin.healthcheckPort) 0) }}
+          livenessProbe:
+            grpc:
+              port: {{ $draPlugin.kubeletPlugin.containers.plugin.healthcheckPort }}
+              service: liveness
+            failureThreshold: 3
+            periodSeconds: 10
+          {{- end }}
+
+          env:
+            - name: CDI_ROOT
+              value: /var/run/cdi
+            - name: KUBELET_REGISTRAR_DIRECTORY_PATH
+              value: {{ $draPlugin.kubeletPlugin.kubeletRegistrarDirectoryPath | quote }}
+            - name: KUBELET_PLUGINS_DIRECTORY_PATH
+              value: {{ $draPlugin.kubeletPlugin.kubeletPluginsDirectoryPath | quote }}
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            {{- if $draPlugin.kubeletPlugin.containers.plugin.healthcheckPort }}
+            - name: HEALTHCHECK_PORT
+              value: {{ $draPlugin.kubeletPlugin.containers.plugin.healthcheckPort | quote }}
+            {{- end }}
+
+          volumeMounts:
+            - name: plugins-registry
+              mountPath: {{ $draPlugin.kubeletPlugin.kubeletRegistrarDirectoryPath | quote }}
+            - name: plugins
+              mountPath: {{ $draPlugin.kubeletPlugin.kubeletPluginsDirectoryPath | quote }}
+            - name: cdi
+              mountPath: /var/run/cdi
+            - name: nvidia-smi-host
+              mountPath: /host
+
+      volumes:
+        - name: plugins-registry
+          hostPath:
+            path: {{ $draPlugin.kubeletPlugin.kubeletRegistrarDirectoryPath | quote }}
+
+        - name: plugins
+          hostPath:
+            path: {{ $draPlugin.kubeletPlugin.kubeletPluginsDirectoryPath | quote }}
+
+        - name: cdi
+          hostPath:
+            path: /var/run/cdi
+
+        - name: nvidia-smi-host
+          hostPath:
+            path: /var/lib/runai/bin
+            type: DirectoryOrCreate
+
+      {{- with $draPlugin.kubeletPlugin.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with $draPlugin.kubeletPlugin.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with $draPlugin.kubeletPlugin.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+{{- end }}
