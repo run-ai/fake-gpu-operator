@@ -30,6 +30,8 @@ type RealNodeDevicePlugin struct {
 	server *grpc.Server
 
 	resourceName string
+
+	pluginapi.UnimplementedDevicePluginServer
 }
 
 func getGpuCount(nodeTopology *topology.NodeTopology) int {
@@ -174,7 +176,7 @@ func (m *RealNodeDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.All
 	for _, req := range reqs.ContainerRequests {
 		response := pluginapi.ContainerAllocateResponse{
 			Envs: map[string]string{
-				"MOCK_NVIDIA_VISIBLE_DEVICES": strings.Join(req.DevicesIDs, ","),
+				"MOCK_NVIDIA_VISIBLE_DEVICES": strings.Join(req.DevicesIds, ","),
 			},
 			Mounts: []*pluginapi.Mount{
 				{

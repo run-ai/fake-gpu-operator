@@ -2,13 +2,11 @@ environment:
   openshift: false
   fakeCSVVersion: 25.10.0
   resourceReservationNamespace: runai-reservation
-
 global:
   image:
     pullPolicy: IfNotPresent
     repository: ghcr.io/run-ai/fake-gpu-operator
-    tag: latest
-
+    tag: ""
 devicePlugin:
   image:
     pullPolicy: Always
@@ -16,46 +14,43 @@ devicePlugin:
     # services can define a repository to over take the global setting
     # repository: localhost:5000
     tag: ""
-  resources: 
+  resources:
     requests:
       cpu: "100m"
       memory: "100Mi"
     limits:
       cpu: "200m"
       memory: "200Mi"
-
 statusUpdater:
   image:
     pullPolicy: Always
     name: status-updater
     tag: ""
-  resources: 
+  resources:
     requests:
       cpu: "200m"
       memory: "200Mi"
     limits:
       cpu: "400m"
       memory: "400Mi"
-
 topologyServer:
   image:
     pullPolicy: Always
     name: topology-server
     tag: ""
-  resources: 
+  resources:
     requests:
       cpu: "100m"
       memory: "100Mi"
     limits:
       cpu: "200m"
       memory: "200Mi"
-
 statusExporter:
   image:
     pullPolicy: Always
     name: status-exporter
     tag: ""
-  resources: 
+  resources:
     requests:
       cpu: "100m"
       memory: "100Mi"
@@ -63,31 +58,27 @@ statusExporter:
       cpu: "200m"
       memory: "200Mi"
   topologyMaxExportInterval: 10s
-
 kwokGpuDevicePlugin:
   image:
     pullPolicy: Always
     name: kwok-gpu-device-plugin
     tag: ""
-  resources: 
+  resources:
     requests:
       cpu: "100m"
       memory: "200Mi"
     limits:
       cpu: "200m"
       memory: "400Mi"
-
 migFaker:
   image:
     pullPolicy: Always
     name: mig-faker
     tag: ""
-
 ubuntu:
   image:
     repository: "ubuntu"
     tag: "24.04"
-
 topology:
   # nodePools is a map of node pool name to node pool configuration.
   # Nodes are assigned to node pools based on the node pool label's value (key is configurable via nodePoolLabelKey).
@@ -101,3 +92,16 @@ topology:
       gpuMemory: 11441
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: mixed
+computeDomainController:
+  enabled: true
+  image:
+    pullPolicy: Always
+    name: compute-domain-controller
+    tag: ""
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "200Mi"
+    limits:
+      cpu: "200m"
+      memory: "400Mi"

@@ -1,5 +1,5 @@
 BUILD_DIR=$(shell pwd)/bin
-COMPONENTS?=device-plugin status-updater kwok-gpu-device-plugin status-exporter topology-server mig-faker jupyter-notebook
+COMPONENTS?=device-plugin status-updater kwok-gpu-device-plugin status-exporter topology-server mig-faker jupyter-notebook compute-domain-controller
 
 DOCKER_REPO_BASE?=gcr.io/run-ai-lab/fake-gpu-operator
 DOCKER_TAG?=0.0.0-dev

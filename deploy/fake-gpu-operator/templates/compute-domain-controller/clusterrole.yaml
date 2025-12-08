@@ -1,0 +1,30 @@
+{{- if .Values.computeDomainController.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: compute-domain-controller-role
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups: ["resource.k8s.io"]
+  resources: ["resourceclaims"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+- apiGroups: ["resource.k8s.io"]
+  resources: ["resourceslices"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["resource.nvidia.com"]
+  resources: ["computedomains"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["resource.nvidia.com"]
+  resources: ["computedomains/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["resource.nvidia.com"]
+  resources: ["computedomains/finalizers"]
+  verbs: ["update"]
+- apiGroups: ["resource.k8s.io"]
+  resources: ["resourceclaimtemplates"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+{{- end }}
