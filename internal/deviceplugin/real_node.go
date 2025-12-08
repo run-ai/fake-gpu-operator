@@ -47,11 +47,11 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	c, err := grpc.DialContext(
+	c, err := grpc.DialContext( // nolint: all
 		ctx,
 		unixSocketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+		grpc.WithBlock(), // nolint: all
 		grpc.WithContextDialer(func(_ context.Context, addr string) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
 		}),

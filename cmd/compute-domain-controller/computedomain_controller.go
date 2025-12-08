@@ -99,7 +99,7 @@ func (r *ComputeDomainReconciler) handleDeletion(ctx context.Context, domain *co
 }
 
 func (r *ComputeDomainReconciler) ensureResourceClaimTemplates(ctx context.Context, domain *computedomainv1beta1.ComputeDomain) error {
-	return r.ensureTemplate(ctx, domain, fmt.Sprintf("%s", domain.Name), consts.ComputeDomainWorkloadDeviceClass, "workload")
+	return r.ensureTemplate(ctx, domain, domain.Name, consts.ComputeDomainWorkloadDeviceClass, "workload")
 }
 
 func (r *ComputeDomainReconciler) getAllocationMode(domain *computedomainv1beta1.ComputeDomain) string {
