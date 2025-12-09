@@ -14,7 +14,7 @@ spec:
       {{- include "fake-gpu-operator.status-exporter.common.podTemplate.spec" . | nindent 6 }}
       initContainers:
       - name: hostpath-init
-        image: "{{ .Values.ubuntu.image.repository }}:{{ .Values.ubuntu.image.tag }}"
+        image: {{ include "fake-gpu-operator.fullImageName" (dict "global" .Values.global "component" .Values.statusExporter.image "chart" .Chart) }}
         command: ["/bin/bash", "/hostpath-init/init.sh"]
         volumeMounts:
         - name: runai-data

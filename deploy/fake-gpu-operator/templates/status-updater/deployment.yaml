@@ -22,8 +22,8 @@ spec:
     spec:
       containers:
         - name: status-updater
-          image: "{{ .Values.statusUpdater.image.repository }}:{{ .Values.statusUpdater.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.statusUpdater.image.pullPolicy }}"
+          image: {{ include "fake-gpu-operator.fullImageName" (dict "global" .Values.global "component" .Values.statusUpdater.image "chart" .Chart) }}
+          imagePullPolicy: {{ include "fake-gpu-operator.imagePullPolicy" (dict "global" .Values.global "component" .Values.statusUpdater.image) }}
           resources:
             {{- toYaml .Values.statusUpdater.resources | nindent 12 }}
           env:

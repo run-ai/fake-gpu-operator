@@ -22,8 +22,8 @@ spec:
     spec:
       containers:
         - name: kwok-gpu-device-plugin
-          image: "{{ .Values.kwokGpuDevicePlugin.image.repository }}:{{ .Values.kwokGpuDevicePlugin.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.kwokGpuDevicePlugin.image.pullPolicy }}"
+          image: {{ include "fake-gpu-operator.fullImageName" (dict "global" .Values.global "component" .Values.kwokGpuDevicePlugin.image "chart" .Chart) }}
+          imagePullPolicy: {{ include "fake-gpu-operator.imagePullPolicy" (dict "global" .Values.global "component" .Values.kwokGpuDevicePlugin.image) }}
           resources:
             {{- toYaml .Values.kwokGpuDevicePlugin.resources | nindent 12 }}
           env:

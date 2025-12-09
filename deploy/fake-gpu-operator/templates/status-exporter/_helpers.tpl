@@ -23,8 +23,8 @@ annotations:
 
 {{- define "fake-gpu-operator.status-exporter.common.podTemplate.spec" -}}
 containers:
-- image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag | default .Chart.AppVersion }}"
-  imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
+- image: {{ include "fake-gpu-operator.fullImageName" (dict "global" .Values.global "component" .Values.statusExporter.image "chart" .Chart) }}
+  imagePullPolicy: {{ include "fake-gpu-operator.imagePullPolicy" (dict "global" .Values.global "component" .Values.statusExporter.image) }}
   resources:
     {{- toYaml .Values.statusExporter.resources | nindent 8 }}
   name: nvidia-dcgm-exporter
