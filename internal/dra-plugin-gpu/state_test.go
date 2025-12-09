@@ -166,10 +166,16 @@ func TestDeviceState_Prepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
+	// Use the same checkpoint directory as NewDeviceState would use
+	checkpointDir := config.DriverPluginPath()
 	os.MkdirAll(checkpointDir, 0755)
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
+	require.NoError(t, err)
+
+	// Initialize checkpoint (normally done in NewDeviceState)
+	checkpoint := newCheckpoint()
+	err = checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint)
 	require.NoError(t, err)
 
 	// Create allocatable devices
@@ -186,6 +192,8 @@ func TestDeviceState_Prepare(t *testing.T) {
 		allocatable:       allocatable,
 		checkpointManager: checkpointManager,
 		cdi:               cdi,
+		coreclient:        config.CoreClient,
+		nodeName:          config.Flags.NodeName,
 	}
 
 	tests := map[string]struct {
@@ -281,10 +289,16 @@ func TestDeviceState_Unprepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
+	// Use the same checkpoint directory as NewDeviceState would use
+	checkpointDir := config.DriverPluginPath()
 	os.MkdirAll(checkpointDir, 0755)
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
+	require.NoError(t, err)
+
+	// Initialize checkpoint (normally done in NewDeviceState)
+	checkpoint := newCheckpoint()
+	err = checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint)
 	require.NoError(t, err)
 
 	allocatable := AllocatableDevices{
@@ -300,6 +314,8 @@ func TestDeviceState_Unprepare(t *testing.T) {
 		allocatable:       allocatable,
 		checkpointManager: checkpointManager,
 		cdi:               cdi,
+		coreclient:        config.CoreClient,
+		nodeName:          config.Flags.NodeName,
 	}
 
 	// First prepare a claim
