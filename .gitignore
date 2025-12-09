@@ -27,6 +27,9 @@
 # Go workspace file
 go.work
 
+# Pre-commit config
+.pre-commit-config.yaml
+
 ### Go Patch ###
 /vendor/
 /Godeps/
