@@ -27,8 +27,8 @@ spec:
                 values:
                 - "true"
       containers:
-        - image: "{{ .Values.migFaker.image.repository }}:{{ .Values.migFaker.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.migFaker.image.pullPolicy }}"
+        - image: {{ include "fake-gpu-operator.fullImageName" (dict "global" .Values.global "component" .Values.migFaker.image "chart" .Chart) }}
+          imagePullPolicy: {{ include "fake-gpu-operator.imagePullPolicy" (dict "global" .Values.global "component" .Values.migFaker.image) }}
           resources:
             {{- toYaml .Values.migFaker.resources | nindent 12 }}
           env:

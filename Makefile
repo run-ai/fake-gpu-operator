@@ -1,7 +1,7 @@
 BUILD_DIR=$(shell pwd)/bin
 COMPONENTS?=device-plugin status-updater kwok-gpu-device-plugin status-exporter topology-server mig-faker jupyter-notebook
 
-DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
+DOCKER_REPO_BASE?=gcr.io/run-ai-lab/fake-gpu-operator
 DOCKER_TAG?=0.0.0-dev
 NAMESPACE=gpu-operator
 
@@ -33,6 +33,21 @@ image:
 		docker buildx build -t ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG} --target $$component --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .; \
 	done
 .PHONY: image
+
+docker-build-local:
+	for component in $(COMPONENTS); do \
+		docker build -t ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG} --target $$component .; \
+	done
+	@echo "Images built and loaded to local Docker daemon"
+.PHONY: docker-build-local
+
+# Push previously built images to registry
+docker-push: docker-build-local
+	for component in $(COMPONENTS); do \
+		docker push ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG}; \
+	done
+	@echo "Images pushed to registry successfully"
+.PHONY: docker-push
 
 test: ginkgo
 	$(GINKGO) -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json

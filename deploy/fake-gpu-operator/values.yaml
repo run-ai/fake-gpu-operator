@@ -3,10 +3,18 @@ environment:
   fakeCSVVersion: 25.10.0
   resourceReservationNamespace: runai-reservation
 
+global:
+  image:
+    pullPolicy: IfNotPresent
+    repository: ghcr.io/run-ai/fake-gpu-operator
+    tag: latest
+
 devicePlugin:
   image:
     pullPolicy: Always
-    repository: ghcr.io/run-ai/fake-gpu-operator/device-plugin
+    name: device-plugin
+    # services can define a repository to over take the global setting
+    # repository: localhost:5000
     tag: ""
   resources: 
     requests:
@@ -19,7 +27,7 @@ devicePlugin:
 statusUpdater:
   image:
     pullPolicy: Always
-    repository: ghcr.io/run-ai/fake-gpu-operator/status-updater
+    name: status-updater
     tag: ""
   resources: 
     requests:
@@ -32,7 +40,7 @@ statusUpdater:
 topologyServer:
   image:
     pullPolicy: Always
-    repository: ghcr.io/run-ai/fake-gpu-operator/topology-server
+    name: topology-server
     tag: ""
   resources: 
     requests:
@@ -45,7 +53,7 @@ topologyServer:
 statusExporter:
   image:
     pullPolicy: Always
-    repository: ghcr.io/run-ai/fake-gpu-operator/status-exporter
+    name: status-exporter
     tag: ""
   resources: 
     requests:
@@ -59,7 +67,7 @@ statusExporter:
 kwokGpuDevicePlugin:
   image:
     pullPolicy: Always
-    repository: ghcr.io/run-ai/fake-gpu-operator/kwok-gpu-device-plugin
+    name: kwok-gpu-device-plugin
     tag: ""
   resources: 
     requests:
@@ -72,7 +80,7 @@ kwokGpuDevicePlugin:
 migFaker:
   image:
     pullPolicy: Always
-    repository: ghcr.io/run-ai/fake-gpu-operator/mig-faker
+    name: mig-faker
     tag: ""
 
 ubuntu:
