@@ -105,7 +105,8 @@ draPlugin:
       type: RollingUpdate
     podAnnotations: {}
     podSecurityContext: {}
-    nodeSelector: {}
+    nodeSelector: 
+      nvidia.com/gpu.deploy.dra-plugin-gpu: "true"
     tolerations: []
     affinity: {}
     kubeletRegistrarDirectoryPath: /var/lib/kubelet/plugins_registry
