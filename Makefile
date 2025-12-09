@@ -38,6 +38,21 @@ test: ginkgo
 	$(GINKGO) -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
 .PHONY: test
 
+setup-integration:
+	test/integration/setup.sh
+.PHONY: setup-integration
+
+test-integration: ginkgo
+	cd test/integration && $(GINKGO) --procs=1 --timeout=30m --trace
+.PHONY: test-integration
+
+teardown-integration:
+	test/integration/teardown.sh
+.PHONY: teardown-integration
+
+integration: setup-integration test-integration teardown-integration
+.PHONY: integration
+
 clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean

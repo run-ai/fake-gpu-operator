@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +36,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager"
 
 	configapi "sigs.k8s.io/dra-example-driver/api/example.com/resource/gpu/v1alpha1"
-	"sigs.k8s.io/dra-example-driver/pkg/consts"
 )
 
 func TestPreparedDevicesGetDevices(t *testing.T) {
@@ -136,15 +136,18 @@ func createTestConfig(t *testing.T) (*Config, func()) {
 			Name: "test-node",
 			Annotations: map[string]string{
 				AnnotationGpuFakeDevices: `{
-					"version": "v1",
+					"gpuMemory": 40960,
+					"gpuProduct": "Test-GPU",
 					"gpus": [
 						{
-							"uuid": "GPU-test-0",
-							"minor": 0,
-							"productName": "Test-GPU",
-							"memoryBytes": 42949672960
+							"id": "GPU-test-0",
+							"status": {
+								"allocatedBy": {"namespace": "", "pod": "", "container": ""},
+								"podGpuUsageStatus": {}
+							}
 						}
-					]
+					],
+					"migStrategy": "none"
 				}`,
 			},
 		},
@@ -367,7 +370,7 @@ func TestDeviceState_Unprepare(t *testing.T) {
 
 func TestGetOpaqueDeviceConfigs(t *testing.T) {
 	decoder := configapi.Decoder
-	driverName := consts.DriverName
+	driverName := DriverName
 
 	tests := map[string]struct {
 		possibleConfigs []resourceapi.DeviceAllocationConfiguration
@@ -551,15 +554,18 @@ func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 		"success update": {
 			updateAnnotation: func(node *corev1.Node) {
 				node.Annotations[AnnotationGpuFakeDevices] = `{
-					"version": "v1",
+					"gpuMemory": 40960,
+					"gpuProduct": "Updated-GPU",
 					"gpus": [
 						{
-							"uuid": "GPU-updated",
-							"minor": 0,
-							"productName": "Updated-GPU",
-							"memoryBytes": 42949672960
+							"id": "GPU-updated",
+							"status": {
+								"allocatedBy": {"namespace": "", "pod": "", "container": ""},
+								"podGpuUsageStatus": {}
+							}
 						}
-					]
+					],
+					"migStrategy": "none"
 				}`
 			},
 			wantErr: false,
@@ -598,16 +604,16 @@ func TestDeviceState_ApplyConfig(t *testing.T) {
 			config: configapi.DefaultGpuConfig(),
 			results: []*resourceapi.DeviceRequestAllocationResult{
 				{
-					Device:  "GPU-test-0",
+					Device:  "gpu-test-0",
 					Request: "request-1",
 					Pool:    "test-node",
 				},
 			},
 			wantErr: false,
 			validate: func(t *testing.T, edits PerDeviceCDIContainerEdits) {
-				require.Contains(t, edits, "GPU-test-0")
-				envs := edits["GPU-test-0"].ContainerEdits.Env
-				assert.Contains(t, envs, "GPU_DEVICE_test-0=GPU-test-0")
+				require.Contains(t, edits, "gpu-test-0")
+				envs := edits["gpu-test-0"].ContainerEdits.Env
+				assert.Contains(t, envs, "GPU_DEVICE_gpu_test_0=gpu-test-0")
 			},
 		},
 		"config with sharing strategy only": {
@@ -620,27 +626,27 @@ func TestDeviceState_ApplyConfig(t *testing.T) {
 			}(),
 			results: []*resourceapi.DeviceRequestAllocationResult{
 				{
-					Device:  "GPU-test-0",
+					Device:  "gpu-test-0",
 					Request: "request-1",
 					Pool:    "test-node",
 				},
 			},
 			wantErr: false,
 			validate: func(t *testing.T, edits PerDeviceCDIContainerEdits) {
-				envs := edits["GPU-test-0"].ContainerEdits.Env
-				assert.Contains(t, envs, "GPU_DEVICE_test-0_SHARING_STRATEGY=time-slicing")
+				envs := edits["gpu-test-0"].ContainerEdits.Env
+				assert.Contains(t, envs, "GPU_DEVICE_gpu_test_0_SHARING_STRATEGY=time-slicing")
 			},
 		},
 		"multiple devices": {
 			config: configapi.DefaultGpuConfig(),
 			results: []*resourceapi.DeviceRequestAllocationResult{
 				{
-					Device:  "GPU-test-0",
+					Device:  "gpu-test-0",
 					Request: "request-1",
 					Pool:    "test-node",
 				},
 				{
-					Device:  "GPU-test-1",
+					Device:  "gpu-test-1",
 					Request: "request-2",
 					Pool:    "test-node",
 				},
@@ -648,8 +654,8 @@ func TestDeviceState_ApplyConfig(t *testing.T) {
 			wantErr: false,
 			validate: func(t *testing.T, edits PerDeviceCDIContainerEdits) {
 				assert.Len(t, edits, 2)
-				assert.Contains(t, edits, "GPU-test-0")
-				assert.Contains(t, edits, "GPU-test-1")
+				assert.Contains(t, edits, "gpu-test-0")
+				assert.Contains(t, edits, "gpu-test-1")
 			},
 		},
 		"empty results": {
@@ -664,7 +670,7 @@ func TestDeviceState_ApplyConfig(t *testing.T) {
 			config: configapi.DefaultGpuConfig(),
 			results: []*resourceapi.DeviceRequestAllocationResult{
 				{
-					Device:  "GPU", // Too short for [4:]
+					Device:  "gpu", // Short device name
 					Request: "request-1",
 					Pool:    "test-node",
 				},
@@ -818,4 +824,86 @@ func mustMarshalJSON(t *testing.T, v interface{}) []byte {
 	data, err := json.Marshal(v)
 	require.NoError(t, err)
 	return data
+}
+
+func TestWaitForGPUAnnotation_ContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	client := fake.NewSimpleClientset()
+
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "test-node",
+			Annotations: map[string]string{},
+			// No annotation - will retry
+		},
+	}
+
+	_, err := client.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	// Cancel context after a short delay
+	go func() {
+		time.Sleep(1 * time.Second)
+		cancel()
+	}()
+
+	devices, err := waitForGPUAnnotation(ctx, client, "test-node")
+
+	// Should fail due to context cancellation
+	assert.Error(t, err)
+	assert.Nil(t, devices)
+	assert.Contains(t, err.Error(), "context canceled")
+}
+
+func TestWaitForGPUAnnotation_MultipleRetriesThenSuccess(t *testing.T) {
+	validAnnotation := `{
+		"gpuMemory": 40960,
+		"gpuProduct": "NVIDIA-A100-SXM4-40GB",
+		"gpus": [
+			{
+				"id": "GPU-12345678-1234-1234-1234-123456789abc",
+				"status": {
+					"allocatedBy": {"namespace": "", "pod": "", "container": ""},
+					"podGpuUsageStatus": {}
+				}
+			}
+		],
+		"migStrategy": "none"
+	}`
+
+	ctx := context.Background()
+	client := fake.NewSimpleClientset()
+
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "test-node",
+			Annotations: map[string]string{},
+			// Start without annotation
+		},
+	}
+
+	_, err := client.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	// Update node after multiple retry attempts (simulate annotation appearing)
+	attemptCount := 0
+	go func() {
+		// Wait for a few retries (each retry has exponential backoff)
+		// First retry: 2s, second: 4s, third: 8s, etc.
+		// We'll add annotation after ~6 seconds (allowing for 2-3 retries)
+		time.Sleep(6 * time.Second)
+		updatedNode, err := client.CoreV1().Nodes().Get(ctx, "test-node", metav1.GetOptions{})
+		if err == nil {
+			updatedNode.Annotations[AnnotationGpuFakeDevices] = validAnnotation
+			_, _ = client.CoreV1().Nodes().Update(ctx, updatedNode, metav1.UpdateOptions{})
+		}
+	}()
+
+	devices, err := waitForGPUAnnotation(ctx, client, "test-node")
+
+	// Should eventually succeed
+	assert.NoError(t, err)
+	require.NotNil(t, devices)
+	assert.Len(t, devices, 1)
+	_ = attemptCount // Suppress unused variable warning
 }

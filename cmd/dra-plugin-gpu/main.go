@@ -31,12 +31,12 @@ import (
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 	"k8s.io/klog/v2"
 
-	"sigs.k8s.io/dra-example-driver/pkg/consts"
 	"sigs.k8s.io/dra-example-driver/pkg/flags"
 )
 
 const (
 	DriverPluginCheckpointFile = "checkpoint.json"
+	DriverName                 = "gpu.nvidia.com" // Override driver name for deviceclass compatibility
 )
 
 type Flags struct {
@@ -57,7 +57,7 @@ type Config struct {
 }
 
 func (c Config) DriverPluginPath() string {
-	return filepath.Join(c.flags.kubeletPluginsDirectoryPath, consts.DriverName)
+	return filepath.Join(c.flags.kubeletPluginsDirectoryPath, DriverName)
 }
 
 func main() {

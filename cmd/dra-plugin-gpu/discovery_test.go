@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -40,21 +41,22 @@ func TestEnumerateAllPossibleDevices(t *testing.T) {
 		"success single GPU": {
 			nodeName: "test-node",
 			annotation: `{
-				"version": "v1",
+				"gpuMemory": 40960,
+				"gpuProduct": "NVIDIA-A100-SXM4-40GB",
 				"gpus": [
 					{
-						"uuid": "GPU-12345678-1234-1234-1234-123456789abc",
-						"minor": 0,
-						"productName": "NVIDIA-A100-SXM4-40GB",
-						"brand": "NVIDIA",
-						"architecture": "Ampere",
-						"cudaComputeCapability": "8.0",
-						"memoryBytes": 42949672960,
-						"pcieBusID": "0000:00:1E.0",
-						"migEnabled": false,
-						"vfioEnabled": true
+						"id": "GPU-12345678-1234-1234-1234-123456789abc",
+						"status": {
+							"allocatedBy": {
+								"namespace": "",
+								"pod": "",
+								"container": ""
+							},
+							"podGpuUsageStatus": {}
+						}
 					}
-				]
+				],
+				"migStrategy": "none"
 			}`,
 			wantErr:         false,
 			wantDeviceCount: 1,
@@ -63,35 +65,39 @@ func TestEnumerateAllPossibleDevices(t *testing.T) {
 				device, exists := devices["gpu-12345678-1234-1234-1234-123456789abc"]
 				require.True(t, exists)
 				assert.Equal(t, "gpu-12345678-1234-1234-1234-123456789abc", device.Name)
-				assert.Equal(t, "NVIDIA-A100-SXM4-40GB", device.Attributes["model"].StringValue)
-				assert.Equal(t, int64(0), *device.Attributes["minor"].IntValue)
+				assert.Equal(t, "NVIDIA-A100-SXM4-40GB", *device.Attributes["model"].StringValue)
+				assert.Equal(t, "GPU-12345678-1234-1234-1234-123456789abc", *device.Attributes["uuid"].StringValue)
 			},
 		},
 		"success multiple GPUs": {
 			nodeName: "test-node",
 			annotation: `{
-				"version": "v1",
+				"gpuMemory": 1000,
+				"gpuProduct": "GPU-1",
 				"gpus": [
 					{
-						"uuid": "GPU-11111111-1111-1111-1111-111111111111",
-						"minor": 0,
-						"productName": "GPU-1",
-						"memoryBytes": 1000000000
+						"id": "GPU-11111111-1111-1111-1111-111111111111",
+						"status": {
+							"allocatedBy": {"namespace": "", "pod": "", "container": ""},
+							"podGpuUsageStatus": {}
+						}
 					},
 					{
-						"uuid": "GPU-22222222-2222-2222-2222-222222222222",
-						"minor": 1,
-						"productName": "GPU-2",
-						"memoryBytes": 2000000000
+						"id": "GPU-22222222-2222-2222-2222-222222222222",
+						"status": {
+							"allocatedBy": {"namespace": "", "pod": "", "container": ""},
+							"podGpuUsageStatus": {}
+						}
 					}
-				]
+				],
+				"migStrategy": "none"
 			}`,
 			wantErr:         false,
 			wantDeviceCount: 2,
 		},
 		"node not found": {
 			nodeName:   "non-existent-node",
-			annotation: `{"version": "v1", "gpus": []}`,
+			annotation: `{"gpuMemory": 40960, "gpuProduct": "Test", "gpus": [], "migStrategy": "none"}`,
 			wantErr:    true,
 		},
 		"annotation missing": {
@@ -117,40 +123,48 @@ func TestEnumerateAllPossibleDevices(t *testing.T) {
 		},
 		"empty GPUs array": {
 			nodeName:   "test-node",
-			annotation: `{"version": "v1", "gpus": []}`,
+			annotation: `{"gpuMemory": 40960, "gpuProduct": "Test", "gpus": [], "migStrategy": "none"}`,
 			wantErr:    true,
 		},
-		"GPU missing UUID": {
+		"GPU missing ID": {
 			nodeName: "test-node",
 			annotation: `{
-				"version": "v1",
+				"gpuMemory": 40960,
+				"gpuProduct": "GPU-1",
 				"gpus": [
 					{
-						"minor": 0,
-						"productName": "GPU-1",
-						"memoryBytes": 1000000000
+						"status": {
+							"allocatedBy": {"namespace": "", "pod": "", "container": ""},
+							"podGpuUsageStatus": {}
+						}
 					}
-				]
+				],
+				"migStrategy": "none"
 			}`,
 			wantErr: true,
 		},
 		"minimal GPU fields": {
 			nodeName: "test-node",
 			annotation: `{
-				"version": "v1",
+				"gpuMemory": 1000,
+				"gpuProduct": "Test-GPU",
 				"gpus": [
 					{
-						"uuid": "GPU-minimal",
-						"memoryBytes": 1000000000
+						"id": "GPU-minimal",
+						"status": {
+							"allocatedBy": {"namespace": "", "pod": "", "container": ""},
+							"podGpuUsageStatus": {}
+						}
 					}
-				]
+				],
+				"migStrategy": "none"
 			}`,
 			wantErr:         false,
 			wantDeviceCount: 1,
 			validateDevice: func(t *testing.T, devices AllocatableDevices) {
 				device := devices["gpu-minimal"]
 				assert.Equal(t, "gpu-minimal", device.Name)
-				// Check that optional fields are handled gracefully
+				assert.Equal(t, "Test-GPU", *device.Attributes["model"].StringValue)
 			},
 		},
 	}
@@ -199,25 +213,30 @@ func TestEnumerateAllPossibleDevices_DeviceAttributes(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 
-	annotation := GpuFakeDevicesAnnotation{
-		Version: "v1",
-		GPUs: []GpuInfo{
+	// Convert 40960 MB to bytes for comparison
+	memoryMB := 40960
+	memoryBytes := int64(memoryMB) * 1024 * 1024
+
+	nodeTopology := topology.NodeTopology{
+		GpuMemory:   memoryMB,
+		GpuProduct:  "Test-GPU",
+		MigStrategy: "none",
+		Gpus: []topology.GpuDetails{
 			{
-				UUID:                  "GPU-test",
-				Minor:                 5,
-				ProductName:           "Test-GPU",
-				Brand:                 "NVIDIA",
-				Architecture:          "Ampere",
-				CudaComputeCapability: "8.0",
-				MemoryBytes:           42949672960,
-				PcieBusID:             "0000:00:1E.0",
-				MigEnabled:            true,
-				VfioEnabled:           false,
+				ID: "GPU-test",
+				Status: topology.GpuStatus{
+					AllocatedBy: topology.ContainerDetails{
+						Namespace: "",
+						Pod:       "",
+						Container: "",
+					},
+					PodGpuUsageStatus: make(topology.PodGpuUsageStatusMap),
+				},
 			},
 		},
 	}
 
-	annotationJSON, err := json.Marshal(annotation)
+	annotationJSON, err := json.Marshal(nodeTopology)
 	require.NoError(t, err)
 
 	node := &corev1.Node{
@@ -239,13 +258,8 @@ func TestEnumerateAllPossibleDevices_DeviceAttributes(t *testing.T) {
 	device := devices["gpu-test"]
 	assert.Equal(t, "gpu-test", device.Name)
 	assert.Equal(t, "Test-GPU", *device.Attributes["model"].StringValue)
-	assert.Equal(t, int64(5), *device.Attributes["minor"].IntValue)
-	assert.Equal(t, "0000:00:1E.0", *device.Attributes["pcieBusID"].StringValue)
-	assert.Equal(t, "Ampere", *device.Attributes["architecture"].StringValue)
-	assert.Equal(t, "8.0", *device.Attributes["cudaComputeCapability"].StringValue)
-	assert.Equal(t, true, *device.Attributes["migEnabled"].BoolValue)
-	assert.Equal(t, false, *device.Attributes["vfioEnabled"].BoolValue)
-	// Verify memory capacity is set correctly
+	assert.Equal(t, "GPU-test", *device.Attributes["uuid"].StringValue)
+	// Verify memory capacity is set correctly (converted from MB to bytes)
 	memoryCapacity := device.Capacity["memory"].Value
-	assert.Equal(t, int64(42949672960), memoryCapacity.Value())
+	assert.Equal(t, memoryBytes, memoryCapacity.Value())
 }

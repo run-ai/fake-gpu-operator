@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gpu-test-timeslicing
+
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  namespace: gpu-test-timeslicing
+  name: timeslicing-gpu
+spec:
+  spec:
+    devices:
+      requests:
+      - name: ts-gpu
+        exactly:
+          deviceClassName: gpu.nvidia.com
+      config:
+      - requests: ["ts-gpu"]
+        opaque:
+          driver: gpu.nvidia.com
+          parameters:
+            apiVersion: gpu.resource.example.com/v1alpha1
+            kind: GpuConfig
+            sharing:
+              strategy: TimeSlicing
+              timeSlicingConfig:
+                interval: Default
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: gpu-test-timeslicing
+  name: pod0
+  labels:
+    app: pod
+spec:
+  containers:
+  - name: ctr0
+    image: ubuntu:22.04
+    command: ["bash", "-c"]
+    args: ["export; trap 'exit 0' TERM; sleep 9999 & wait"]
+    resources:
+      claims:
+      - name: ts-gpu
+  - name: ctr1
+    image: ubuntu:22.04
+    command: ["bash", "-c"]
+    args: ["export; trap 'exit 0' TERM; sleep 9999 & wait"]
+    resources:
+      claims:
+      - name: ts-gpu
+  resourceClaims:
+  - name: ts-gpu
+    resourceClaimTemplateName: timeslicing-gpu
+

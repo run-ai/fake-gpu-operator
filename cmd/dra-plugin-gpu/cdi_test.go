@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -207,67 +206,6 @@ func TestCDIHandler_CreateClaimSpecFile(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestCDIHandler_CreateClaimSpecFile_WithTopology(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	config := &Config{
-		flags: &Flags{
-			cdiRoot: tmpDir,
-		},
-	}
-
-	handler, err := NewCDIHandler(config)
-	require.NoError(t, err)
-
-	topologyJSON := `{"gpuMemory":40960,"gpuProduct":"Tesla-V100","gpus":[{"id":"gpu-0","status":{"allocatedBy":{"namespace":"","pod":"","container":""},"podGpuUsageStatus":{}}}]}`
-
-	devices := PreparedDevices{
-		{
-			Device: drapbv1.Device{
-				DeviceName: "gpu-0",
-			},
-		},
-	}
-
-	err = handler.CreateClaimSpecFile("claim-with-topology", devices, topologyJSON)
-	assert.NoError(t, err)
-
-	// Verify the spec contains topology env var by reading spec files
-	var specFiles []string
-	err = filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && strings.Contains(path, "claim-with-topology") && strings.HasSuffix(path, ".json") {
-			specFiles = append(specFiles, path)
-		}
-		return nil
-	})
-	require.NoError(t, err)
-	require.NotEmpty(t, specFiles, "should have claim spec file")
-
-	// Read and parse the claim spec file
-	specData, err := os.ReadFile(specFiles[0])
-	require.NoError(t, err)
-
-	var spec cdispec.Spec
-	err = json.Unmarshal(specData, &spec)
-	require.NoError(t, err)
-	require.NotEmpty(t, spec.Devices, "spec should have devices")
-
-	// Verify topology env var exists in the first device
-	device := spec.Devices[0]
-	foundTopologyEnv := false
-	for _, env := range device.ContainerEdits.Env {
-		if strings.HasPrefix(env, "GPU_TOPOLOGY_JSON=") {
-			foundTopologyEnv = true
-			assert.Equal(t, "GPU_TOPOLOGY_JSON="+topologyJSON, env)
-			break
-		}
-	}
-	assert.True(t, foundTopologyEnv, "GPU_TOPOLOGY_JSON env var should be present")
 }
 
 func TestCDIHandler_DeleteClaimSpecFile(t *testing.T) {

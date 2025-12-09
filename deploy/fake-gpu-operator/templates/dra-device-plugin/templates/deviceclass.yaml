@@ -2,9 +2,9 @@
 apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
 kind: DeviceClass
 metadata:
-  name: gpu.example.com
+  name: gpu.nvidia.com
 spec:
   selectors:
   - cel: 
-      expression: "device.driver == 'gpu.example.com'"
+      expression: "device.driver == 'gpu.nvidia.com'"
 {{- end -}}

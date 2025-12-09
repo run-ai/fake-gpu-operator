@@ -18,10 +18,7 @@ package main
 
 import (
 	"fmt"
-	"os"
-
-	"k8s.io/klog/v2"
-	"sigs.k8s.io/dra-example-driver/pkg/consts"
+	"strings"
 
 	cdiapi "tags.cncf.io/container-device-interface/pkg/cdi"
 	cdiparser "tags.cncf.io/container-device-interface/pkg/parser"
@@ -29,7 +26,7 @@ import (
 )
 
 const (
-	cdiVendor = "k8s." + consts.DriverName
+	cdiVendor = "k8s." + DriverName
 	cdiClass  = "gpu"
 	cdiKind   = cdiVendor + "/" + cdiClass
 
@@ -55,35 +52,23 @@ func NewCDIHandler(config *Config) (*CDIHandler, error) {
 }
 
 func (cdi *CDIHandler) CreateCommonSpecFile() error {
-	klog.Info("Creating CDI common spec file")
-	
-	nodeName := os.Getenv("NODE_NAME")
 	spec := &cdispec.Spec{
 		Kind: cdiKind,
 		Devices: []cdispec.Device{
 			{
 				Name: cdiCommonDeviceName,
 				ContainerEdits: cdispec.ContainerEdits{
-					Env: []string{
-						fmt.Sprintf("KUBERNETES_NODE_NAME=%s", nodeName),
-						fmt.Sprintf("DRA_RESOURCE_DRIVER_NAME=%s", consts.DriverName),
-					},
 					Mounts: []*cdispec.Mount{
 						{
 							HostPath:      "/var/lib/runai/bin/nvidia-smi",
 							ContainerPath: "/bin/nvidia-smi",
-							Options:       []string{"ro"},
+							Options:       []string{"ro", "bind"},
 						},
 					},
 				},
 			},
 		},
 	}
-
-	klog.Infof("CDI common spec: env vars: %v, mounts: hostPath=%s, containerPath=%s", 
-		spec.Devices[0].ContainerEdits.Env,
-		spec.Devices[0].ContainerEdits.Mounts[0].HostPath,
-		spec.Devices[0].ContainerEdits.Mounts[0].ContainerPath)
 
 	minVersion, err := cdiapi.MinimumRequiredVersion(spec)
 	if err != nil {
@@ -96,43 +81,32 @@ func (cdi *CDIHandler) CreateCommonSpecFile() error {
 		return fmt.Errorf("failed to generate Spec name: %w", err)
 	}
 
-	klog.Infof("Writing CDI common spec file: %s", specName)
-	err = cdi.cache.WriteSpec(spec, specName)
-	if err != nil {
-		klog.Errorf("Failed to write CDI common spec file: %v", err)
-		return err
-	}
-	
-	klog.Info("Successfully created CDI common spec file")
-	return nil
+	return cdi.cache.WriteSpec(spec, specName)
 }
 
 func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevices, topologyJSON string) error {
 	specName := cdiapi.GenerateTransientSpecName(cdiVendor, cdiClass, claimUID)
-	klog.Infof("Creating CDI claim spec file for claim UID: %s, spec name: %s", claimUID, specName)
 
 	spec := &cdispec.Spec{
 		Kind:    cdiKind,
 		Devices: []cdispec.Device{},
 	}
 
-	topologyInjected := false
 	for _, device := range devices {
-		envVars := []string{
-			fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM=%s", device.DeviceName[4:], claimUID),
+		// Device name is now just the UUID (lowercase), so use it directly
+		deviceID := strings.ReplaceAll(device.DeviceName, "-", "_")
+		envs := []string{
+			fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM=%s", deviceID, claimUID),
 		}
-		// Add topology JSON env var if provided
+
+		// Add topology JSON as environment variable
 		if topologyJSON != "" {
-			envVars = append(envVars, fmt.Sprintf("GPU_TOPOLOGY_JSON=%s", topologyJSON))
-			topologyInjected = true
-			klog.Infof("Injecting GPU_TOPOLOGY_JSON env var for device %s (length: %d chars)", device.DeviceName, len(topologyJSON))
-		} else {
-			klog.Warningf("No topology JSON provided for claim %s, skipping GPU_TOPOLOGY_JSON injection", claimUID)
+			envs = append(envs, fmt.Sprintf("GPU_TOPOLOGY_JSON=%s", topologyJSON))
 		}
 
 		claimEdits := cdiapi.ContainerEdits{
 			ContainerEdits: &cdispec.ContainerEdits{
-				Env: envVars,
+				Env: envs,
 			},
 		}
 		claimEdits.Append(device.ContainerEdits)
@@ -142,42 +116,21 @@ func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevi
 			ContainerEdits: *claimEdits.ContainerEdits,
 		}
 
-		klog.Infof("CDI device %s: env vars: %v", cdiDevice.Name, cdiDevice.ContainerEdits.Env)
 		spec.Devices = append(spec.Devices, cdiDevice)
-	}
-
-	if topologyInjected {
-		klog.Infof("Topology JSON injected into %d device(s) for claim %s", len(spec.Devices), claimUID)
 	}
 
 	minVersion, err := cdiapi.MinimumRequiredVersion(spec)
 	if err != nil {
-		klog.Errorf("Failed to get minimum required CDI spec version: %v", err)
 		return fmt.Errorf("failed to get minimum required CDI spec version: %v", err)
 	}
 	spec.Version = minVersion
 
-	klog.Infof("Writing CDI claim spec file: %s (version: %s)", specName, spec.Version)
-	err = cdi.cache.WriteSpec(spec, specName)
-	if err != nil {
-		klog.Errorf("Failed to write CDI claim spec file: %v", err)
-		return err
-	}
-	
-	klog.Infof("Successfully created CDI claim spec file for claim %s with %d device(s)", claimUID, len(spec.Devices))
-	return nil
+	return cdi.cache.WriteSpec(spec, specName)
 }
 
 func (cdi *CDIHandler) DeleteClaimSpecFile(claimUID string) error {
 	specName := cdiapi.GenerateTransientSpecName(cdiVendor, cdiClass, claimUID)
-	klog.Infof("Deleting CDI claim spec file for claim UID: %s, spec name: %s", claimUID, specName)
-	err := cdi.cache.RemoveSpec(specName)
-	if err != nil {
-		klog.Errorf("Failed to delete CDI claim spec file: %v", err)
-		return err
-	}
-	klog.Infof("Successfully deleted CDI claim spec file for claim %s", claimUID)
-	return nil
+	return cdi.cache.RemoveSpec(specName)
 }
 
 func (cdi *CDIHandler) GetClaimDevices(claimUID string, devices []string) []string {

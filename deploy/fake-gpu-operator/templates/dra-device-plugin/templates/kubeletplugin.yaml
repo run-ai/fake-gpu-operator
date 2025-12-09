@@ -52,9 +52,9 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              mkdir -p /host/var/lib/runai/bin
-              cp /bin/nvidia-smi /host/var/lib/runai/bin/nvidia-smi
-              chmod 755 /host/var/lib/runai/bin/nvidia-smi
+              mkdir -p /host
+              cp /bin/nvidia-smi /host/nvidia-smi
+              chmod 755 /host/nvidia-smi
           securityContext:
             runAsUser: 0
             runAsGroup: 0
@@ -78,12 +78,37 @@ spec:
             {{- toYaml $draPlugin.kubeletPlugin.containers.plugin.resources | nindent 12 }}
 
           {{- if (gt (int $draPlugin.kubeletPlugin.containers.plugin.healthcheckPort) 0) }}
+          {{- with $draPlugin.kubeletPlugin.containers.plugin.livenessProbe }}
+          livenessProbe:
+            grpc:
+              port: {{ $draPlugin.kubeletPlugin.containers.plugin.healthcheckPort }}
+              service: {{ .service | default "liveness" }}
+            {{- if .initialDelaySeconds }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            {{- end }}
+            {{- if .periodSeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            {{- end }}
+            {{- if .timeoutSeconds }}
+            timeoutSeconds: {{ .timeoutSeconds }}
+            {{- end }}
+            {{- if .failureThreshold }}
+            failureThreshold: {{ .failureThreshold }}
+            {{- end }}
+            {{- if .successThreshold }}
+            successThreshold: {{ .successThreshold }}
+            {{- end }}
+          {{- else }}
           livenessProbe:
             grpc:
               port: {{ $draPlugin.kubeletPlugin.containers.plugin.healthcheckPort }}
               service: liveness
-            failureThreshold: 3
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          {{- end }}
           {{- end }}
 
           env:

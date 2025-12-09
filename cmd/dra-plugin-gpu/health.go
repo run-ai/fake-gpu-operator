@@ -33,8 +33,6 @@ import (
 	"k8s.io/klog/v2"
 	drapb "k8s.io/kubelet/pkg/apis/dra/v1"
 	registerapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
-
-	"sigs.k8s.io/dra-example-driver/pkg/consts"
 )
 
 type healthcheck struct {
@@ -65,7 +63,7 @@ func startHealthcheck(ctx context.Context, config *Config) (*healthcheck, error)
 		Scheme: "unix",
 		// TODO: this needs to adapt when seamless upgrades
 		// are enabled and the filename includes a uid.
-		Path: path.Join(config.flags.kubeletRegistrarDirectoryPath, consts.DriverName+"-reg.sock"),
+		Path: path.Join(config.flags.kubeletRegistrarDirectoryPath, DriverName+"-reg.sock"),
 	}).String()
 	log.Info("connecting to registration socket", "path", regSockPath)
 	regConn, err := grpc.NewClient(

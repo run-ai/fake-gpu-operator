@@ -22,11 +22,14 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"sync"
+	"time"
 
 	resourceapi "k8s.io/api/resource/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	coreclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 	"k8s.io/dynamic-resource-allocation/resourceslice"
@@ -35,8 +38,8 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager"
 
 	configapi "sigs.k8s.io/dra-example-driver/api/example.com/resource/gpu/v1alpha1"
-	"sigs.k8s.io/dra-example-driver/pkg/consts"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	cdiapi "tags.cncf.io/container-device-interface/pkg/cdi"
 	cdispec "tags.cncf.io/container-device-interface/specs-go"
 )
@@ -57,6 +60,12 @@ type PreparedDevice struct {
 }
 
 func (pds PreparedDevices) GetDevices() []*drapbv1.Device {
+	if pds == nil {
+		return nil
+	}
+	if len(pds) == 0 {
+		return []*drapbv1.Device{}
+	}
 	var devices []*drapbv1.Device
 	for _, pd := range pds {
 		devices = append(devices, &pd.Device)
@@ -74,8 +83,46 @@ type DeviceState struct {
 	helper            *kubeletplugin.Helper
 }
 
+// waitForGPUAnnotation retries enumerating devices with exponential backoff
+// until the GPU annotation is found on the node.
+func waitForGPUAnnotation(ctx context.Context, coreclient coreclientset.Interface, nodeName string) (AllocatableDevices, error) {
+	logger := klog.FromContext(ctx)
+
+	backoff := wait.Backoff{
+		Duration: 2 * time.Second, // Initial delay
+		Factor:   2.0,             // Multiply by 2 each time
+		Steps:    10,              // Maximum 10 retries
+		Cap:      5 * time.Minute, // Cap at 5 minutes
+	}
+
+	var allocatable AllocatableDevices
+	err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
+		var err error
+		allocatable, err = enumerateAllPossibleDevices(ctx, coreclient, nodeName)
+		if err != nil {
+			// Check if it's an annotation missing error (retryable)
+			if strings.Contains(err.Error(), "annotation") &&
+				(strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "empty")) {
+				logger.V(2).Info("Waiting for GPU annotation", "node", nodeName, "error", err)
+				return false, nil // Retry
+			}
+			// Other errors are not retryable
+			return false, err
+		}
+		// Success
+		logger.Info("Successfully found GPU annotation", "deviceCount", len(allocatable))
+		return true, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error enumerating all possible devices after retries: %w", err)
+	}
+
+	return allocatable, nil
+}
+
 func NewDeviceState(ctx context.Context, config *Config, helper *kubeletplugin.Helper) (*DeviceState, error) {
-	allocatable, err := enumerateAllPossibleDevices(ctx, config.coreclient, config.flags.nodeName)
+	allocatable, err := waitForGPUAnnotation(ctx, config.coreclient, config.flags.nodeName)
 	if err != nil {
 		return nil, fmt.Errorf("error enumerating all possible devices: %v", err)
 	}
@@ -144,11 +191,10 @@ func (s *DeviceState) Prepare(ctx context.Context, claim *resourceapi.ResourceCl
 		return nil, fmt.Errorf("prepare failed: %v", err)
 	}
 
-	// Get topology from node annotation and convert to JSON
+	// Get topology JSON from node annotation
 	topologyJSON, err := s.getTopologyJSON(ctx)
 	if err != nil {
-		klog.Warningf("Failed to get topology JSON, continuing without it: %v", err)
-		topologyJSON = "" // Continue without topology if unavailable
+		return nil, fmt.Errorf("unable to get topology JSON: %v", err)
 	}
 
 	if err = s.cdi.CreateClaimSpecFile(claimUID, preparedDevices, topologyJSON); err != nil {
@@ -202,7 +248,7 @@ func (s *DeviceState) prepareDevices(claim *resourceapi.ResourceClaim) (Prepared
 	// Retrieve the full set of device configs for the driver.
 	configs, err := GetOpaqueDeviceConfigs(
 		configapi.Decoder,
-		consts.DriverName,
+		DriverName,
 		claim.Status.Allocation.Devices.Config,
 	)
 	if err != nil {
@@ -292,7 +338,7 @@ func (s *DeviceState) prepareDevices(claim *resourceapi.ResourceClaim) (Prepared
 // getTopologyJSON retrieves topology from node annotation and converts it to JSON
 func (s *DeviceState) getTopologyJSON(ctx context.Context) (string, error) {
 	klog.Info("Retrieving topology JSON from node annotation")
-	
+
 	// Fetch the node
 	node, err := s.coreclient.CoreV1().Nodes().Get(ctx, s.nodeName, metav1.GetOptions{})
 	if err != nil {
@@ -314,21 +360,14 @@ func (s *DeviceState) getTopologyJSON(ctx context.Context) (string, error) {
 
 	klog.Infof("Found annotation %s on node %s (length: %d chars)", AnnotationGpuFakeDevices, s.nodeName, len(annotationValue))
 
-	// Parse JSON
-	var annotation GpuFakeDevicesAnnotation
-	if err := json.Unmarshal([]byte(annotationValue), &annotation); err != nil {
+	// Parse JSON as NodeTopology
+	var nodeTopology topology.NodeTopology
+	if err := json.Unmarshal([]byte(annotationValue), &nodeTopology); err != nil {
 		klog.Errorf("Failed to parse annotation %s: %v", AnnotationGpuFakeDevices, err)
 		return "", fmt.Errorf("failed to parse annotation %s: %w", AnnotationGpuFakeDevices, err)
 	}
 
-	klog.Infof("Parsed annotation: version=%s, gpuCount=%d", annotation.Version, len(annotation.GPUs))
-
-	// Convert to NodeTopology format
-	nodeTopology, err := convertToNodeTopology(annotation, s.nodeName)
-	if err != nil {
-		klog.Errorf("Failed to convert topology: %v", err)
-		return "", fmt.Errorf("failed to convert topology: %w", err)
-	}
+	klog.Infof("Parsed annotation: gpuCount=%d, gpuProduct=%s, gpuMemory=%d", len(nodeTopology.Gpus), nodeTopology.GpuProduct, nodeTopology.GpuMemory)
 
 	// Serialize to JSON
 	topologyJSON, err := json.Marshal(nodeTopology)
@@ -345,6 +384,12 @@ func (s *DeviceState) unprepareDevices(claimUID string, devices PreparedDevices)
 	return nil
 }
 
+// sanitizeDeviceNameForEnvVar replaces hyphens with underscores in device names
+// to make them valid shell environment variable names.
+func sanitizeDeviceNameForEnvVar(deviceName string) string {
+	return strings.ReplaceAll(deviceName, "-", "_")
+}
+
 // applyConfig applies a configuration to a set of device allocation results.
 //
 // In this example driver there is no actual configuration applied. We simply
@@ -355,12 +400,14 @@ func (s *DeviceState) applyConfig(config *configapi.GpuConfig, results []*resour
 	perDeviceEdits := make(PerDeviceCDIContainerEdits)
 
 	for _, result := range results {
+		// Device name is now just the UUID (lowercase), so use it directly
+		deviceID := sanitizeDeviceNameForEnvVar(result.Device)
 		envs := []string{
-			fmt.Sprintf("GPU_DEVICE_%s=%s", result.Device[4:], result.Device),
+			fmt.Sprintf("GPU_DEVICE_%s=%s", deviceID, result.Device),
 		}
 
 		if config.Sharing != nil {
-			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_SHARING_STRATEGY=%s", result.Device[4:], config.Sharing.Strategy))
+			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_SHARING_STRATEGY=%s", deviceID, config.Sharing.Strategy))
 		}
 
 		switch {
@@ -369,13 +416,13 @@ func (s *DeviceState) applyConfig(config *configapi.GpuConfig, results []*resour
 			if err != nil {
 				return nil, fmt.Errorf("unable to get time slicing config for device %v: %w", result.Device, err)
 			}
-			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_TIMESLICE_INTERVAL=%v", result.Device[4:], tsconfig.Interval))
+			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_TIMESLICE_INTERVAL=%v", deviceID, tsconfig.Interval))
 		case config.Sharing.IsSpacePartitioning():
 			spconfig, err := config.Sharing.GetSpacePartitioningConfig()
 			if err != nil {
 				return nil, fmt.Errorf("unable to get space partitioning config for device %v: %w", result.Device, err)
 			}
-			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_PARTITION_COUNT=%v", result.Device[4:], spconfig.PartitionCount))
+			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_PARTITION_COUNT=%v", deviceID, spconfig.PartitionCount))
 		}
 
 		edits := &cdispec.ContainerEdits{
@@ -484,8 +531,10 @@ func (s *DeviceState) updateDevicesFromAnnotation(ctx context.Context) error {
 		},
 	}
 
-	if err := s.helper.PublishResources(ctx, resources); err != nil {
-		return fmt.Errorf("failed to publish updated resources: %w", err)
+	if s.helper != nil {
+		if err := s.helper.PublishResources(ctx, resources); err != nil {
+			return fmt.Errorf("failed to publish updated resources: %w", err)
+		}
 	}
 
 	klog.FromContext(ctx).Info("Successfully updated devices from annotation", "deviceCount", len(devices))

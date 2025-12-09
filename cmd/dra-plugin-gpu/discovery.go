@@ -34,26 +34,6 @@ const (
 	AnnotationGpuFakeDevices = "nvidia.com/gpu.fake.devices"
 )
 
-// GpuFakeDevicesAnnotation represents the structure of the node annotation
-type GpuFakeDevicesAnnotation struct {
-	Version string    `json:"version"`
-	GPUs    []GpuInfo `json:"gpus"`
-}
-
-// GpuInfo represents a single GPU device from the annotation
-type GpuInfo struct {
-	UUID                  string `json:"uuid"`
-	Minor                 int    `json:"minor"`
-	ProductName           string `json:"productName"`
-	Brand                 string `json:"brand"`
-	Architecture          string `json:"architecture"`
-	CudaComputeCapability string `json:"cudaComputeCapability"`
-	MemoryBytes           int64  `json:"memoryBytes"`
-	PcieBusID             string `json:"pcieBusID"`
-	MigEnabled            bool   `json:"migEnabled"`
-	VfioEnabled           bool   `json:"vfioEnabled"`
-}
-
 func enumerateAllPossibleDevices(ctx context.Context, coreclient coreclientset.Interface, nodeName string) (AllocatableDevices, error) {
 	// Fetch the node
 	node, err := coreclient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -71,55 +51,40 @@ func enumerateAllPossibleDevices(ctx context.Context, coreclient coreclientset.I
 		return nil, fmt.Errorf("annotation %s is empty on node %s", AnnotationGpuFakeDevices, nodeName)
 	}
 
-	// Parse JSON
-	var annotation GpuFakeDevicesAnnotation
-	if err := json.Unmarshal([]byte(annotationValue), &annotation); err != nil {
+	// Parse JSON as NodeTopology
+	var nodeTopology topology.NodeTopology
+	if err := json.Unmarshal([]byte(annotationValue), &nodeTopology); err != nil {
 		return nil, fmt.Errorf("failed to parse annotation %s: %w", AnnotationGpuFakeDevices, err)
 	}
 
-	if len(annotation.GPUs) == 0 {
+	if len(nodeTopology.Gpus) == 0 {
 		return nil, fmt.Errorf("annotation %s contains no GPUs", AnnotationGpuFakeDevices)
 	}
 
+	// Convert GpuMemory from MB to bytes for resource.Quantity
+	memoryBytes := int64(nodeTopology.GpuMemory) * 1024 * 1024
+
 	// Map GPU info to resourceapi.Device structures
 	alldevices := make(AllocatableDevices)
-	for _, gpu := range annotation.GPUs {
-		if gpu.UUID == "" {
-			return nil, fmt.Errorf("GPU entry missing UUID in annotation")
+	for _, gpu := range nodeTopology.Gpus {
+		if gpu.ID == "" {
+			return nil, fmt.Errorf("GPU entry missing ID in annotation")
 		}
 
-		// Use UUID as device name
-		deviceName := strings.ToLower(gpu.UUID)
+		// Use ID (UUID) as device name, convert to lowercase for RFC 1123 compliance
+		deviceName := strings.ToLower(gpu.ID)
 
 		attributes := map[resourceapi.QualifiedName]resourceapi.DeviceAttribute{
 			"uuid": {
-				StringValue: ptr.To(gpu.UUID),
+				StringValue: ptr.To(gpu.ID),
 			},
 			"model": {
-				StringValue: ptr.To(gpu.ProductName),
-			},
-			"minor": {
-				IntValue: ptr.To(int64(gpu.Minor)),
-			},
-			"pcieBusID": {
-				StringValue: ptr.To(gpu.PcieBusID),
-			},
-			"architecture": {
-				StringValue: ptr.To(gpu.Architecture),
-			},
-			"cudaComputeCapability": {
-				StringValue: ptr.To(gpu.CudaComputeCapability),
-			},
-			"migEnabled": {
-				BoolValue: ptr.To(gpu.MigEnabled),
-			},
-			"vfioEnabled": {
-				BoolValue: ptr.To(gpu.VfioEnabled),
+				StringValue: ptr.To(nodeTopology.GpuProduct),
 			},
 		}
 
-		// Convert memoryBytes to resource.Quantity
-		memoryQuantity := resource.NewQuantity(gpu.MemoryBytes, resource.BinarySI)
+		// Convert memory to resource.Quantity
+		memoryQuantity := resource.NewQuantity(memoryBytes, resource.BinarySI)
 
 		device := resourceapi.Device{
 			Name:       deviceName,
@@ -134,43 +99,4 @@ func enumerateAllPossibleDevices(ctx context.Context, coreclient coreclientset.I
 	}
 
 	return alldevices, nil
-}
-
-// convertToNodeTopology converts GpuFakeDevicesAnnotation to topology.NodeTopology format
-func convertToNodeTopology(annotation GpuFakeDevicesAnnotation, nodeName string) (*topology.NodeTopology, error) {
-	if len(annotation.GPUs) == 0 {
-		return nil, fmt.Errorf("annotation contains no GPUs")
-	}
-
-	// Extract GpuMemory and GpuProduct from first GPU (assuming all GPUs have same specs)
-	firstGPU := annotation.GPUs[0]
-	gpuMemory := int(firstGPU.MemoryBytes / (1024 * 1024)) // Convert bytes to MB
-	gpuProduct := firstGPU.ProductName
-
-	// Convert GPUs from annotation to GpuDetails format
-	gpus := make([]topology.GpuDetails, 0, len(annotation.GPUs))
-	for _, gpu := range annotation.GPUs {
-		gpuDetails := topology.GpuDetails{
-			ID: gpu.UUID,
-			Status: topology.GpuStatus{
-				AllocatedBy: topology.ContainerDetails{
-					// Empty initially - will be populated when allocated
-					Namespace: "",
-					Pod:       "",
-					Container: "",
-				},
-				PodGpuUsageStatus: make(topology.PodGpuUsageStatusMap),
-			},
-		}
-		gpus = append(gpus, gpuDetails)
-	}
-
-	nodeTopology := &topology.NodeTopology{
-		GpuMemory:   gpuMemory,
-		GpuProduct:  gpuProduct,
-		Gpus:        gpus,
-		MigStrategy: "none", // Default, can be updated if needed
-	}
-
-	return nodeTopology, nil
 }

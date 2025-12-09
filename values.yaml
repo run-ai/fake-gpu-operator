@@ -7,7 +7,7 @@ devicePlugin:
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/device-plugin
-    tag: ""
+    tag: "v0.0.63"
   resources: 
     requests:
       cpu: "100m"
@@ -21,7 +21,7 @@ statusUpdater:
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-updater
-    tag: ""
+    tag: "v0.0.63"
   resources: 
     requests:
       cpu: "200m"
@@ -35,7 +35,7 @@ topologyServer:
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/topology-server
-    tag: ""
+    tag: "v0.0.63"
   resources: 
     requests:
       cpu: "100m"
@@ -49,7 +49,7 @@ statusExporter:
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-exporter
-    tag: ""
+    tag: "v0.0.63"
   resources: 
     requests:
       cpu: "100m"
@@ -64,7 +64,7 @@ kwokGpuDevicePlugin:
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/kwok-gpu-device-plugin
-    tag: ""
+    tag: "v0.0.63"
   resources: 
     requests:
       cpu: "100m"
@@ -78,7 +78,7 @@ migFaker:
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/mig-faker
-    tag: ""
+    tag: "v0.0.63"
 
 gpuOperator:
   enabled: true
@@ -90,11 +90,11 @@ topologyConfigMap:
   enabled: true
 
 draPlugin:
-  enabled: false
+  enabled: true
   image:
     repository: ghcr.io/run-ai/fake-gpu-operator/dra-plugin-gpu
     pullPolicy: Always
-    tag: ""
+    tag: "0.0.0-dev"
   serviceAccount:
     create: true
     name: ""
@@ -122,13 +122,6 @@ draPlugin:
             cpu: "200m"
             memory: "200Mi"
         healthcheckPort: 51515
-        livenessProbe:
-          service: liveness
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-          successThreshold: 1
   imagePullSecrets: []
 
 ubuntu:
