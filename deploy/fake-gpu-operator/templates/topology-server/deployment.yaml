@@ -19,8 +19,8 @@ spec:
     spec:
       containers:
         - name: topology-server
-          image: "{{ .Values.topologyServer.image.repository }}:{{ .Values.topologyServer.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.topologyServer.image.pullPolicy }}"
+          image: {{ include "fake-gpu-operator.fullImageName" (dict "global" .Values.global "component" .Values.topologyServer.image "chart" .Chart) }}
+          imagePullPolicy: {{ include "fake-gpu-operator.imagePullPolicy" (dict "global" .Values.global "component" .Values.topologyServer.image) }}
           resources:
             {{- toYaml .Values.topologyServer.resources | nindent 12 }}
           env:

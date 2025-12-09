@@ -30,6 +30,8 @@ type RealNodeDevicePlugin struct {
 	server *grpc.Server
 
 	resourceName string
+
+	pluginapi.UnimplementedDevicePluginServer
 }
 
 func getGpuCount(nodeTopology *topology.NodeTopology) int {
@@ -45,11 +47,11 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	c, err := grpc.DialContext(
+	c, err := grpc.DialContext( // nolint: all
 		ctx,
 		unixSocketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+		grpc.WithBlock(), // nolint: all
 		grpc.WithContextDialer(func(_ context.Context, addr string) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
 		}),
@@ -174,7 +176,7 @@ func (m *RealNodeDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.All
 	for _, req := range reqs.ContainerRequests {
 		response := pluginapi.ContainerAllocateResponse{
 			Envs: map[string]string{
-				"MOCK_NVIDIA_VISIBLE_DEVICES": strings.Join(req.DevicesIDs, ","),
+				"MOCK_NVIDIA_VISIBLE_DEVICES": strings.Join(req.DevicesIds, ","),
 			},
 			Mounts: []*pluginapi.Mount{
 				{

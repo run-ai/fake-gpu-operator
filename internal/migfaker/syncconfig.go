@@ -55,18 +55,22 @@ func ContinuouslySyncMigConfigChanges(clientset kubernetes.Interface, migConfig 
 		fields.OneTermEqualSelector("metadata.name", viper.GetString(constants.EnvNodeName)),
 	)
 
-	_, controller := cache.NewInformer(
-		listWatch, &v1.Node{}, 0,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				migConfig.Set(obj.(*v1.Node).Annotations[MigConfigAnnotation])
-			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				oldAnnotation := oldObj.(*v1.Node).Annotations[MigConfigAnnotation]
-				newAnnotation := newObj.(*v1.Node).Annotations[MigConfigAnnotation]
-				if oldAnnotation != newAnnotation {
-					migConfig.Set(newAnnotation)
-				}
+	_, controller := cache.NewInformerWithOptions(
+		cache.InformerOptions{
+			ListerWatcher: listWatch,
+			ObjectType:    &v1.Node{},
+			ResyncPeriod:  0,
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc: func(obj interface{}) {
+					migConfig.Set(obj.(*v1.Node).Annotations[MigConfigAnnotation])
+				},
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					oldAnnotation := oldObj.(*v1.Node).Annotations[MigConfigAnnotation]
+					newAnnotation := newObj.(*v1.Node).Annotations[MigConfigAnnotation]
+					if oldAnnotation != newAnnotation {
+						migConfig.Set(newAnnotation)
+					}
+				},
 			},
 		},
 	)

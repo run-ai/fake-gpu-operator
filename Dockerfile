@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.22.1 AS common-builder
+FROM --platform=$BUILDPLATFORM golang:1.24.4 AS common-builder
 WORKDIR $GOPATH/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
@@ -6,6 +6,11 @@ RUN go mod download
 COPY Makefile .
 COPY internal/common ./internal/common
 ARG TARGETOS TARGETARCH
+
+FROM common-builder AS compute-domain-controller-builder
+COPY ./cmd/compute-domain-controller/ ./cmd/compute-domain-controller/
+COPY ./pkg/compute-domain/ ./pkg/compute-domain/
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=compute-domain-controller
 
 FROM common-builder AS device-plugin-builder
 COPY ./cmd/device-plugin/ ./cmd/device-plugin/
@@ -58,6 +63,10 @@ ENTRYPOINT ["/bin/device-plugin"]
 FROM ubuntu AS status-updater
 COPY --from=status-updater-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-updater /bin/
 ENTRYPOINT ["/bin/status-updater"]
+
+FROM ubuntu AS compute-domain-controller
+COPY --from=compute-domain-controller-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/compute-domain-controller /bin/
+ENTRYPOINT ["/bin/compute-domain-controller"]
 
 FROM ubuntu AS status-exporter
 COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /bin/
