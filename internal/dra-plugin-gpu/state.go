@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"context"
@@ -122,7 +122,7 @@ func waitForGPUAnnotation(ctx context.Context, coreclient coreclientset.Interfac
 }
 
 func NewDeviceState(ctx context.Context, config *Config, helper *kubeletplugin.Helper) (*DeviceState, error) {
-	allocatable, err := waitForGPUAnnotation(ctx, config.coreclient, config.flags.nodeName)
+	allocatable, err := waitForGPUAnnotation(ctx, config.CoreClient, config.Flags.NodeName)
 	if err != nil {
 		return nil, fmt.Errorf("error enumerating all possible devices: %v", err)
 	}
@@ -146,8 +146,8 @@ func NewDeviceState(ctx context.Context, config *Config, helper *kubeletplugin.H
 		cdi:               cdi,
 		allocatable:       allocatable,
 		checkpointManager: checkpointManager,
-		nodeName:          config.flags.nodeName,
-		coreclient:        config.coreclient,
+		nodeName:          config.Flags.NodeName,
+		coreclient:        config.CoreClient,
 		helper:            helper,
 	}
 
@@ -501,9 +501,9 @@ func GetOpaqueDeviceConfigs(
 	return resultConfigs, nil
 }
 
-// updateDevicesFromAnnotation updates the allocatable devices from the node annotation
+// UpdateDevicesFromAnnotation updates the allocatable devices from the node annotation
 // and re-publishes resources. This method is thread-safe.
-func (s *DeviceState) updateDevicesFromAnnotation(ctx context.Context) error {
+func (s *DeviceState) UpdateDevicesFromAnnotation(ctx context.Context) error {
 	s.Lock()
 	defer s.Unlock()
 

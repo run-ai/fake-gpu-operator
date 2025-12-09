@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"fmt"
@@ -39,7 +39,7 @@ type CDIHandler struct {
 
 func NewCDIHandler(config *Config) (*CDIHandler, error) {
 	cache, err := cdiapi.NewCache(
-		cdiapi.WithSpecDirs(config.flags.cdiRoot),
+		cdiapi.WithSpecDirs(config.Flags.CDIRoot),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create a new CDI cache: %w", err)

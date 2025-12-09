@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"context"
@@ -52,7 +52,7 @@ func TestDriver_Shutdown(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			d := &driver{
+			d := &Driver{
 				healthcheck: test.healthcheck,
 				helper:      nil, // Helper not needed for Shutdown test
 			}
@@ -75,7 +75,7 @@ func TestDriver_PrepareResourceClaims(t *testing.T) {
 	state, err := createTestDeviceState(t, config)
 	require.NoError(t, err)
 
-	d := &driver{
+	d := &Driver{
 		state: state,
 	}
 
@@ -129,7 +129,7 @@ func TestDriver_PrepareResourceClaim(t *testing.T) {
 	state, err := createTestDeviceState(t, config)
 	require.NoError(t, err)
 
-	d := &driver{
+	d := &Driver{
 		state: state,
 	}
 
@@ -178,13 +178,13 @@ func TestDriver_UnprepareResourceClaims(t *testing.T) {
 	state, err := createTestDeviceState(t, config)
 	require.NoError(t, err)
 
-	d := &driver{
+	d := &Driver{
 		state: state,
 	}
 
 	// Prepare a claim first
 	claim := createTestClaim("claim-to-unprepare")
-			_, err = state.Prepare(context.Background(), claim)
+	_, err = state.Prepare(context.Background(), claim)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -243,13 +243,13 @@ func TestDriver_UnprepareResourceClaim(t *testing.T) {
 	state, err := createTestDeviceState(t, config)
 	require.NoError(t, err)
 
-	d := &driver{
+	d := &Driver{
 		state: state,
 	}
 
 	// Prepare a claim first
 	claim := createTestClaim("claim-to-unprepare")
-			_, err = state.Prepare(context.Background(), claim)
+	_, err = state.Prepare(context.Background(), claim)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -321,7 +321,7 @@ func TestDriver_HandleError(t *testing.T) {
 				}
 			}
 
-			d := &driver{
+			d := &Driver{
 				cancelCtx: actualCancelCtx,
 			}
 
@@ -362,11 +362,11 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 	require.NoError(t, err)
 
 	config := &Config{
-		flags: &Flags{
-			nodeName: "test-node",
-			cdiRoot:  tmpDir,
+		Flags: &Flags{
+			NodeName: "test-node",
+			CDIRoot:  tmpDir,
 		},
-		coreclient: client,
+		CoreClient: client,
 	}
 
 	cleanup := func() {
@@ -377,7 +377,7 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 }
 
 func createTestDeviceState(t *testing.T, config *Config) (*DeviceState, error) {
-	checkpointDir := filepath.Join(config.flags.cdiRoot, "checkpoints")
+	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
 	os.MkdirAll(checkpointDir, 0755)
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)

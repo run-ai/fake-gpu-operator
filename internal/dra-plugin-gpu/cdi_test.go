@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"encoding/json"
@@ -36,8 +36,8 @@ func TestNewCDIHandler(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	config := &Config{
-		flags: &Flags{
-			cdiRoot: tmpDir,
+		Flags: &Flags{
+			CDIRoot: tmpDir,
 		},
 	}
 
@@ -53,8 +53,8 @@ func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 	defer os.Unsetenv("NODE_NAME")
 
 	config := &Config{
-		flags: &Flags{
-			cdiRoot: tmpDir,
+		Flags: &Flags{
+			CDIRoot: tmpDir,
 		},
 	}
 
@@ -138,8 +138,8 @@ func TestCDIHandler_CreateClaimSpecFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	config := &Config{
-		flags: &Flags{
-			cdiRoot: tmpDir,
+		Flags: &Flags{
+			CDIRoot: tmpDir,
 		},
 	}
 
@@ -212,8 +212,8 @@ func TestCDIHandler_DeleteClaimSpecFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	config := &Config{
-		flags: &Flags{
-			cdiRoot: tmpDir,
+		Flags: &Flags{
+			CDIRoot: tmpDir,
 		},
 	}
 

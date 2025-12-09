@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"context"
@@ -31,7 +31,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type driver struct {
+// Driver implements the DRA driver interface
+type Driver struct {
 	client      coreclientset.Interface
 	helper      *kubeletplugin.Helper
 	state       *DeviceState
@@ -39,20 +40,25 @@ type driver struct {
 	cancelCtx   func(error)
 }
 
-func NewDriver(ctx context.Context, config *Config) (*driver, error) {
-	driver := &driver{
-		client:    config.coreclient,
-		cancelCtx: config.cancelMainCtx,
+// GetState returns the device state (for use by node controller)
+func (d *Driver) GetState() *DeviceState {
+	return d.state
+}
+
+func NewDriver(ctx context.Context, config *Config) (*Driver, error) {
+	driver := &Driver{
+		client:    config.CoreClient,
+		cancelCtx: config.CancelMainCtx,
 	}
 
 	// Start helper first (needed for NewDeviceState)
 	helper, err := kubeletplugin.Start(
 		ctx,
 		driver,
-		kubeletplugin.KubeClient(config.coreclient),
-		kubeletplugin.NodeName(config.flags.nodeName),
+		kubeletplugin.KubeClient(config.CoreClient),
+		kubeletplugin.NodeName(config.Flags.NodeName),
 		kubeletplugin.DriverName(DriverName),
-		kubeletplugin.RegistrarDirectoryPath(config.flags.kubeletRegistrarDirectoryPath),
+		kubeletplugin.RegistrarDirectoryPath(config.Flags.KubeletRegistrarDirectoryPath),
 		kubeletplugin.PluginDataDirectoryPath(config.DriverPluginPath()),
 	)
 	if err != nil {
@@ -72,7 +78,7 @@ func NewDriver(ctx context.Context, config *Config) (*driver, error) {
 	}
 	resources := resourceslice.DriverResources{
 		Pools: map[string]resourceslice.Pool{
-			config.flags.nodeName: {
+			config.Flags.NodeName: {
 				Slices: []resourceslice.Slice{
 					{
 						Devices: devices,
@@ -82,7 +88,7 @@ func NewDriver(ctx context.Context, config *Config) (*driver, error) {
 		},
 	}
 
-	driver.healthcheck, err = startHealthcheck(ctx, config)
+	driver.healthcheck, err = StartHealthcheck(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("start healthcheck: %w", err)
 	}
@@ -94,7 +100,7 @@ func NewDriver(ctx context.Context, config *Config) (*driver, error) {
 	return driver, nil
 }
 
-func (d *driver) Shutdown(logger klog.Logger) error {
+func (d *Driver) Shutdown(logger klog.Logger) error {
 	if d.healthcheck != nil {
 		d.healthcheck.Stop(logger)
 	}
@@ -102,7 +108,7 @@ func (d *driver) Shutdown(logger klog.Logger) error {
 	return nil
 }
 
-func (d *driver) PrepareResourceClaims(ctx context.Context, claims []*resourceapi.ResourceClaim) (map[types.UID]kubeletplugin.PrepareResult, error) {
+func (d *Driver) PrepareResourceClaims(ctx context.Context, claims []*resourceapi.ResourceClaim) (map[types.UID]kubeletplugin.PrepareResult, error) {
 	klog.Infof("PrepareResourceClaims is called: number of claims: %d", len(claims))
 	result := make(map[types.UID]kubeletplugin.PrepareResult)
 
@@ -113,7 +119,7 @@ func (d *driver) PrepareResourceClaims(ctx context.Context, claims []*resourceap
 	return result, nil
 }
 
-func (d *driver) prepareResourceClaim(ctx context.Context, claim *resourceapi.ResourceClaim) kubeletplugin.PrepareResult {
+func (d *Driver) prepareResourceClaim(ctx context.Context, claim *resourceapi.ResourceClaim) kubeletplugin.PrepareResult {
 	preparedPBs, err := d.state.Prepare(ctx, claim)
 	if err != nil {
 		return kubeletplugin.PrepareResult{
@@ -134,7 +140,7 @@ func (d *driver) prepareResourceClaim(ctx context.Context, claim *resourceapi.Re
 	return kubeletplugin.PrepareResult{Devices: prepared}
 }
 
-func (d *driver) UnprepareResourceClaims(ctx context.Context, claims []kubeletplugin.NamespacedObject) (map[types.UID]error, error) {
+func (d *Driver) UnprepareResourceClaims(ctx context.Context, claims []kubeletplugin.NamespacedObject) (map[types.UID]error, error) {
 	klog.Infof("UnprepareResourceClaims is called: number of claims: %d", len(claims))
 	result := make(map[types.UID]error)
 
@@ -145,7 +151,7 @@ func (d *driver) UnprepareResourceClaims(ctx context.Context, claims []kubeletpl
 	return result, nil
 }
 
-func (d *driver) unprepareResourceClaim(_ context.Context, claim kubeletplugin.NamespacedObject) error {
+func (d *Driver) unprepareResourceClaim(_ context.Context, claim kubeletplugin.NamespacedObject) error {
 	if err := d.state.Unprepare(string(claim.UID)); err != nil {
 		return fmt.Errorf("error unpreparing devices for claim %v: %w", claim.UID, err)
 	}
@@ -153,7 +159,7 @@ func (d *driver) unprepareResourceClaim(_ context.Context, claim kubeletplugin.N
 	return nil
 }
 
-func (d *driver) HandleError(ctx context.Context, err error, msg string) {
+func (d *Driver) HandleError(ctx context.Context, err error, msg string) {
 	utilruntime.HandleErrorWithContext(ctx, err, msg)
 	if !errors.Is(err, kubeletplugin.ErrRecoverable) && d.cancelCtx != nil {
 		d.cancelCtx(fmt.Errorf("fatal background error: %w", err))

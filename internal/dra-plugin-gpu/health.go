@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"context"
@@ -45,10 +45,10 @@ type healthcheck struct {
 	draClient drapb.DRAPluginClient
 }
 
-func startHealthcheck(ctx context.Context, config *Config) (*healthcheck, error) {
+func StartHealthcheck(ctx context.Context, config *Config) (*healthcheck, error) {
 	log := klog.FromContext(ctx)
 
-	port := config.flags.healthcheckPort
+	port := config.Flags.HealthcheckPort
 	if port < 0 {
 		return nil, nil
 	}
@@ -63,7 +63,7 @@ func startHealthcheck(ctx context.Context, config *Config) (*healthcheck, error)
 		Scheme: "unix",
 		// TODO: this needs to adapt when seamless upgrades
 		// are enabled and the filename includes a uid.
-		Path: path.Join(config.flags.kubeletRegistrarDirectoryPath, DriverName+"-reg.sock"),
+		Path: path.Join(config.Flags.KubeletRegistrarDirectoryPath, DriverName+"-reg.sock"),
 	}).String()
 	log.Info("connecting to registration socket", "path", regSockPath)
 	regConn, err := grpc.NewClient(

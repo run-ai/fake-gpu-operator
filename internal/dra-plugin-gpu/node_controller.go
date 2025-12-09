@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"context"
@@ -64,7 +64,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	r.lastValue = currentValue
 
 	// Update devices from annotation
-	if err := r.state.updateDevicesFromAnnotation(ctx); err != nil {
+	if err := r.state.UpdateDevicesFromAnnotation(ctx); err != nil {
 		logger.Error(err, "Failed to update devices from annotation")
 		return ctrl.Result{}, fmt.Errorf("failed to update devices: %w", err)
 	}
@@ -85,8 +85,8 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// setupNodeController sets up and starts the node controller
-func setupNodeController(ctx context.Context, state *DeviceState, nodeName string) error {
+// SetupNodeController sets up and starts the node controller
+func SetupNodeController(ctx context.Context, state *DeviceState, nodeName string) error {
 	nodeNameEnv := os.Getenv("NODE_NAME")
 	if nodeNameEnv == "" {
 		return fmt.Errorf("NODE_NAME environment variable is not set")

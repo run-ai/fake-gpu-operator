@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 )
 
 const (
+	// AnnotationGpuFakeDevices is the annotation key for GPU fake devices on nodes
 	AnnotationGpuFakeDevices = "nvidia.com/gpu.fake.devices"
 )
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package dra_plugin_gpu
 
 import (
 	"context"
@@ -156,11 +156,11 @@ func createTestConfig(t *testing.T) (*Config, func()) {
 	require.NoError(t, err)
 
 	config := &Config{
-		flags: &Flags{
-			nodeName: "test-node",
-			cdiRoot:  tmpDir,
+		Flags: &Flags{
+			NodeName: "test-node",
+			CDIRoot:  tmpDir,
 		},
-		coreclient: client,
+		CoreClient: client,
 	}
 
 	cleanup := func() {
@@ -182,7 +182,7 @@ func TestDeviceState_Prepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	checkpointDir := filepath.Join(config.flags.cdiRoot, "checkpoints")
+	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
 	os.MkdirAll(checkpointDir, 0755)
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
@@ -297,7 +297,7 @@ func TestDeviceState_Unprepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	checkpointDir := filepath.Join(config.flags.cdiRoot, "checkpoints")
+	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
 	os.MkdirAll(checkpointDir, 0755)
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
@@ -520,7 +520,7 @@ func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	checkpointDir := filepath.Join(config.flags.cdiRoot, "checkpoints")
+	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
 	os.MkdirAll(checkpointDir, 0755)
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
@@ -544,7 +544,7 @@ func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 		cdi:               cdi,
 		helper:            nil, // Skip helper-dependent test
 		nodeName:          "test-node",
-		coreclient:        config.coreclient,
+		coreclient:        config.CoreClient,
 	}
 
 	tests := map[string]struct {
@@ -575,13 +575,13 @@ func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			// Update node annotation
-			node, err := config.coreclient.CoreV1().Nodes().Get(context.Background(), "test-node", metav1.GetOptions{})
+			node, err := config.CoreClient.CoreV1().Nodes().Get(context.Background(), "test-node", metav1.GetOptions{})
 			require.NoError(t, err)
 			test.updateAnnotation(node)
-			_, err = config.coreclient.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
+			_, err = config.CoreClient.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
-			err = state.updateDevicesFromAnnotation(context.Background())
+			err = state.UpdateDevicesFromAnnotation(context.Background())
 			if test.wantErr {
 				assert.Error(t, err)
 			} else {

@@ -1,19 +1,3 @@
-/*
- * Copyright 2023 The Kubernetes Authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package main
 
 import (
@@ -22,21 +6,15 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	"github.com/urfave/cli/v2"
 
-	coreclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 	"k8s.io/klog/v2"
 
+	dra_plugin_gpu "github.com/run-ai/fake-gpu-operator/internal/dra-plugin-gpu"
 	"sigs.k8s.io/dra-example-driver/pkg/flags"
-)
-
-const (
-	DriverPluginCheckpointFile = "checkpoint.json"
-	DriverName                 = "gpu.nvidia.com" // Override driver name for deviceclass compatibility
 )
 
 type Flags struct {
@@ -48,16 +26,6 @@ type Flags struct {
 	kubeletRegistrarDirectoryPath string
 	kubeletPluginsDirectoryPath   string
 	healthcheckPort               int
-}
-
-type Config struct {
-	flags         *Flags
-	coreclient    coreclientset.Interface
-	cancelMainCtx func(error)
-}
-
-func (c Config) DriverPluginPath() string {
-	return filepath.Join(c.flags.kubeletPluginsDirectoryPath, DriverName)
 }
 
 func main() {
@@ -130,9 +98,17 @@ func newApp() *cli.App {
 				return fmt.Errorf("create client: %v", err)
 			}
 
-			config := &Config{
-				flags:      flags,
-				coreclient: clientSets.Core,
+			internalFlags := &dra_plugin_gpu.Flags{
+				NodeName:                      flags.nodeName,
+				CDIRoot:                       flags.cdiRoot,
+				KubeletRegistrarDirectoryPath: flags.kubeletRegistrarDirectoryPath,
+				KubeletPluginsDirectoryPath:   flags.kubeletPluginsDirectoryPath,
+				HealthcheckPort:               flags.healthcheckPort,
+			}
+
+			config := &dra_plugin_gpu.Config{
+				Flags:      internalFlags,
+				CoreClient: clientSets.Core,
 			}
 
 			return RunPlugin(ctx, config)
@@ -142,7 +118,7 @@ func newApp() *cli.App {
 	return app
 }
 
-func RunPlugin(ctx context.Context, config *Config) error {
+func RunPlugin(ctx context.Context, config *dra_plugin_gpu.Config) error {
 	logger := klog.FromContext(ctx)
 
 	err := os.MkdirAll(config.DriverPluginPath(), 0750)
@@ -150,10 +126,10 @@ func RunPlugin(ctx context.Context, config *Config) error {
 		return err
 	}
 
-	info, err := os.Stat(config.flags.cdiRoot)
+	info, err := os.Stat(config.Flags.CDIRoot)
 	switch {
 	case err != nil && os.IsNotExist(err):
-		err := os.MkdirAll(config.flags.cdiRoot, 0750)
+		err := os.MkdirAll(config.Flags.CDIRoot, 0750)
 		if err != nil {
 			return err
 		}
@@ -166,15 +142,15 @@ func RunPlugin(ctx context.Context, config *Config) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 	ctx, cancel := context.WithCancelCause(ctx)
-	config.cancelMainCtx = cancel
+	config.CancelMainCtx = cancel
 
-	driver, err := NewDriver(ctx, config)
+	driver, err := dra_plugin_gpu.NewDriver(ctx, config)
 	if err != nil {
 		return err
 	}
 
 	// Set up node controller to watch for annotation changes
-	if err := setupNodeController(ctx, driver.state, config.flags.nodeName); err != nil {
+	if err := dra_plugin_gpu.SetupNodeController(ctx, driver.GetState(), config.Flags.NodeName); err != nil {
 		logger.Error(err, "Failed to setup node controller")
 		return fmt.Errorf("failed to setup node controller: %w", err)
 	}
