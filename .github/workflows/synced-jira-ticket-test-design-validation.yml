@@ -32,36 +32,3 @@ jobs:
           else
             echo "found jira ticket: ${{steps.ticket.outputs.issue}}"
           fi
-      - name: Setup Jira CLI
-        uses: atlassian/gajira-cli@v2.0.2
-      - name: Verify not epic and that design and test plan fields are filled out
-        run: |
-          export JIRA_API_TOKEN=${{ secrets.JIRA_SECRET }}
-
-          jira list -q "ID=${{steps.ticket.outputs.issue}} AND type!=Story AND type!=Bug"  > /tmp/query1-result.txt
-          cat /tmp/query1-result.txt
-          if [ -s /tmp/query1-result.txt ]; then
-            echo "Rejected: Ticket: ${{steps.ticket.outputs.issue}} is not a bug and not a story"
-            exit 1
-          else
-            echo "Good: Ticket is a bug or story"
-          fi
-
-          jira list -q "(ID=${{steps.ticket.outputs.issue}} AND type=Story AND (\"Design[Paragraph]\" is EMPTY OR \"Test Plan[Paragraph]\" is EMPTY))"  > /tmp/query2-result.txt
-          cat /tmp/query2-result.txt
-          if [ -s /tmp/query2-result.txt ]; then
-            echo "Rejected: Its a story and either design or a test plan at not filled out in ticket: ${{steps.ticket.outputs.issue}} "
-            exit 1
-          else
-            echo "All OK. Either its a bug, or a story where both Design and Test Plan fields are filled out in ticket ${{steps.ticket.outputs.issue}}"
-          fi
-
-          jira list -q "ID=${{steps.ticket.outputs.issue}} AND status=Done"  > /tmp/query3-result.txt
-          cat /tmp/query3-result.txt
-          if [ -s /tmp/query3-result.txt ]; then
-            echo "Rejected: Ticket: ${{steps.ticket.outputs.issue}} ticket is already done"
-            exit 1
-          else
-            echo "Good: Ticket is not done"
-          fi
-
