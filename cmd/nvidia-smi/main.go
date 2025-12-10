@@ -85,7 +85,11 @@ func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get topology from HTTP: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			// Ignore close errors on response body
+		}
+	}()
 
 	var nodeTopology topology.NodeTopology
 	err = json.NewDecoder(resp.Body).Decode(&nodeTopology)

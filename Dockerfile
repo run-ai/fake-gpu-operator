@@ -43,6 +43,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH
 
 FROM common-builder AS dra-plugin-gpu-builder
 COPY ./cmd/dra-plugin-gpu/ ./cmd/dra-plugin-gpu/
+COPY ./internal/dra-plugin-gpu/ ./internal/dra-plugin-gpu/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=dra-plugin-gpu
 
 FROM common-builder AS preloader-builder 

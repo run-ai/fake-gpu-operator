@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -336,16 +335,6 @@ func applyManifest(manifestPath string) {
 	Expect(err).NotTo(HaveOccurred(), "Failed to apply manifest %s: %s", manifestPath, string(output))
 }
 
-func deleteManifest(manifestPath string) {
-	// Get the test directory (where this file is located)
-	_, filename, _, _ := runtime.Caller(0)
-	testDir := filepath.Dir(filename)
-	manifestFile := filepath.Join(testDir, manifestPath)
-
-	cmd := exec.Command("kubectl", "delete", "-f", manifestFile, "--ignore-not-found=true")
-	_ = cmd.Run() // Ignore errors during cleanup
-}
-
 func deleteResourceClaim(namespace, claimName string) {
 	cmd := exec.Command("kubectl", "delete", "resourceclaim", claimName, "-n", namespace, "--ignore-not-found=true", "--wait=false")
 	_ = cmd.Run() // Ignore errors during cleanup
@@ -470,7 +459,11 @@ func getPodLogs(namespace, podName, containerName string) string {
 		if err != nil {
 			return "", err
 		}
-		defer logs.Close()
+		defer func() {
+			if err := logs.Close(); err != nil {
+				GinkgoWriter.Printf("Error closing logs stream: %v\n", err)
+			}
+		}()
 
 		buf := make([]byte, 1024*1024) // 1MB buffer
 		n, err := logs.Read(buf)
@@ -485,7 +478,11 @@ func getPodLogs(namespace, podName, containerName string) string {
 	})
 	logs, err := req.Stream(context.Background())
 	Expect(err).NotTo(HaveOccurred())
-	defer logs.Close()
+	defer func() {
+		if err := logs.Close(); err != nil {
+			GinkgoWriter.Printf("Error closing logs stream: %v\n", err)
+		}
+	}()
 
 	buf := make([]byte, 1024*1024) // 1MB buffer
 	n, err := logs.Read(buf)
@@ -593,21 +590,4 @@ func verifyNvidiaSmiBinary(namespace, podName, containerName string) {
 	output, _ := cmd.CombinedOutput()
 	// We expect either success or a usage error, but not "command not found"
 	Expect(string(output)).NotTo(ContainSubstring("command not found"), "nvidia-smi should be available")
-}
-
-// Helper to parse GPU_TOPOLOGY_JSON
-func parseTopologyJSON(logs string) (map[string]interface{}, error) {
-	re := regexp.MustCompile(`GPU_TOPOLOGY_JSON=({.+})`)
-	matches := re.FindStringSubmatch(logs)
-	if len(matches) < 2 {
-		return nil, fmt.Errorf("GPU_TOPOLOGY_JSON not found in logs")
-	}
-
-	var topology map[string]interface{}
-	err := json.Unmarshal([]byte(matches[1]), &topology)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse GPU_TOPOLOGY_JSON: %w", err)
-	}
-
-	return topology, nil
 }

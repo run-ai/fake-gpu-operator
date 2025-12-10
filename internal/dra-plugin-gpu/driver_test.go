@@ -320,7 +320,7 @@ func TestDriver_HandleError(t *testing.T) {
 
 func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 	tmpDir := t.TempDir()
-	os.Setenv("NODE_NAME", "test-node")
+	require.NoError(t, os.Setenv("NODE_NAME", "test-node"))
 
 	client := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -355,7 +355,7 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 	}
 
 	cleanup := func() {
-		os.Unsetenv("NODE_NAME")
+		_ = os.Unsetenv("NODE_NAME")
 	}
 
 	return config, cleanup
@@ -364,7 +364,7 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 func createTestDeviceState(t *testing.T, config *Config) (*DeviceState, error) {
 	// Use the same checkpoint directory as NewDeviceState would use
 	checkpointDir := config.DriverPluginPath()
-	os.MkdirAll(checkpointDir, 0755)
+	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
 	require.NoError(t, err)

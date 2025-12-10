@@ -57,62 +57,13 @@ func TestPreparedDevicesGetDevices(t *testing.T) {
 	}
 }
 
-// mockCheckpointManager implements checkpointmanager.CheckpointManager for testing
-type mockCheckpointManager struct {
-	checkpoints         []string
-	getCheckpointErr    error
-	createCheckpointErr error
-	listCheckpointsErr  error
-	storedCheckpoint    checkpointmanager.Checkpoint
-}
-
-func (m *mockCheckpointManager) CreateCheckpoint(name string, checkpoint checkpointmanager.Checkpoint) error {
-	if m.createCheckpointErr != nil {
-		return m.createCheckpointErr
-	}
-	m.storedCheckpoint = checkpoint
-	m.checkpoints = append(m.checkpoints, name)
-	return nil
-}
-
-func (m *mockCheckpointManager) GetCheckpoint(name string, checkpoint checkpointmanager.Checkpoint) error {
-	if m.getCheckpointErr != nil {
-		return m.getCheckpointErr
-	}
-	if m.storedCheckpoint != nil {
-		data, err := m.storedCheckpoint.MarshalCheckpoint()
-		if err != nil {
-			return err
-		}
-		return checkpoint.UnmarshalCheckpoint(data)
-	}
-	// Return empty checkpoint
-	empty := newCheckpoint()
-	data, err := empty.MarshalCheckpoint()
-	if err != nil {
-		return err
-	}
-	return checkpoint.UnmarshalCheckpoint(data)
-}
-
-func (m *mockCheckpointManager) RemoveCheckpoint(name string) error {
-	return nil
-}
-
-func (m *mockCheckpointManager) ListCheckpoints() ([]string, error) {
-	if m.listCheckpointsErr != nil {
-		return nil, m.listCheckpointsErr
-	}
-	return m.checkpoints, nil
-}
-
 // We can't easily mock kubeletplugin.Helper as it's a concrete type
 // For tests that need it, we'll skip NewDeviceState tests that require it
 // and test other methods directly
 
 func createTestConfig(t *testing.T) (*Config, func()) {
 	tmpDir := t.TempDir()
-	os.Setenv("NODE_NAME", "test-node")
+	require.NoError(t, os.Setenv("NODE_NAME", "test-node"))
 
 	client := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -148,7 +99,7 @@ func createTestConfig(t *testing.T) (*Config, func()) {
 	}
 
 	cleanup := func() {
-		os.Unsetenv("NODE_NAME")
+		_ = os.Unsetenv("NODE_NAME")
 	}
 
 	return config, cleanup
@@ -168,7 +119,7 @@ func TestDeviceState_Prepare(t *testing.T) {
 
 	// Use the same checkpoint directory as NewDeviceState would use
 	checkpointDir := config.DriverPluginPath()
-	os.MkdirAll(checkpointDir, 0755)
+	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
 	require.NoError(t, err)
@@ -291,7 +242,7 @@ func TestDeviceState_Unprepare(t *testing.T) {
 
 	// Use the same checkpoint directory as NewDeviceState would use
 	checkpointDir := config.DriverPluginPath()
-	os.MkdirAll(checkpointDir, 0755)
+	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
 	require.NoError(t, err)
@@ -521,7 +472,7 @@ func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 	defer cleanup()
 
 	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
-	os.MkdirAll(checkpointDir, 0755)
+	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
 	require.NoError(t, err)
@@ -612,7 +563,7 @@ func TestDeviceState_ApplyConfig(t *testing.T) {
 			wantErr: false,
 			validate: func(t *testing.T, edits PerDeviceCDIContainerEdits) {
 				require.Contains(t, edits, "gpu-test-0")
-				envs := edits["gpu-test-0"].ContainerEdits.Env
+				envs := edits["gpu-test-0"].Env
 				assert.Contains(t, envs, "GPU_DEVICE_gpu_test_0=gpu-test-0")
 			},
 		},
@@ -633,7 +584,7 @@ func TestDeviceState_ApplyConfig(t *testing.T) {
 			},
 			wantErr: false,
 			validate: func(t *testing.T, edits PerDeviceCDIContainerEdits) {
-				envs := edits["gpu-test-0"].ContainerEdits.Env
+				envs := edits["gpu-test-0"].Env
 				assert.Contains(t, envs, "GPU_DEVICE_gpu_test_0_SHARING_STRATEGY=time-slicing")
 			},
 		},

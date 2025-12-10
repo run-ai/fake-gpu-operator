@@ -33,8 +33,10 @@ func TestNewCDIHandler(t *testing.T) {
 
 func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("NODE_NAME", "test-node")
-	defer os.Unsetenv("NODE_NAME")
+	require.NoError(t, os.Setenv("NODE_NAME", "test-node"))
+	defer func() {
+		_ = os.Unsetenv("NODE_NAME")
+	}()
 
 	config := &Config{
 		Flags: &Flags{
@@ -260,20 +262,6 @@ func TestCDIHandler_GetClaimDevices(t *testing.T) {
 			assert.Equal(t, test.expected, result)
 		})
 	}
-}
-
-// Test helper to create a mock CDI cache that fails operations
-type mockCDICache struct {
-	writeSpecErr  error
-	removeSpecErr error
-}
-
-func (m *mockCDICache) WriteSpec(spec interface{}, name string) error {
-	return m.writeSpecErr
-}
-
-func (m *mockCDICache) RemoveSpec(name string) error {
-	return m.removeSpecErr
 }
 
 func TestCDIHandler_CreateCommonSpecFile_Errors(t *testing.T) {
