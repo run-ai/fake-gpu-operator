@@ -2,7 +2,7 @@
 
 This document will guide you through deploying fake-gpu-operator on an OpenShift cluster with some basic validation. Unlike most Kubernetes based clusters, Openshift has tighter security controls on what pods or workloads can do. Since there is this delta, we think it would be helpful to have this document here for others looking to deploy it on Openshift.
 
-It must be noted that this operator has limitations on what can be simulated. Do NOT expect to be able to plug in and have it play nice for say something like vllm or llm-d gpu required workloads/requests. As of this document, the simulated GPUs do not support simulated inferencing nor simulating training.
+It must be noted that this operator has limitations on what can be simulated. Do NOT expect to be able to plug in and have it play nice for say something like vllm or llm-d gpu required workloads/requests. As of this document, the simulated GPUs do not support simulated inferencing. If you need that functionality, consider looking at [llm-d/llm-d simulated-accelerators](https://github.com/llm-d/llm-d/tree/main/guides/simulated-accelerators) and/or [llm-d/llm-d-inference-sim](https://github.com/llm-d/llm-d-inference-sim).
 
 Note: Comparable Openshift infrastructure and/or older OCP versions may work but have not been tested.
 Note: The oc cli is used for this guide but kubectl should work as well.
