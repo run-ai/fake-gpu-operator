@@ -67,6 +67,8 @@ jobs:
         run: make integration
         env:
           DOCKER_TAG: 0.0.0-dev
+          DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
+          DOCKER_BUILDX_PLATFORMS: linux/amd64
 
   set-release-vars:
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
