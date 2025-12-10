@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
-	"github.com/spf13/viper"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 )
 
@@ -21,7 +20,7 @@ type DraPluginGpuApp struct {
 }
 
 func (app *DraPluginGpuApp) GetConfig() interface{} {
-	return Flags{}
+	return &app.Flags
 }
 
 func (app *DraPluginGpuApp) Name() string {
@@ -31,11 +30,7 @@ func (app *DraPluginGpuApp) Name() string {
 func (app *DraPluginGpuApp) Init(stop chan struct{}) {
 	app.stopCh = stop
 
-	if err := viper.Unmarshal(&app.Flags); err != nil {
-		log.Fatalf("failed to unmarshal configuration: %v", err)
-	}
-
-	// Set defaults
+	// Set defaults (config already unmarshalled by apprunner.LoadConfig)
 	if app.Flags.KubeletRegistrarDirectoryPath == "" {
 		app.Flags.KubeletRegistrarDirectoryPath = kubeletplugin.KubeletRegistryDir
 	}
