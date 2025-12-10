@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
-	"k8s.io/klog/v2"
 )
 
 func TestDriver_Shutdown(t *testing.T) {
@@ -39,8 +38,7 @@ func TestDriver_Shutdown(t *testing.T) {
 				helper:      nil, // Helper not needed for Shutdown test
 			}
 
-			logger := klog.Background()
-			err := d.Shutdown(logger)
+			err := d.Shutdown()
 			if test.wantErr {
 				assert.Error(t, err)
 			} else {

@@ -3,13 +3,13 @@ package dra_plugin_gpu
 import (
 	"context"
 	"fmt"
+	"log"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
@@ -24,9 +24,6 @@ type NodeReconciler struct {
 
 // Reconcile watches for changes to the node annotation
 func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-
-	// Only reconcile if this is our node
 	if req.Name != r.nodeName {
 		return ctrl.Result{}, nil
 	}
@@ -36,19 +33,16 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Check if the annotation exists and has changed
 	currentValue := node.Annotations[AnnotationGpuFakeDevices]
 	if currentValue == r.lastValue {
-		// No change, skip reconciliation
 		return ctrl.Result{}, nil
 	}
 
-	logger.Info("Node annotation changed, updating devices", "node", req.Name)
+	log.Printf("Node annotation changed, updating devices for node %s", req.Name)
 	r.lastValue = currentValue
 
-	// Update devices from annotation
 	if err := r.state.UpdateDevicesFromAnnotation(ctx); err != nil {
-		logger.Error(err, "Failed to update devices from annotation")
+		log.Printf("Failed to update devices from annotation: %v", err)
 		return ctrl.Result{}, fmt.Errorf("failed to update devices: %w", err)
 	}
 
@@ -114,7 +108,7 @@ func SetupNodeController(ctx context.Context, state *DeviceState, nodeName strin
 	// Start manager in a goroutine
 	go func() {
 		if err := mgr.Start(ctx); err != nil {
-			log.FromContext(ctx).Error(err, "Failed to start node controller manager")
+			log.Printf("Failed to start node controller manager: %v", err)
 		}
 	}()
 

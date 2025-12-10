@@ -3,6 +3,7 @@ package dra_plugin_gpu
 import (
 	"context"
 	"fmt"
+	"log"
 	"maps"
 	"slices"
 	"strings"
@@ -12,11 +13,9 @@ import (
 	resourceapi "k8s.io/api/resource/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	coreclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 	"k8s.io/dynamic-resource-allocation/resourceslice"
-	"k8s.io/klog/v2"
 	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1beta1"
 
 	configapi "sigs.k8s.io/dra-example-driver/api/example.com/resource/gpu/v1alpha1"
@@ -63,42 +62,30 @@ type DeviceState struct {
 	helper      *kubeletplugin.Helper
 }
 
-// waitForGPUAnnotation retries enumerating devices with exponential backoff
-// until the GPU annotation is found on the node.
+// waitForGPUAnnotation polls for the GPU annotation every 3 seconds until found.
 func waitForGPUAnnotation(ctx context.Context, coreclient coreclientset.Interface, nodeName string) (AllocatableDevices, error) {
-	logger := klog.FromContext(ctx)
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
 
-	backoff := wait.Backoff{
-		Duration: 2 * time.Second, // Initial delay
-		Factor:   2.0,             // Multiply by 2 each time
-		Steps:    10,              // Maximum 10 retries
-		Cap:      5 * time.Minute, // Cap at 5 minutes
-	}
-
-	var allocatable AllocatableDevices
-	err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
-		var err error
-		allocatable, err = enumerateAllPossibleDevices(ctx, coreclient, nodeName)
-		if err != nil {
-			// Check if it's an annotation missing error (retryable)
-			if strings.Contains(err.Error(), "annotation") &&
-				(strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "empty")) {
-				logger.V(2).Info("Waiting for GPU annotation", "node", nodeName, "error", err)
-				return false, nil // Retry
-			}
-			// Other errors are not retryable
-			return false, err
+	for {
+		allocatable, err := enumerateAllPossibleDevices(ctx, coreclient, nodeName)
+		if err == nil {
+			log.Printf("Successfully found GPU annotation, deviceCount=%d", len(allocatable))
+			return allocatable, nil
 		}
-		// Success
-		logger.Info("Successfully found GPU annotation", "deviceCount", len(allocatable))
-		return true, nil
-	})
 
-	if err != nil {
-		return nil, fmt.Errorf("error enumerating all possible devices after retries: %w", err)
+		// Retry only for missing/empty annotation errors
+		if !strings.Contains(err.Error(), "annotation") {
+			return nil, err
+		}
+
+		log.Printf("Waiting for GPU annotation on node %s", nodeName)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-ticker.C:
+		}
 	}
-
-	return allocatable, nil
 }
 
 func NewDeviceState(ctx context.Context, config *Config, helper *kubeletplugin.Helper) (*DeviceState, error) {
@@ -376,6 +363,6 @@ func (s *DeviceState) UpdateDevicesFromAnnotation(ctx context.Context) error {
 		}
 	}
 
-	klog.FromContext(ctx).Info("Successfully updated devices from annotation", "deviceCount", len(devices))
+	log.Printf("Successfully updated devices from annotation, deviceCount=%d", len(devices))
 	return nil
 }

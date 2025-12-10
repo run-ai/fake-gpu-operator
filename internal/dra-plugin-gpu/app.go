@@ -9,7 +9,6 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/spf13/viper"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
-	"k8s.io/klog/v2"
 )
 
 type DraPluginGpuApp struct {
@@ -85,13 +84,10 @@ func (app *DraPluginGpuApp) Init(stop chan struct{}) {
 }
 
 func (app *DraPluginGpuApp) Run() {
-	// Block until stopCh is closed
 	<-app.stopCh
 
-	// Cleanup/shutdown
-	logger := klog.Background()
-	if err := app.driver.Shutdown(logger); err != nil {
-		logger.Error(err, "Unable to cleanly shutdown driver")
+	if err := app.driver.Shutdown(); err != nil {
+		log.Printf("Unable to cleanly shutdown driver: %v", err)
 	}
 }
 

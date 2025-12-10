@@ -3,6 +3,7 @@ package dra_plugin_gpu
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"path"
@@ -14,7 +15,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
-	"k8s.io/klog/v2"
 	drapb "k8s.io/kubelet/pkg/apis/dra/v1"
 	registerapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
 )
@@ -29,9 +29,7 @@ type healthcheck struct {
 	draClient drapb.DRAPluginClient
 }
 
-func StartHealthcheck(ctx context.Context, config *Config) (*healthcheck, error) {
-	log := klog.FromContext(ctx)
-
+func StartHealthcheck(_ context.Context, config *Config) (*healthcheck, error) {
 	port := config.Flags.HealthcheckPort
 	if port < 0 {
 		return nil, nil
@@ -45,11 +43,9 @@ func StartHealthcheck(ctx context.Context, config *Config) (*healthcheck, error)
 
 	regSockPath := (&url.URL{
 		Scheme: "unix",
-		// TODO: this needs to adapt when seamless upgrades
-		// are enabled and the filename includes a uid.
-		Path: path.Join(config.Flags.KubeletRegistrarDirectoryPath, DriverName+"-reg.sock"),
+		Path:   path.Join(config.Flags.KubeletRegistrarDirectoryPath, DriverName+"-reg.sock"),
 	}).String()
-	log.Info("connecting to registration socket", "path", regSockPath)
+	log.Printf("Connecting to registration socket: %s", regSockPath)
 	regConn, err := grpc.NewClient(
 		regSockPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -62,7 +58,7 @@ func StartHealthcheck(ctx context.Context, config *Config) (*healthcheck, error)
 		Scheme: "unix",
 		Path:   path.Join(config.DriverPluginPath(), "dra.sock"),
 	}).String()
-	log.Info("connecting to DRA socket", "path", draSockPath)
+	log.Printf("Connecting to DRA socket: %s", draSockPath)
 	draConn, err := grpc.NewClient(
 		draSockPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -82,18 +78,18 @@ func StartHealthcheck(ctx context.Context, config *Config) (*healthcheck, error)
 	healthcheck.wg.Add(1)
 	go func() {
 		defer healthcheck.wg.Done()
-		log.Info("starting healthcheck service", "addr", lis.Addr().String())
+		log.Printf("Starting healthcheck service at %s", lis.Addr().String())
 		if err := server.Serve(lis); err != nil {
-			log.Error(err, "failed to serve healthcheck service", "addr", addr)
+			log.Printf("Failed to serve healthcheck: %v", err)
 		}
 	}()
 
 	return healthcheck, nil
 }
 
-func (h *healthcheck) Stop(logger klog.Logger) {
+func (h *healthcheck) Stop() {
 	if h.server != nil {
-		logger.Info("stopping healthcheck service")
+		log.Printf("Stopping healthcheck service")
 		h.server.GracefulStop()
 	}
 	h.wg.Wait()
@@ -101,31 +97,25 @@ func (h *healthcheck) Stop(logger klog.Logger) {
 
 // Check implements [grpc_health_v1.HealthServer].
 func (h *healthcheck) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	log := klog.FromContext(ctx)
-
 	knownServices := map[string]struct{}{"": {}, "liveness": {}}
 	if _, known := knownServices[req.GetService()]; !known {
 		return nil, status.Error(codes.NotFound, "unknown service")
 	}
 
-	status := &grpc_health_v1.HealthCheckResponse{
+	resp := &grpc_health_v1.HealthCheckResponse{
 		Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
 	}
 
-	info, err := h.regClient.GetInfo(ctx, &registerapi.InfoRequest{})
-	if err != nil {
-		log.Error(err, "failed to call GetInfo")
-		return status, nil
+	if _, err := h.regClient.GetInfo(ctx, &registerapi.InfoRequest{}); err != nil {
+		log.Printf("Healthcheck: GetInfo failed: %v", err)
+		return resp, nil
 	}
-	log.V(5).Info("Successfully invoked GetInfo", "info", info)
 
-	_, err = h.draClient.NodePrepareResources(ctx, &drapb.NodePrepareResourcesRequest{})
-	if err != nil {
-		log.Error(err, "failed to call NodePrepareResources")
-		return status, nil
+	if _, err := h.draClient.NodePrepareResources(ctx, &drapb.NodePrepareResourcesRequest{}); err != nil {
+		log.Printf("Healthcheck: NodePrepareResources failed: %v", err)
+		return resp, nil
 	}
-	log.V(5).Info("Successfully invoked NodePrepareResources")
 
-	status.Status = grpc_health_v1.HealthCheckResponse_SERVING
-	return status, nil
+	resp.Status = grpc_health_v1.HealthCheckResponse_SERVING
+	return resp, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"maps"
 
 	resourceapi "k8s.io/api/resource/v1"
@@ -12,7 +13,6 @@ import (
 	coreclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 	"k8s.io/dynamic-resource-allocation/resourceslice"
-	"k8s.io/klog/v2"
 )
 
 // Driver implements the DRA driver interface
@@ -84,16 +84,16 @@ func NewDriver(ctx context.Context, config *Config) (*Driver, error) {
 	return driver, nil
 }
 
-func (d *Driver) Shutdown(logger klog.Logger) error {
+func (d *Driver) Shutdown() error {
 	if d.healthcheck != nil {
-		d.healthcheck.Stop(logger)
+		d.healthcheck.Stop()
 	}
 	d.helper.Stop()
 	return nil
 }
 
 func (d *Driver) PrepareResourceClaims(ctx context.Context, claims []*resourceapi.ResourceClaim) (map[types.UID]kubeletplugin.PrepareResult, error) {
-	klog.Infof("PrepareResourceClaims is called: number of claims: %d", len(claims))
+	log.Printf("PrepareResourceClaims called: claims=%d", len(claims))
 	result := make(map[types.UID]kubeletplugin.PrepareResult)
 
 	for _, claim := range claims {
@@ -120,12 +120,12 @@ func (d *Driver) prepareResourceClaim(ctx context.Context, claim *resourceapi.Re
 		})
 	}
 
-	klog.Infof("Returning newly prepared devices for claim '%v': %v", claim.UID, prepared)
+	log.Printf("Prepared devices for claim %v: %v", claim.UID, prepared)
 	return kubeletplugin.PrepareResult{Devices: prepared}
 }
 
 func (d *Driver) UnprepareResourceClaims(ctx context.Context, claims []kubeletplugin.NamespacedObject) (map[types.UID]error, error) {
-	klog.Infof("UnprepareResourceClaims is called: number of claims: %d", len(claims))
+	log.Printf("UnprepareResourceClaims called: claims=%d", len(claims))
 	result := make(map[types.UID]error)
 
 	for _, claim := range claims {
