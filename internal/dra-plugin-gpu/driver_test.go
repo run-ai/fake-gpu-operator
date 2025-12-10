@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -347,8 +346,10 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 
 	config := &Config{
 		Flags: &Flags{
-			NodeName: "test-node",
-			CDIRoot:  tmpDir,
+			NodeName:                      "test-node",
+			CDIRoot:                       tmpDir,
+			KubeletPluginsDirectoryPath:   tmpDir,
+			KubeletRegistrarDirectoryPath: tmpDir,
 		},
 		CoreClient: client,
 	}
@@ -361,10 +362,16 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 }
 
 func createTestDeviceState(t *testing.T, config *Config) (*DeviceState, error) {
-	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
+	// Use the same checkpoint directory as NewDeviceState would use
+	checkpointDir := config.DriverPluginPath()
 	os.MkdirAll(checkpointDir, 0755)
 
 	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
+	require.NoError(t, err)
+
+	// Initialize checkpoint (normally done in NewDeviceState)
+	checkpoint := newCheckpoint()
+	err = checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint)
 	require.NoError(t, err)
 
 	allocatable := AllocatableDevices{
@@ -380,6 +387,8 @@ func createTestDeviceState(t *testing.T, config *Config) (*DeviceState, error) {
 		allocatable:       allocatable,
 		checkpointManager: checkpointManager,
 		cdi:               cdi,
+		coreclient:        config.CoreClient,
+		nodeName:          config.Flags.NodeName,
 	}
 
 	return state, nil

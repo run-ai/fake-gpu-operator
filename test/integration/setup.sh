@@ -94,6 +94,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
     fi
 
+    # Currently only with dra plugin enabled as it's the only one with the tests written
     echo "Deploying fake-gpu-operator..."
     cd "${PROJECT_ROOT}"
     helm upgrade -i fake-gpu-operator deploy/fake-gpu-operator \
