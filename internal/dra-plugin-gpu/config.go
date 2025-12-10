@@ -12,11 +12,11 @@ const (
 
 // Flags contains configuration flags for the DRA plugin
 type Flags struct {
-	NodeName                      string
-	CDIRoot                       string
-	KubeletRegistrarDirectoryPath string
-	KubeletPluginsDirectoryPath   string
-	HealthcheckPort               int
+	NodeName                      string `mapstructure:"NODE_NAME" validate:"required"`
+	CDIRoot                       string `mapstructure:"CDI_ROOT"`
+	KubeletRegistrarDirectoryPath string `mapstructure:"KUBELET_REGISTRAR_DIRECTORY_PATH"`
+	KubeletPluginsDirectoryPath   string `mapstructure:"KUBELET_PLUGINS_DIRECTORY_PATH"`
+	HealthcheckPort               int    `mapstructure:"HEALTHCHECK_PORT"`
 }
 
 // Config contains the configuration for the DRA plugin
