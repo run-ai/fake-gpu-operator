@@ -35,49 +35,23 @@ Apart from what is already mentioned on the main README page, below are some fur
     oc label node ip-10-0-13-14.us-east-2.compute.internal run.ai/simulated-gpu-node-pool=default
     oc label node ip-10-0-30-218.us-east-2.compute.internal run.ai/simulated-gpu-node-pool=default
     ```
-1. Deploy the helm chart. You can get the particular version you want by looking at the fake-gpu-operator repository releases page. Make sure you drop the version prefix "v" when running the helm command.
+1. Deploy the helm chart. You can get the particular version you want by looking at the fake-gpu-operator repository releases page. Make sure you drop the version prefix "v" when running the helm command. Overwrite the environment.openshift value from the values file so the approprate security context constraints can be configured.
     ```
-    helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.64
+    helm upgrade -i gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator --namespace gpu-operator --create-namespace --version 0.0.64 --set environment.openshift=true
     ```
 1. You should see the following helm output.
     ```
     Release "gpu-operator" does not exist. Installing it now.
     Pulled: ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator:0.0.64
     Digest: sha256:f3a96f26ebc3bd77a2c50c4f792c692064826b99906aead51720413e6936e08b
-    W1208 21:48:28.101177 3339253 warnings.go:70] would violate PodSecurity "restricted:latest": privileged (container "nvidia-device-plugin-ctr" must not set securityContext.privileged=true), allowPrivilegeEscalation != false (container "nvidia-device-plugin-ctr" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nvidia-device-plugin-ctr" must set securityContext.capabilities.drop=["ALL"]), restricted volume types (volumes "device-plugin", "runai-bin-directory", "runai-shared-directory" use restricted volume type "hostPath"), runAsNonRoot != true (pod or container "nvidia-device-plugin-ctr" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nvidia-device-plugin-ctr" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-    W1208 21:48:28.136227 3339253 warnings.go:70] would violate PodSecurity "restricted:latest": privileged (container "hostpath-init" must not set securityContext.privileged=true), allowPrivilegeEscalation != false (containers "hostpath-init", "nvidia-dcgm-exporter" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (containers "hostpath-init", "nvidia-dcgm-exporter" must set securityContext.capabilities.drop=["ALL"]), restricted volume types (volume "runai-data" uses restricted volume type "hostPath"), runAsNonRoot != true (pod or containers "hostpath-init", "nvidia-dcgm-exporter" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nvidia-dcgm-exporter" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-    W1208 21:48:28.308365 3339253 warnings.go:70] would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "nvidia-dcgm-exporter" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nvidia-dcgm-exporter" must set securityContext.capabilities.drop=["ALL"]), restricted volume types (volume "runai-data" uses restricted volume type "hostPath"), runAsNonRoot != true (pod or container "nvidia-dcgm-exporter" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nvidia-dcgm-exporter" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-
     NAME: gpu-operator
-    LAST DEPLOYED: Mon Dec  8 21:48:20 2025
+    LAST DEPLOYED: Wed Dec 10 13:30:57 2025
     NAMESPACE: gpu-operator
     STATUS: deployed
     REVISION: 1
     TEST SUITE: None
     ```
-5. However, due to Openshift security controls expect to see quite a number events like the following.
-    ```
-    $ oc get events -n gpu-operator
-    LAST SEEN   TYPE      REASON                            OBJECT                                       MESSAGE
-    6s          Warning   FailedCreate                      daemonset/device-plugin                      Error creating: pods "device-plugin-" is forbidden: unable to validate against any security context constraint: [provider "anyuid": Forbidden: not usable by user or serviceaccount, spec.volumes[0]: Invalid value: "hostPath": hostPath volumes are not allowed to be used, spec.volumes[1]: Invalid value: "hostPath": hostPath volumes are not allowed to be used, spec.volumes[2]: Invalid value: "hostPath": hostPath volumes are not allowed to be used, provider restricted-v2: .containers[0].privileged: Invalid value: true: Privileged containers are not allowed, provider "restricted-v3": Forbidden: not usable by user or serviceaccount, provider "restricted": Forbidden: not usable by user or serviceaccount, provider "nested-container": Forbidden: not usable by user or serviceaccount, provider "nonroot-v2": Forbidden: not usable by user or serviceaccount, provider "nonroot": Forbidden: not usable by user or serviceaccount, provider "hostmount-anyuid": Forbidden: not usable by user or serviceaccount, provider "hostmount-anyuid-v2": Forbidden: not usable by user or serviceaccount, provider "machine-api-termination-handler": Forbidden: not usable by user or serviceaccount, provider "hostnetwork-v2": Forbidden: not usable by user or serviceaccount, provider "hostnetwork": Forbidden: not usable by user or serviceaccount, provider "hostaccess": Forbidden: not usable by user or serviceaccount, provider "insights-runtime-extractor-scc": Forbidden: not usable by user or serviceaccount, provider "node-exporter": Forbidden: not usable by user or serviceaccount, provider "privileged": Forbidden: not usable by user or serviceaccount]
-    6s          Warning   FailedCreate                      daemonset/nvidia-dcgm-exporter               Error creating: pods "nvidia-dcgm-exporter-" is forbidden: unable to validate against any security context constraint: [provider "anyuid": Forbidden: not usable by user or serviceaccount, spec.volumes[0]: Invalid value: "hostPath": hostPath volumes are not allowed to be used, provider restricted-v2: .initContainers[0].privileged: Invalid value: true: Privileged containers are not allowed, provider "restricted-v3": Forbidden: not usable by user or serviceaccount, provider "restricted": Forbidden: not usable by user or serviceaccount, provider "nested-container": Forbidden: not usable by user or serviceaccount, provider "nonroot-v2": Forbidden: not usable by user or serviceaccount, provider "nonroot": Forbidden: not usable by user or serviceaccount, provider "hostmount-anyuid": Forbidden: not usable by user or serviceaccount, provider "hostmount-anyuid-v2": Forbidden: not usable by user or serviceaccount, provider "machine-api-termination-handler": Forbidden: not usable by user or serviceaccount, provider "hostnetwork-v2": Forbidden: not usable by user or serviceaccount, provider "hostnetwork": Forbidden: not usable by user or serviceaccount, provider "hostaccess": Forbidden: not usable by user or serviceaccount, provider "insights-runtime-extractor-scc": Forbidden: not usable by user or serviceaccount, provider "node-exporter": Forbidden: not usable by user or serviceaccount, provider "privileged": Forbidden: not usable by user or serviceaccount]
-    ...
-    ```
-6. As the admin user, grant the following service accounts with sufficient privileges. 
-    ```
-    oc adm policy add-scc-to-user privileged -z status-exporter -n gpu-operator
-    oc adm policy add-scc-to-user privileged -z nvidia-device-plugin -n gpu-operator
-    oc adm policy add-scc-to-user privileged -z mig-faker -n gpu-operator
-    ```
-7. Restart these deployments if the pod creation and/or scheduling got put into stuck state. If you don't see pods for certain controllers then go ahead and scale up by 1 too.
-    ```
-    $ oc rollout restart deployment/nvidia-dcgm-exporter -n gpu-operator
-    deployment.apps/nvidia-dcgm-exporter restarted
-    ...
-    $ oc scale deployment.apps/nvidia-dcgm-exporter --replicas 1 -n gpu-operator
-    deployment.apps/nvidia-dcgm-exporter scaled
-    ```
-8. Validate the deployments and daemonsets are up.
+1. Validate the deployments and daemonsets are up.
     ```
     $ oc get deploy,ds -n gpu-operator
     NAME                                     READY   UP-TO-DATE   AVAILABLE   AGE
@@ -92,7 +66,7 @@ Apart from what is already mentioned on the main README page, below are some fur
     daemonset.apps/mig-faker              0         0         0       0            0           node-role.kubernetes.io/runai-dynamic-mig=true   14m
     daemonset.apps/nvidia-dcgm-exporter   2         2         2       2            2           nvidia.com/gpu.deploy.dcgm-exporter=true         14m
     ```
-9. Save the following content as a yaml file named `gpu-test-pod.yaml`.
+1. Save the following content as a yaml file named `gpu-test-pod.yaml`.
     ```
     apiVersion: v1
     kind: Pod
@@ -120,12 +94,12 @@ Apart from what is already mentioned on the main README page, below are some fur
               sleep 10
             done
     ```
-10. Create the pod that "needs" a gpu to simulate scheduling onto a "gpu" node.
+1. Create the pod that "needs" a gpu to simulate scheduling onto a "gpu" node.
     ```
     $ oc apply -f gpu-test-pod.yaml 
     pod/gpu-test-pod created
     ```
-11. Confirm that the mock nvidia-smi command got injected into the pods runtime and that we get the default simulated `Tesla-K80` gpu info.
+1. Confirm that the mock nvidia-smi command got injected into the pods runtime and that we get the default simulated `Tesla-K80` gpu info.
     ```
     $ oc exec pod/gpu-test-pod -n gpu-operator -- nvidia-smi
     Wed Dec 10 03:15:26 2025
