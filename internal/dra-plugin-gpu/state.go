@@ -26,7 +26,6 @@ import (
 
 type AllocatableDevices map[string]resourceapi.Device
 type PreparedDevices []*PreparedDevice
-type PreparedClaims map[string]PreparedDevices
 type PerDeviceCDIContainerEdits map[string]*cdiapi.ContainerEdits
 
 type OpaqueDeviceConfig struct {
