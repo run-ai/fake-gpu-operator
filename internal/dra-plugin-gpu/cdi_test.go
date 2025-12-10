@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,8 @@ func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 
 	config := &Config{
 		Flags: &Flags{
-			CDIRoot: tmpDir,
+			CDIRoot:  tmpDir,
+			NodeName: "test-node",
 		},
 	}
 
@@ -72,6 +74,7 @@ func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 
 	// Read and parse spec files to find the common spec
 	var foundMount bool
+	var foundNodeName bool
 	for _, specFile := range specFiles {
 		specData, err := os.ReadFile(specFile)
 		if err != nil {
@@ -92,6 +95,16 @@ func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 		// Find the common device
 		for _, device := range spec.Devices {
 			if device.Name == cdiCommonDeviceName {
+				// Verify NODE_NAME environment variable exists
+				if device.ContainerEdits.Env != nil {
+					for _, env := range device.ContainerEdits.Env {
+						if strings.HasPrefix(env, "NODE_NAME=") {
+							foundNodeName = true
+							assert.Equal(t, "NODE_NAME=test-node", env, "NODE_NAME should be set to test-node")
+							break
+						}
+					}
+				}
 				// Verify nvidia-smi mount exists
 				if device.ContainerEdits.Mounts != nil {
 					for _, mount := range device.ContainerEdits.Mounts {
@@ -113,11 +126,12 @@ func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 				break
 			}
 		}
-		if foundMount {
+		if foundMount && foundNodeName {
 			break
 		}
 	}
 	assert.True(t, foundMount, "nvidia-smi mount should be present in common spec")
+	assert.True(t, foundNodeName, "NODE_NAME environment variable should be present in common spec")
 }
 
 func TestCDIHandler_CreateClaimSpecFile(t *testing.T) {

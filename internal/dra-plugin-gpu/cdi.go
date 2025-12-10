@@ -18,7 +18,8 @@ const (
 )
 
 type CDIHandler struct {
-	cache *cdiapi.Cache
+	cache    *cdiapi.Cache
+	nodeName string
 }
 
 func NewCDIHandler(config *Config) (*CDIHandler, error) {
@@ -29,7 +30,8 @@ func NewCDIHandler(config *Config) (*CDIHandler, error) {
 		return nil, fmt.Errorf("unable to create a new CDI cache: %w", err)
 	}
 	handler := &CDIHandler{
-		cache: cache,
+		cache:    cache,
+		nodeName: config.Flags.NodeName,
 	}
 
 	return handler, nil
@@ -42,6 +44,9 @@ func (cdi *CDIHandler) CreateCommonSpecFile() error {
 			{
 				Name: cdiCommonDeviceName,
 				ContainerEdits: cdispec.ContainerEdits{
+					Env: []string{
+						fmt.Sprintf("NODE_NAME=%s", cdi.nodeName),
+					},
 					Mounts: []*cdispec.Mount{
 						{
 							HostPath:      "/var/lib/runai/bin/nvidia-smi",

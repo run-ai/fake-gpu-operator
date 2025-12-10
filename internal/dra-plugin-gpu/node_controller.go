@@ -3,7 +3,6 @@ package dra_plugin_gpu
 import (
 	"context"
 	"fmt"
-	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,14 +70,8 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // SetupNodeController sets up and starts the node controller
 func SetupNodeController(ctx context.Context, state *DeviceState, nodeName string) error {
-	nodeNameEnv := os.Getenv("NODE_NAME")
-	if nodeNameEnv == "" {
-		return fmt.Errorf("NODE_NAME environment variable is not set")
-	}
-
-	// Use NODE_NAME from env var, but also accept the parameter for flexibility
 	if nodeName == "" {
-		nodeName = nodeNameEnv
+		return fmt.Errorf("node name is required")
 	}
 
 	// Initialize controller-runtime logger using klog

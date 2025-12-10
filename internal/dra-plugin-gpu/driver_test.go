@@ -167,7 +167,7 @@ func TestDriver_UnprepareResourceClaims(t *testing.T) {
 
 	// Prepare a claim first
 	claim := createTestClaim("claim-to-unprepare")
-	_, err = state.Prepare(context.Background(), claim)
+			_, err = state.Prepare(context.Background(), claim)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -232,7 +232,7 @@ func TestDriver_UnprepareResourceClaim(t *testing.T) {
 
 	// Prepare a claim first
 	claim := createTestClaim("claim-to-unprepare")
-	_, err = state.Prepare(context.Background(), claim)
+			_, err = state.Prepare(context.Background(), claim)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
