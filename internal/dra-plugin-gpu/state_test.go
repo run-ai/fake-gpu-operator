@@ -20,6 +20,20 @@ import (
 	configapi "sigs.k8s.io/dra-example-driver/api/example.com/resource/gpu/v1alpha1"
 )
 
+// Test constants
+const (
+	testNodeName   = "test-node"
+	testGpuDevice0 = "GPU-test-0"
+	testGpuDevice1 = "GPU-test-1"
+	testGpuProduct = "Test-GPU"
+	testRequest1   = "request-1"
+	testRequest2   = "request-2"
+	testClaimUID1  = "claim-1"
+	testClaimUID2  = "claim-2"
+	testClaimUID3  = "claim-3"
+	nodeNameEnvVar = "NODE_NAME"
+)
+
 func TestPreparedDevicesGetDevices(t *testing.T) {
 	tests := map[string]struct {
 		preparedDevices PreparedDevices
@@ -61,46 +75,118 @@ func TestPreparedDevicesGetDevices(t *testing.T) {
 
 func createTestConfig(t *testing.T) (*Config, func()) {
 	tmpDir := t.TempDir()
-	require.NoError(t, os.Setenv("NODE_NAME", "test-node"))
+	require.NoError(t, os.Setenv(nodeNameEnvVar, testNodeName))
 
 	client := fake.NewSimpleClientset()
-	node := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-node",
-			Annotations: map[string]string{
-				AnnotationGpuFakeDevices: `{
-					"gpuMemory": 40960,
-					"gpuProduct": "Test-GPU",
-					"gpus": [
-						{
-							"id": "GPU-test-0",
-							"status": {
-								"allocatedBy": {"namespace": "", "pod": "", "container": ""},
-								"podGpuUsageStatus": {}
-							}
-						}
-					],
-					"migStrategy": "none"
-				}`,
-			},
-		},
-	}
+	node := createTestNode(testNodeName, testGpuDevice0)
 	_, err := client.CoreV1().Nodes().Create(context.Background(), node, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	config := &Config{
 		Flags: &Flags{
-			NodeName: "test-node",
+			NodeName: testNodeName,
 			CDIRoot:  tmpDir,
 		},
 		CoreClient: client,
 	}
 
 	cleanup := func() {
-		_ = os.Unsetenv("NODE_NAME")
+		_ = os.Unsetenv(nodeNameEnvVar)
 	}
 
 	return config, cleanup
+}
+
+func createTestNode(nodeName, gpuID string) *corev1.Node {
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+			Annotations: map[string]string{
+				AnnotationGpuFakeDevices: `{
+					"gpuMemory": 40960,
+					"gpuProduct": "` + testGpuProduct + `",
+					"gpus": [{"id": "` + gpuID + `", "status": {"allocatedBy": {"namespace": "", "pod": "", "container": ""}, "podGpuUsageStatus": {}}}],
+					"migStrategy": "none"
+				}`,
+			},
+		},
+	}
+}
+
+func createTestState(t *testing.T, config *Config) *DeviceState {
+	allocatable := AllocatableDevices{
+		testGpuDevice0: resourceapi.Device{Name: testGpuDevice0},
+	}
+	cdi, err := NewCDIHandler(config)
+	require.NoError(t, err)
+	return &DeviceState{
+		allocatable: allocatable,
+		cdi:         cdi,
+		coreclient:  config.CoreClient,
+		nodeName:    config.Flags.NodeName,
+	}
+}
+
+func createTestStateWithDevices(t *testing.T, config *Config, deviceIDs ...string) *DeviceState {
+	allocatable := make(AllocatableDevices)
+	for _, id := range deviceIDs {
+		allocatable[id] = resourceapi.Device{Name: id}
+	}
+	cdi, err := NewCDIHandler(config)
+	require.NoError(t, err)
+	return &DeviceState{
+		allocatable: allocatable,
+		cdi:         cdi,
+		coreclient:  config.CoreClient,
+		nodeName:    config.Flags.NodeName,
+	}
+}
+
+func createTestClaim(uid, deviceID, requestName, poolName string) *resourceapi.ResourceClaim {
+	return &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{UID: types.UID(uid)},
+		Status: resourceapi.ResourceClaimStatus{
+			Allocation: &resourceapi.AllocationResult{
+				Devices: resourceapi.DeviceAllocationResult{
+					Results: []resourceapi.DeviceRequestAllocationResult{
+						{Device: deviceID, Request: requestName, Pool: poolName},
+					},
+					Config: []resourceapi.DeviceAllocationConfiguration{},
+				},
+			},
+		},
+	}
+}
+
+func createUnallocatedClaim(uid string) *resourceapi.ResourceClaim {
+	return &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{UID: types.UID(uid)},
+		Status:     resourceapi.ResourceClaimStatus{},
+	}
+}
+
+func createMultiDeviceClaim(uid, poolName string, deviceIDs, requestNames []string) *resourceapi.ResourceClaim {
+	var results []resourceapi.DeviceRequestAllocationResult
+	for i, deviceID := range deviceIDs {
+		reqName := requestNames[0]
+		if i < len(requestNames) {
+			reqName = requestNames[i]
+		}
+		results = append(results, resourceapi.DeviceRequestAllocationResult{
+			Device: deviceID, Request: reqName, Pool: poolName,
+		})
+	}
+	return &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{UID: types.UID(uid)},
+		Status: resourceapi.ResourceClaimStatus{
+			Allocation: &resourceapi.AllocationResult{
+				Devices: resourceapi.DeviceAllocationResult{
+					Results: results,
+					Config:  []resourceapi.DeviceAllocationConfiguration{},
+				},
+			},
+		},
+	}
 }
 
 // TestNewDeviceState is skipped because it requires a real kubeletplugin.Helper
@@ -113,81 +199,24 @@ func TestDeviceState_Prepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	allocatable := AllocatableDevices{
-		"GPU-test-0": resourceapi.Device{
-			Name: "GPU-test-0",
-		},
-	}
-
-	cdi, err := NewCDIHandler(config)
-	require.NoError(t, err)
-
-	state := &DeviceState{
-		allocatable: allocatable,
-		cdi:         cdi,
-		coreclient:  config.CoreClient,
-		nodeName:    config.Flags.NodeName,
-	}
+	state := createTestState(t, config)
 
 	tests := map[string]struct {
 		claim        *resourceapi.ResourceClaim
 		wantErr      bool
 		wantPrepared bool
-		prepareTwice bool // Test idempotency
+		prepareTwice bool
 	}{
 		"new claim": {
-			claim: &resourceapi.ResourceClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("claim-1"),
-				},
-				Status: resourceapi.ResourceClaimStatus{
-					Allocation: &resourceapi.AllocationResult{
-						Devices: resourceapi.DeviceAllocationResult{
-							Results: []resourceapi.DeviceRequestAllocationResult{
-								{
-									Device:  "GPU-test-0",
-									Request: "request-1",
-									Pool:    "test-node",
-								},
-							},
-							Config: []resourceapi.DeviceAllocationConfiguration{},
-						},
-					},
-				},
-			},
-			wantErr:      false,
+			claim:        createTestClaim(testClaimUID1, testGpuDevice0, testRequest1, testNodeName),
 			wantPrepared: true,
 		},
 		"claim not allocated": {
-			claim: &resourceapi.ResourceClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("claim-2"),
-				},
-				Status: resourceapi.ResourceClaimStatus{},
-			},
+			claim:   createUnallocatedClaim(testClaimUID2),
 			wantErr: true,
 		},
 		"idempotency - prepare twice": {
-			claim: &resourceapi.ResourceClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("claim-3"),
-				},
-				Status: resourceapi.ResourceClaimStatus{
-					Allocation: &resourceapi.AllocationResult{
-						Devices: resourceapi.DeviceAllocationResult{
-							Results: []resourceapi.DeviceRequestAllocationResult{
-								{
-									Device:  "GPU-test-0",
-									Request: "request-1",
-									Pool:    "test-node",
-								},
-							},
-							Config: []resourceapi.DeviceAllocationConfiguration{},
-						},
-					},
-				},
-			},
-			wantErr:      false,
+			claim:        createTestClaim(testClaimUID3, testGpuDevice0, testRequest1, testNodeName),
 			wantPrepared: true,
 			prepareTwice: true,
 		},
@@ -222,44 +251,11 @@ func TestDeviceState_Unprepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	allocatable := AllocatableDevices{
-		"GPU-test-0": resourceapi.Device{
-			Name: "GPU-test-0",
-		},
-	}
-
-	cdi, err := NewCDIHandler(config)
-	require.NoError(t, err)
-
-	state := &DeviceState{
-		allocatable: allocatable,
-		cdi:         cdi,
-		coreclient:  config.CoreClient,
-		nodeName:    config.Flags.NodeName,
-	}
+	state := createTestState(t, config)
 
 	// First prepare a claim
-	claim := &resourceapi.ResourceClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			UID: types.UID("claim-to-unprepare"),
-		},
-		Status: resourceapi.ResourceClaimStatus{
-			Allocation: &resourceapi.AllocationResult{
-				Devices: resourceapi.DeviceAllocationResult{
-					Results: []resourceapi.DeviceRequestAllocationResult{
-						{
-							Device:  "GPU-test-0",
-							Request: "request-1",
-							Pool:    "test-node",
-						},
-					},
-					Config: []resourceapi.DeviceAllocationConfiguration{},
-				},
-			},
-		},
-	}
-
-	_, err = state.Prepare(context.Background(), claim)
+	claim := createTestClaim("claim-to-unprepare", testGpuDevice0, testRequest1, testNodeName)
+	_, err := state.Prepare(context.Background(), claim)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -422,65 +418,22 @@ func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	allocatable := AllocatableDevices{
-		"GPU-test-0": resourceapi.Device{
-			Name: "GPU-test-0",
-		},
-	}
+	state := createTestState(t, config)
 
-	cdi, err := NewCDIHandler(config)
+	// Update node annotation
+	node, err := config.CoreClient.CoreV1().Nodes().Get(context.Background(), testNodeName, metav1.GetOptions{})
+	require.NoError(t, err)
+	node.Annotations[AnnotationGpuFakeDevices] = `{
+		"gpuMemory": 40960,
+		"gpuProduct": "Updated-GPU",
+		"gpus": [{"id": "GPU-updated", "status": {"allocatedBy": {"namespace": "", "pod": "", "container": ""}, "podGpuUsageStatus": {}}}],
+		"migStrategy": "none"
+	}`
+	_, err = config.CoreClient.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
-	state := &DeviceState{
-		allocatable: allocatable,
-		cdi:         cdi,
-		helper:      nil, // Skip helper-dependent test
-		nodeName:    "test-node",
-		coreclient:  config.CoreClient,
-	}
-
-	tests := map[string]struct {
-		updateAnnotation func(*corev1.Node)
-		wantErr          bool
-	}{
-		"success update": {
-			updateAnnotation: func(node *corev1.Node) {
-				node.Annotations[AnnotationGpuFakeDevices] = `{
-					"gpuMemory": 40960,
-					"gpuProduct": "Updated-GPU",
-					"gpus": [
-						{
-							"id": "GPU-updated",
-							"status": {
-								"allocatedBy": {"namespace": "", "pod": "", "container": ""},
-								"podGpuUsageStatus": {}
-							}
-						}
-					],
-					"migStrategy": "none"
-				}`
-			},
-			wantErr: false,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			// Update node annotation
-			node, err := config.CoreClient.CoreV1().Nodes().Get(context.Background(), "test-node", metav1.GetOptions{})
-			require.NoError(t, err)
-			test.updateAnnotation(node)
-			_, err = config.CoreClient.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
-			require.NoError(t, err)
-
-			err = state.UpdateDevicesFromAnnotation(context.Background())
-			if test.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
+	err = state.UpdateDevicesFromAnnotation(context.Background())
+	assert.NoError(t, err)
 }
 
 func TestDeviceState_ApplyConfig(t *testing.T) {
@@ -592,22 +545,7 @@ func TestDeviceState_PrepareDevices(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	allocatable := AllocatableDevices{
-		"GPU-test-0": resourceapi.Device{
-			Name: "GPU-test-0",
-		},
-		"GPU-test-1": resourceapi.Device{
-			Name: "GPU-test-1",
-		},
-	}
-
-	cdi, err := NewCDIHandler(config)
-	require.NoError(t, err)
-
-	state := &DeviceState{
-		allocatable: allocatable,
-		cdi:         cdi,
-	}
+	state := createTestStateWithDevices(t, config, testGpuDevice0, testGpuDevice1)
 
 	tests := map[string]struct {
 		claim    *resourceapi.ResourceClaim
@@ -615,81 +553,22 @@ func TestDeviceState_PrepareDevices(t *testing.T) {
 		validate func(*testing.T, PreparedDevices)
 	}{
 		"single device": {
-			claim: &resourceapi.ResourceClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("claim-1"),
-				},
-				Status: resourceapi.ResourceClaimStatus{
-					Allocation: &resourceapi.AllocationResult{
-						Devices: resourceapi.DeviceAllocationResult{
-							Results: []resourceapi.DeviceRequestAllocationResult{
-								{
-									Device:  "GPU-test-0",
-									Request: "request-1",
-									Pool:    "test-node",
-								},
-							},
-							Config: []resourceapi.DeviceAllocationConfiguration{},
-						},
-					},
-				},
-			},
-			wantErr: false,
+			claim: createTestClaim(testClaimUID1, testGpuDevice0, testRequest1, testNodeName),
 			validate: func(t *testing.T, devices PreparedDevices) {
 				assert.Len(t, devices, 1)
-				assert.Equal(t, "GPU-test-0", devices[0].DeviceName)
+				assert.Equal(t, testGpuDevice0, devices[0].DeviceName)
 			},
 		},
 		"multiple devices": {
-			claim: &resourceapi.ResourceClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("claim-2"),
-				},
-				Status: resourceapi.ResourceClaimStatus{
-					Allocation: &resourceapi.AllocationResult{
-						Devices: resourceapi.DeviceAllocationResult{
-							Results: []resourceapi.DeviceRequestAllocationResult{
-								{
-									Device:  "GPU-test-0",
-									Request: "request-1",
-									Pool:    "test-node",
-								},
-								{
-									Device:  "GPU-test-1",
-									Request: "request-2",
-									Pool:    "test-node",
-								},
-							},
-							Config: []resourceapi.DeviceAllocationConfiguration{},
-						},
-					},
-				},
-			},
-			wantErr: false,
+			claim: createMultiDeviceClaim(testClaimUID2, testNodeName,
+				[]string{testGpuDevice0, testGpuDevice1},
+				[]string{testRequest1, testRequest2}),
 			validate: func(t *testing.T, devices PreparedDevices) {
 				assert.Len(t, devices, 2)
 			},
 		},
 		"device not allocatable": {
-			claim: &resourceapi.ResourceClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("claim-3"),
-				},
-				Status: resourceapi.ResourceClaimStatus{
-					Allocation: &resourceapi.AllocationResult{
-						Devices: resourceapi.DeviceAllocationResult{
-							Results: []resourceapi.DeviceRequestAllocationResult{
-								{
-									Device:  "GPU-non-existent",
-									Request: "request-1",
-									Pool:    "test-node",
-								},
-							},
-							Config: []resourceapi.DeviceAllocationConfiguration{},
-						},
-					},
-				},
-			},
+			claim:   createTestClaim(testClaimUID3, "GPU-non-existent", testRequest1, testNodeName),
 			wantErr: true,
 		},
 	}
@@ -722,14 +601,13 @@ func TestWaitForGPUAnnotation_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client := fake.NewSimpleClientset()
 
+	// Create node without GPU annotation - will cause retries
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "test-node",
+			Name:        testNodeName,
 			Annotations: map[string]string{},
-			// No annotation - will retry
 		},
 	}
-
 	_, err := client.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -739,9 +617,8 @@ func TestWaitForGPUAnnotation_ContextCancellation(t *testing.T) {
 		cancel()
 	}()
 
-	devices, err := waitForGPUAnnotation(ctx, client, "test-node")
+	devices, err := waitForGPUAnnotation(ctx, client, testNodeName)
 
-	// Should fail due to context cancellation
 	assert.Error(t, err)
 	assert.Nil(t, devices)
 	assert.Contains(t, err.Error(), "context canceled")

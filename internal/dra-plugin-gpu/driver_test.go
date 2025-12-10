@@ -16,6 +16,13 @@ import (
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 )
 
+// Test constants (reuse from state_test.go where applicable)
+const (
+	driverTestNodeName   = "test-node"
+	driverTestGpuDevice0 = "GPU-test-0"
+	driverTestRequest1   = "request-1"
+)
+
 func TestDriver_Shutdown(t *testing.T) {
 	tests := map[string]struct {
 		healthcheck *healthcheck
@@ -66,15 +73,15 @@ func TestDriver_PrepareResourceClaims(t *testing.T) {
 	}{
 		"single claim": {
 			claims: []*resourceapi.ResourceClaim{
-				createTestClaim("claim-1"),
+				createDriverTestClaim("claim-1"),
 			},
 			wantErr:   false,
 			wantCount: 1,
 		},
 		"multiple claims": {
 			claims: []*resourceapi.ResourceClaim{
-				createTestClaim("claim-1"),
-				createTestClaim("claim-2"),
+				createDriverTestClaim("claim-1"),
+				createDriverTestClaim("claim-2"),
 			},
 			wantErr:   false,
 			wantCount: 2,
@@ -119,7 +126,7 @@ func TestDriver_PrepareResourceClaim(t *testing.T) {
 		wantDevices bool
 	}{
 		"successful preparation": {
-			claim:       createTestClaim("claim-1"),
+			claim:       createDriverTestClaim("claim-1"),
 			wantErr:     false,
 			wantDevices: true,
 		},
@@ -163,8 +170,8 @@ func TestDriver_UnprepareResourceClaims(t *testing.T) {
 	}
 
 	// Prepare a claim first
-	claim := createTestClaim("claim-to-unprepare")
-			_, err = state.Prepare(context.Background(), claim)
+	claim := createDriverTestClaim("claim-to-unprepare")
+	_, err = state.Prepare(context.Background(), claim)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -228,8 +235,8 @@ func TestDriver_UnprepareResourceClaim(t *testing.T) {
 	}
 
 	// Prepare a claim first
-	claim := createTestClaim("claim-to-unprepare")
-			_, err = state.Prepare(context.Background(), claim)
+	claim := createDriverTestClaim("claim-to-unprepare")
+	_, err = state.Prepare(context.Background(), claim)
 	require.NoError(t, err)
 
 	tests := map[string]struct {
@@ -317,23 +324,18 @@ func TestDriver_HandleError(t *testing.T) {
 
 func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 	tmpDir := t.TempDir()
-	require.NoError(t, os.Setenv("NODE_NAME", "test-node"))
+	require.NoError(t, os.Setenv("NODE_NAME", driverTestNodeName))
 
 	client := fake.NewSimpleClientset()
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-node",
+			Name: driverTestNodeName,
 			Annotations: map[string]string{
 				AnnotationGpuFakeDevices: `{
-					"version": "v1",
-					"gpus": [
-						{
-							"uuid": "GPU-test-0",
-							"minor": 0,
-							"productName": "Test-GPU",
-							"memoryBytes": 42949672960
-						}
-					]
+					"gpuMemory": 40960,
+					"gpuProduct": "Test-GPU",
+					"gpus": [{"id": "` + driverTestGpuDevice0 + `", "status": {"allocatedBy": {"namespace": "", "pod": "", "container": ""}, "podGpuUsageStatus": {}}}],
+					"migStrategy": "none"
 				}`,
 			},
 		},
@@ -343,7 +345,7 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 
 	config := &Config{
 		Flags: &Flags{
-			NodeName:                      "test-node",
+			NodeName:                      driverTestNodeName,
 			CDIRoot:                       tmpDir,
 			KubeletPluginsDirectoryPath:   tmpDir,
 			KubeletRegistrarDirectoryPath: tmpDir,
@@ -360,38 +362,28 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 
 func createTestDeviceState(t *testing.T, config *Config) (*DeviceState, error) {
 	allocatable := AllocatableDevices{
-		"GPU-test-0": resourceapi.Device{
-			Name: "GPU-test-0",
-		},
+		driverTestGpuDevice0: resourceapi.Device{Name: driverTestGpuDevice0},
 	}
 
 	cdi, err := NewCDIHandler(config)
 	require.NoError(t, err)
 
-	state := &DeviceState{
+	return &DeviceState{
 		allocatable: allocatable,
 		cdi:         cdi,
 		coreclient:  config.CoreClient,
 		nodeName:    config.Flags.NodeName,
-	}
-
-	return state, nil
+	}, nil
 }
 
-func createTestClaim(uid string) *resourceapi.ResourceClaim {
+func createDriverTestClaim(uid string) *resourceapi.ResourceClaim {
 	return &resourceapi.ResourceClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			UID: types.UID(uid),
-		},
+		ObjectMeta: metav1.ObjectMeta{UID: types.UID(uid)},
 		Status: resourceapi.ResourceClaimStatus{
 			Allocation: &resourceapi.AllocationResult{
 				Devices: resourceapi.DeviceAllocationResult{
 					Results: []resourceapi.DeviceRequestAllocationResult{
-						{
-							Device:  "GPU-test-0",
-							Request: "request-1",
-							Pool:    "test-node",
-						},
+						{Device: driverTestGpuDevice0, Request: driverTestRequest1, Pool: driverTestNodeName},
 					},
 					Config: []resourceapi.DeviceAllocationConfiguration{},
 				},
