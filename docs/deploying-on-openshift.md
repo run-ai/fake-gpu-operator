@@ -6,7 +6,6 @@ It must be noted that this operator has limitations on what can be simulated. Do
 
 Note: Comparable Openshift infrastructure and/or older OCP versions may work but have not been tested.
 Note: The oc cli is used for this guide but kubectl should work as well.
-Note: The fake-gpu-operator won't show up under installed operators on the web console but don't interpret this as it not being installed. 
 
 ## Prerequisites
 
