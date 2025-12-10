@@ -5,7 +5,7 @@ set -e
 # A reference to the current directory where this script is located
 SCRIPTS_DIR="$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../.." &> /dev/null && pwd)"
-
+DOCKER_BUILDX_PUSH_FLAG="--load"
 # The name of the kind cluster to create
 : ${KIND_CLUSTER_NAME:="fake-gpu-operator-cluster"}
 
@@ -86,6 +86,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     for NODE in ${NODES}; do
         echo "Annotating node ${NODE}..."
         kubectl annotate node "${NODE}" nvidia.com/gpu.fake.devices="${GPU_ANNOTATION}" --overwrite
+        kubectl label node "${NODE}" nvidia.com/gpu.deploy.dra-plugin-gpu=true --overwrite
     done
     
     # Store worker node name for later reference
@@ -93,7 +94,6 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     if [[ -z "${WORKER_NODE}" ]]; then
         WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
     fi
-
     # Currently only with dra plugin enabled as it's the only one with the tests written
     echo "Deploying fake-gpu-operator..."
     cd "${PROJECT_ROOT}"
@@ -112,6 +112,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         --set gpuOperator.enabled=false \
         --set runtimeClass.enabled=false \
         --set topologyConfigMap.enabled=false
+
 
     echo "Waiting for DRA plugin pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=kubeletplugin -n gpu-operator --timeout=120s
