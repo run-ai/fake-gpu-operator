@@ -119,7 +119,12 @@ func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevi
 
 func (cdi *CDIHandler) DeleteClaimSpecFile(claimUID string) error {
 	specName := cdiapi.GenerateTransientSpecName(cdiVendor, cdiClass, claimUID)
-	return cdi.cache.RemoveSpec(specName)
+	err := cdi.cache.RemoveSpec(specName)
+	// Handle "not found" gracefully - file already deleted is fine
+	if err != nil && strings.Contains(err.Error(), "not found") {
+		return nil
+	}
+	return err
 }
 
 func (cdi *CDIHandler) GetClaimDevices(claimUID string, devices []string) []string {

@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	DriverPluginCheckpointFile = "checkpoint.json"
-	DriverName                 = "gpu.nvidia.com" // Override driver name for deviceclass compatibility
+	DriverName = "gpu.nvidia.com" // Override driver name for deviceclass compatibility
 )
 
 // Flags contains configuration flags for the DRA plugin

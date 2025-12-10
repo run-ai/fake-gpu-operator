@@ -2,7 +2,6 @@ package dra_plugin_gpu
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -19,11 +18,9 @@ import (
 	"k8s.io/dynamic-resource-allocation/resourceslice"
 	"k8s.io/klog/v2"
 	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1beta1"
-	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager"
 
 	configapi "sigs.k8s.io/dra-example-driver/api/example.com/resource/gpu/v1alpha1"
 
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	cdiapi "tags.cncf.io/container-device-interface/pkg/cdi"
 	cdispec "tags.cncf.io/container-device-interface/specs-go"
 )
@@ -59,12 +56,11 @@ func (pds PreparedDevices) GetDevices() []*drapbv1.Device {
 
 type DeviceState struct {
 	sync.Mutex
-	cdi               *CDIHandler
-	allocatable       AllocatableDevices
-	checkpointManager checkpointmanager.CheckpointManager
-	nodeName          string
-	coreclient        coreclientset.Interface
-	helper            *kubeletplugin.Helper
+	cdi         *CDIHandler
+	allocatable AllocatableDevices
+	nodeName    string
+	coreclient  coreclientset.Interface
+	helper      *kubeletplugin.Helper
 }
 
 // waitForGPUAnnotation retries enumerating devices with exponential backoff
@@ -121,37 +117,13 @@ func NewDeviceState(ctx context.Context, config *Config, helper *kubeletplugin.H
 		return nil, fmt.Errorf("unable to create CDI spec file for common edits: %v", err)
 	}
 
-	checkpointManager, err := checkpointmanager.NewCheckpointManager(config.DriverPluginPath())
-	if err != nil {
-		return nil, fmt.Errorf("unable to create checkpoint manager: %v", err)
-	}
-
-	state := &DeviceState{
-		cdi:               cdi,
-		allocatable:       allocatable,
-		checkpointManager: checkpointManager,
-		nodeName:          config.Flags.NodeName,
-		coreclient:        config.CoreClient,
-		helper:            helper,
-	}
-
-	checkpoints, err := state.checkpointManager.ListCheckpoints()
-	if err != nil {
-		return nil, fmt.Errorf("unable to list checkpoints: %v", err)
-	}
-
-	for _, c := range checkpoints {
-		if c == DriverPluginCheckpointFile {
-			return state, nil
-		}
-	}
-
-	checkpoint := newCheckpoint()
-	if err := state.checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint); err != nil {
-		return nil, fmt.Errorf("unable to sync to checkpoint: %v", err)
-	}
-
-	return state, nil
+	return &DeviceState{
+		cdi:         cdi,
+		allocatable: allocatable,
+		nodeName:    config.Flags.NodeName,
+		coreclient:  config.CoreClient,
+		helper:      helper,
+	}, nil
 }
 
 func (s *DeviceState) Prepare(ctx context.Context, claim *resourceapi.ResourceClaim) ([]*drapbv1.Device, error) {
@@ -160,68 +132,30 @@ func (s *DeviceState) Prepare(ctx context.Context, claim *resourceapi.ResourceCl
 
 	claimUID := string(claim.UID)
 
-	checkpoint := newCheckpoint()
-	if err := s.checkpointManager.GetCheckpoint(DriverPluginCheckpointFile, checkpoint); err != nil {
-		return nil, fmt.Errorf("unable to sync from checkpoint: %v", err)
-	}
-	preparedClaims := checkpoint.V1.PreparedClaims
-
-	if preparedClaims[claimUID] != nil {
-		return preparedClaims[claimUID].GetDevices(), nil
-	}
-
 	preparedDevices, err := s.prepareDevices(claim)
 	if err != nil {
 		return nil, fmt.Errorf("prepare failed: %v", err)
 	}
 
-	// Get topology JSON from node annotation
 	topologyJSON, err := s.getTopologyJSON(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get topology JSON: %v", err)
 	}
 
+	// CDI file creation is idempotent (overwrites if exists)
 	if err = s.cdi.CreateClaimSpecFile(claimUID, preparedDevices, topologyJSON); err != nil {
 		return nil, fmt.Errorf("unable to create CDI spec file for claim: %v", err)
 	}
 
-	preparedClaims[claimUID] = preparedDevices
-	if err := s.checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint); err != nil {
-		return nil, fmt.Errorf("unable to sync to checkpoint: %v", err)
-	}
-
-	return preparedClaims[claimUID].GetDevices(), nil
+	return preparedDevices.GetDevices(), nil
 }
 
 func (s *DeviceState) Unprepare(claimUID string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	checkpoint := newCheckpoint()
-	if err := s.checkpointManager.GetCheckpoint(DriverPluginCheckpointFile, checkpoint); err != nil {
-		return fmt.Errorf("unable to sync from checkpoint: %v", err)
-	}
-	preparedClaims := checkpoint.V1.PreparedClaims
-
-	if preparedClaims[claimUID] == nil {
-		return nil
-	}
-
-	if err := s.unprepareDevices(claimUID, preparedClaims[claimUID]); err != nil {
-		return fmt.Errorf("unprepare failed: %v", err)
-	}
-
-	err := s.cdi.DeleteClaimSpecFile(claimUID)
-	if err != nil {
-		return fmt.Errorf("unable to delete CDI spec file for claim: %v", err)
-	}
-
-	delete(preparedClaims, claimUID)
-	if err := s.checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint); err != nil {
-		return fmt.Errorf("unable to sync to checkpoint: %v", err)
-	}
-
-	return nil
+	// CDI file deletion is idempotent (handles missing files gracefully)
+	return s.cdi.DeleteClaimSpecFile(claimUID)
 }
 
 func (s *DeviceState) prepareDevices(claim *resourceapi.ResourceClaim) (PreparedDevices, error) {
@@ -319,53 +253,15 @@ func (s *DeviceState) prepareDevices(claim *resourceapi.ResourceClaim) (Prepared
 	return preparedDevices, nil
 }
 
-// getTopologyJSON retrieves topology from node annotation and converts it to JSON
+// getTopologyJSON retrieves topology JSON directly from node annotation
 func (s *DeviceState) getTopologyJSON(ctx context.Context) (string, error) {
-	klog.Info("Retrieving topology JSON from node annotation")
-
-	// Fetch the node
 	node, err := s.coreclient.CoreV1().Nodes().Get(ctx, s.nodeName, metav1.GetOptions{})
 	if err != nil {
-		klog.Errorf("Failed to get node %s: %v", s.nodeName, err)
 		return "", fmt.Errorf("failed to get node %s: %w", s.nodeName, err)
 	}
 
-	// Read the annotation
-	annotationValue, exists := node.Annotations[AnnotationGpuFakeDevices]
-	if !exists {
-		klog.Warningf("Annotation %s not found on node %s", AnnotationGpuFakeDevices, s.nodeName)
-		return "", fmt.Errorf("annotation %s not found on node %s", AnnotationGpuFakeDevices, s.nodeName)
-	}
-
-	if annotationValue == "" {
-		klog.Warningf("Annotation %s is empty on node %s", AnnotationGpuFakeDevices, s.nodeName)
-		return "", fmt.Errorf("annotation %s is empty on node %s", AnnotationGpuFakeDevices, s.nodeName)
-	}
-
-	klog.Infof("Found annotation %s on node %s (length: %d chars)", AnnotationGpuFakeDevices, s.nodeName, len(annotationValue))
-
-	// Parse JSON as NodeTopology
-	var nodeTopology topology.NodeTopology
-	if err := json.Unmarshal([]byte(annotationValue), &nodeTopology); err != nil {
-		klog.Errorf("Failed to parse annotation %s: %v", AnnotationGpuFakeDevices, err)
-		return "", fmt.Errorf("failed to parse annotation %s: %w", AnnotationGpuFakeDevices, err)
-	}
-
-	klog.Infof("Parsed annotation: gpuCount=%d, gpuProduct=%s, gpuMemory=%d", len(nodeTopology.Gpus), nodeTopology.GpuProduct, nodeTopology.GpuMemory)
-
-	// Serialize to JSON
-	topologyJSON, err := json.Marshal(nodeTopology)
-	if err != nil {
-		klog.Errorf("Failed to marshal topology: %v", err)
-		return "", fmt.Errorf("failed to marshal topology: %w", err)
-	}
-
-	klog.Infof("Successfully generated topology JSON (length: %d chars) for node %s", len(topologyJSON), s.nodeName)
-	return string(topologyJSON), nil
-}
-
-func (s *DeviceState) unprepareDevices(claimUID string, devices PreparedDevices) error {
-	return nil
+	// The annotation is already JSON, return it directly
+	return node.Annotations[AnnotationGpuFakeDevices], nil
 }
 
 // sanitizeDeviceNameForEnvVar replaces hyphens with underscores in device names
@@ -419,69 +315,28 @@ func (s *DeviceState) applyConfig(config *configapi.GpuConfig, results []*resour
 	return perDeviceEdits, nil
 }
 
-// GetOpaqueDeviceConfigs returns an ordered list of the configs contained in possibleConfigs for this driver.
-//
-// Configs can either come from the resource claim itself or from the device
-// class associated with the request. Configs coming directly from the resource
-// claim take precedence over configs coming from the device class. Moreover,
-// configs found later in the list of configs attached to its source take
-// precedence over configs found earlier in the list for that source.
-//
-// All of the configs relevant to the driver from the list of possibleConfigs
-// will be returned in order of precedence (from lowest to highest). If no
-// configs are found, nil is returned.
+// GetOpaqueDeviceConfigs returns configs from possibleConfigs that match this driver.
 func GetOpaqueDeviceConfigs(
 	decoder runtime.Decoder,
 	driverName string,
 	possibleConfigs []resourceapi.DeviceAllocationConfiguration,
 ) ([]*OpaqueDeviceConfig, error) {
-	// Collect all configs in order of reverse precedence.
-	var classConfigs []resourceapi.DeviceAllocationConfiguration
-	var claimConfigs []resourceapi.DeviceAllocationConfiguration
-	var candidateConfigs []resourceapi.DeviceAllocationConfiguration
-	for _, config := range possibleConfigs {
-		switch config.Source {
-		case resourceapi.AllocationConfigSourceClass:
-			classConfigs = append(classConfigs, config)
-		case resourceapi.AllocationConfigSourceClaim:
-			claimConfigs = append(claimConfigs, config)
-		default:
-			return nil, fmt.Errorf("invalid config source: %v", config.Source)
-		}
-	}
-	candidateConfigs = append(candidateConfigs, classConfigs...)
-	candidateConfigs = append(candidateConfigs, claimConfigs...)
-
-	// Decode all configs that are relevant for the driver.
 	var resultConfigs []*OpaqueDeviceConfig
-	for _, config := range candidateConfigs {
-		// If this is nil, the driver doesn't support some future API extension
-		// and needs to be updated.
-		if config.Opaque == nil {
-			return nil, fmt.Errorf("only opaque parameters are supported by this driver")
-		}
-
-		// Configs for different drivers may have been specified because a
-		// single request can be satisfied by different drivers. This is not
-		// an error -- drivers must skip over other driver's configs in order
-		// to support this.
-		if config.Opaque.Driver != driverName {
+	for _, config := range possibleConfigs {
+		if config.Opaque == nil || config.Opaque.Driver != driverName {
 			continue
 		}
 
 		decodedConfig, err := runtime.Decode(decoder, config.Opaque.Parameters.Raw)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding config parameters: %w", err)
+			return nil, fmt.Errorf("error decoding config: %w", err)
 		}
 
-		resultConfig := &OpaqueDeviceConfig{
+		resultConfigs = append(resultConfigs, &OpaqueDeviceConfig{
 			Requests: config.Requests,
 			Config:   decodedConfig,
-		}
-
-		resultConfigs = append(resultConfigs, resultConfig)
+		})
 	}
-
 	return resultConfigs, nil
 }
 

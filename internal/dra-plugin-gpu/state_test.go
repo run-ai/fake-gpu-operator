@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1beta1"
-	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager"
 
 	configapi "sigs.k8s.io/dra-example-driver/api/example.com/resource/gpu/v1alpha1"
 )
@@ -112,24 +110,9 @@ func TestNewDeviceState(t *testing.T) {
 }
 
 func TestDeviceState_Prepare(t *testing.T) {
-	// Create a minimal state for testing Prepare method directly
-	// We'll test Prepare with a real checkpoint manager but skip NewDeviceState
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	// Use the same checkpoint directory as NewDeviceState would use
-	checkpointDir := config.DriverPluginPath()
-	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
-
-	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
-	require.NoError(t, err)
-
-	// Initialize checkpoint (normally done in NewDeviceState)
-	checkpoint := newCheckpoint()
-	err = checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint)
-	require.NoError(t, err)
-
-	// Create allocatable devices
 	allocatable := AllocatableDevices{
 		"GPU-test-0": resourceapi.Device{
 			Name: "GPU-test-0",
@@ -140,11 +123,10 @@ func TestDeviceState_Prepare(t *testing.T) {
 	require.NoError(t, err)
 
 	state := &DeviceState{
-		allocatable:       allocatable,
-		checkpointManager: checkpointManager,
-		cdi:               cdi,
-		coreclient:        config.CoreClient,
-		nodeName:          config.Flags.NodeName,
+		allocatable: allocatable,
+		cdi:         cdi,
+		coreclient:  config.CoreClient,
+		nodeName:    config.Flags.NodeName,
 	}
 
 	tests := map[string]struct {
@@ -240,18 +222,6 @@ func TestDeviceState_Unprepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
 
-	// Use the same checkpoint directory as NewDeviceState would use
-	checkpointDir := config.DriverPluginPath()
-	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
-
-	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
-	require.NoError(t, err)
-
-	// Initialize checkpoint (normally done in NewDeviceState)
-	checkpoint := newCheckpoint()
-	err = checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint)
-	require.NoError(t, err)
-
 	allocatable := AllocatableDevices{
 		"GPU-test-0": resourceapi.Device{
 			Name: "GPU-test-0",
@@ -262,11 +232,10 @@ func TestDeviceState_Unprepare(t *testing.T) {
 	require.NoError(t, err)
 
 	state := &DeviceState{
-		allocatable:       allocatable,
-		checkpointManager: checkpointManager,
-		cdi:               cdi,
-		coreclient:        config.CoreClient,
-		nodeName:          config.Flags.NodeName,
+		allocatable: allocatable,
+		cdi:         cdi,
+		coreclient:  config.CoreClient,
+		nodeName:    config.Flags.NodeName,
 	}
 
 	// First prepare a claim
@@ -418,20 +387,7 @@ func TestGetOpaqueDeviceConfigs(t *testing.T) {
 			wantErr:         false,
 			wantCount:       0,
 		},
-		"invalid config source": {
-			possibleConfigs: []resourceapi.DeviceAllocationConfiguration{
-				{
-					Source: "invalid-source",
-					DeviceConfiguration: resourceapi.DeviceConfiguration{
-						Opaque: &resourceapi.OpaqueDeviceConfiguration{
-							Driver: driverName,
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		"opaque is nil": {
+		"opaque is nil - skipped": {
 			possibleConfigs: []resourceapi.DeviceAllocationConfiguration{
 				{
 					Source: resourceapi.AllocationConfigSourceClass,
@@ -440,7 +396,8 @@ func TestGetOpaqueDeviceConfigs(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:   false,
+			wantCount: 0, // Skipped due to nil opaque
 		},
 	}
 
@@ -461,21 +418,9 @@ func TestGetOpaqueDeviceConfigs(t *testing.T) {
 	}
 }
 
-func TestDeviceState_UnprepareDevices(t *testing.T) {
-	state := &DeviceState{}
-	err := state.unprepareDevices("claim-1", PreparedDevices{})
-	assert.NoError(t, err) // Currently a no-op
-}
-
 func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 	config, cleanup := createTestConfig(t)
 	defer cleanup()
-
-	checkpointDir := filepath.Join(config.Flags.CDIRoot, "checkpoints")
-	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
-
-	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
-	require.NoError(t, err)
 
 	allocatable := AllocatableDevices{
 		"GPU-test-0": resourceapi.Device{
@@ -486,16 +431,12 @@ func TestDeviceState_UpdateDevicesFromAnnotation(t *testing.T) {
 	cdi, err := NewCDIHandler(config)
 	require.NoError(t, err)
 
-	// For updateDevicesFromAnnotation test, we need a helper
-	// Since we can't easily mock it, we'll test the logic without calling helper
-	// by checking that the method would work if helper was available
 	state := &DeviceState{
-		allocatable:       allocatable,
-		checkpointManager: checkpointManager,
-		cdi:               cdi,
-		helper:            nil, // Skip helper-dependent test
-		nodeName:          "test-node",
-		coreclient:        config.CoreClient,
+		allocatable: allocatable,
+		cdi:         cdi,
+		helper:      nil, // Skip helper-dependent test
+		nodeName:    "test-node",
+		coreclient:  config.CoreClient,
 	}
 
 	tests := map[string]struct {

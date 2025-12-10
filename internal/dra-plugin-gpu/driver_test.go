@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager"
 )
 
 func TestDriver_Shutdown(t *testing.T) {
@@ -362,18 +361,6 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 }
 
 func createTestDeviceState(t *testing.T, config *Config) (*DeviceState, error) {
-	// Use the same checkpoint directory as NewDeviceState would use
-	checkpointDir := config.DriverPluginPath()
-	require.NoError(t, os.MkdirAll(checkpointDir, 0755))
-
-	checkpointManager, err := checkpointmanager.NewCheckpointManager(checkpointDir)
-	require.NoError(t, err)
-
-	// Initialize checkpoint (normally done in NewDeviceState)
-	checkpoint := newCheckpoint()
-	err = checkpointManager.CreateCheckpoint(DriverPluginCheckpointFile, checkpoint)
-	require.NoError(t, err)
-
 	allocatable := AllocatableDevices{
 		"GPU-test-0": resourceapi.Device{
 			Name: "GPU-test-0",
@@ -384,11 +371,10 @@ func createTestDeviceState(t *testing.T, config *Config) (*DeviceState, error) {
 	require.NoError(t, err)
 
 	state := &DeviceState{
-		allocatable:       allocatable,
-		checkpointManager: checkpointManager,
-		cdi:               cdi,
-		coreclient:        config.CoreClient,
-		nodeName:          config.Flags.NodeName,
+		allocatable: allocatable,
+		cdi:         cdi,
+		coreclient:  config.CoreClient,
+		nodeName:    config.Flags.NodeName,
 	}
 
 	return state, nil
