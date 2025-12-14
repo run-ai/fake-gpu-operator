@@ -1,20 +1,20 @@
 {{- define "fake-gpu-operator.device-plugin.common.metadata.labels" -}}
 app: device-plugin
-{{ end }}
+{{- end -}}
 
 {{- define "fake-gpu-operator.device-plugin.common.metadata.annotations" -}}
 openshift.io/scc: hostmount-anyuid
-{{ end }}
+{{- end -}}
 
 {{- define "fake-gpu-operator.device-plugin.common.metadata.name" -}}
 device-plugin
-{{ end }}
+{{- end -}}
 
 {{- define "fake-gpu-operator.device-plugin.common.podSelector" }}
 matchLabels:
   app: device-plugin
   component: device-plugin
-{{ end }}
+{{- end }}
 
 {{- define "fake-gpu-operator.device-plugin.common.podTemplate.metadata" }}
 annotations:
@@ -22,7 +22,7 @@ annotations:
 labels:
   app: device-plugin
   component: device-plugin
-{{ end }}
+{{- end }}
 
 {{- define "fake-gpu-operator.device-plugin.common.podTemplate.spec" }}
 containers:
@@ -74,4 +74,4 @@ volumes:
       path: /var/lib/runai/shared
       type: DirectoryOrCreate
     name: runai-shared-directory
-{{ end }}
+{{- end }}

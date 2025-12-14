@@ -27,7 +27,7 @@ rules:
     verbs:
       - get
       - update
-{{- if .Values.environment.openshift -}}
+{{- if .Values.environment.openshift }}
   - apiGroups:
     - security.openshift.io
     resources:
@@ -37,4 +37,4 @@ rules:
     - privileged
     verbs:
     - use
-{{- end -}}
+{{ end }}

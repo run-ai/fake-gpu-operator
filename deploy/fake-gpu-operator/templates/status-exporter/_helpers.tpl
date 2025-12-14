@@ -2,16 +2,16 @@
 app: nvidia-dcgm-exporter
 component: status-exporter
 app.kubernetes.io/name: nvidia-container-toolkit
-{{ end }}
+{{- end -}}
 
 {{- define "fake-gpu-operator.status-exporter.common.metadata.name" -}}
 nvidia-dcgm-exporter
-{{ end }}
+{{- end -}}
 
 {{- define "fake-gpu-operator.status-exporter.common.podSelector" -}}
 matchLabels:
   app: nvidia-dcgm-exporter
-{{ end }}
+{{- end -}}
 
 {{- define "fake-gpu-operator.status-exporter.common.podTemplate.metadata" -}}
 labels:
@@ -19,7 +19,7 @@ labels:
   app.kubernetes.io/name: nvidia-container-toolkit
 annotations:
   checksum/hostpath-init-configmap: {{ include (print $.Template.BasePath "/status-exporter/hostpath-init-configmap.yaml") . | sha256sum }}
-{{ end }}
+{{- end -}}
 
 {{- define "fake-gpu-operator.status-exporter.common.podTemplate.spec" -}}
 containers:
@@ -65,4 +65,4 @@ volumes:
   - name: hostpath-init-script
     configMap:
       name: hostpath-init
-{{ end }}
+{{- end -}}
