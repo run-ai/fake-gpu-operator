@@ -19,41 +19,41 @@ type NodePoolTopology struct {
 }
 
 type NodeTopology struct {
-	GpuMemory    int             `yaml:"gpuMemory" json:"gpuMemory"`
-	GpuProduct   string          `yaml:"gpuProduct" json:"gpuProduct"`
-	Gpus         []GpuDetails    `yaml:"gpus" json:"gpus"`
-	MigStrategy  string          `yaml:"migStrategy" json:"migStrategy"`
-	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty" json:"otherDevices,omitempty"`
+	GpuMemory    int             `yaml:"gpuMemory"`
+	GpuProduct   string          `yaml:"gpuProduct"`
+	Gpus         []GpuDetails    `yaml:"gpus"`
+	MigStrategy  string          `yaml:"migStrategy"`
+	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty"`
 }
 
 type GpuDetails struct {
-	ID     string    `yaml:"id" json:"id"`
-	Status GpuStatus `yaml:"status" json:"status"`
+	ID     string    `yaml:"id"`
+	Status GpuStatus `yaml:"status"`
 }
 
 type PodGpuUsageStatusMap map[types.UID]GpuUsageStatus
 
 type GpuStatus struct {
-	AllocatedBy ContainerDetails `yaml:"allocatedBy" json:"allocatedBy"`
+	AllocatedBy ContainerDetails `yaml:"allocatedBy"`
 	// Maps PodUID to its GPU usage status
-	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"podGpuUsageStatus" json:"podGpuUsageStatus"`
+	PodGpuUsageStatus PodGpuUsageStatusMap `yaml:"podGpuUsageStatus"`
 }
 
 type ContainerDetails struct {
-	Namespace string `yaml:"namespace" json:"namespace"`
-	Pod       string `yaml:"pod" json:"pod"`
-	Container string `yaml:"container" json:"container"`
+	Namespace string `yaml:"namespace"`
+	Pod       string `yaml:"pod"`
+	Container string `yaml:"container"`
 }
 
 type GpuUsageStatus struct {
-	Utilization           Range `yaml:"utilization" json:"utilization"`
-	FbUsed                int   `yaml:"fbUsed" json:"fbUsed"`
-	UseKnativeUtilization bool  `yaml:"useKnativeUtilization" json:"useKnativeUtilization"`
+	Utilization           Range `yaml:"utilization"`
+	FbUsed                int   `yaml:"fbUsed"`
+	UseKnativeUtilization bool  `yaml:"useKnativeUtilization"`
 }
 
 type Range struct {
-	Min int `yaml:"min" json:"min"`
-	Max int `yaml:"max" json:"max"`
+	Min int `yaml:"min"`
+	Max int `yaml:"max"`
 }
 
 type GenericDevice struct {
