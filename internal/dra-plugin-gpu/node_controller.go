@@ -16,13 +16,12 @@ import (
 // NodeReconciler reconciles Node objects
 type NodeReconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	state     *DeviceState
-	nodeName  string
-	lastValue string
+	Scheme   *runtime.Scheme
+	state    *DeviceState
+	nodeName string
 }
 
-// Reconcile watches for changes to the node annotation
+// Reconcile watches for changes to the node and refreshes topology from the server
 func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if req.Name != r.nodeName {
 		return ctrl.Result{}, nil
@@ -33,16 +32,10 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	currentValue := node.Annotations[AnnotationGpuFakeDevices]
-	if currentValue == r.lastValue {
-		return ctrl.Result{}, nil
-	}
+	log.Printf("Node event received, refreshing topology for node %s", req.Name)
 
-	log.Printf("Node annotation changed, updating devices for node %s", req.Name)
-	r.lastValue = currentValue
-
-	if err := r.state.UpdateDevicesFromAnnotation(ctx); err != nil {
-		log.Printf("Failed to update devices from annotation: %v", err)
+	if err := r.state.UpdateDevicesFromTopology(ctx); err != nil {
+		log.Printf("Failed to update devices from topology: %v", err)
 		return ctrl.Result{}, fmt.Errorf("failed to update devices: %w", err)
 	}
 

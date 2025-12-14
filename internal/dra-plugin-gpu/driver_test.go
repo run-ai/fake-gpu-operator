@@ -329,15 +329,8 @@ func createTestConfigForDriver(t *testing.T) (*Config, func()) {
 	client := fake.NewSimpleClientset()
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: driverTestNodeName,
-			Annotations: map[string]string{
-				AnnotationGpuFakeDevices: `{
-					"gpuMemory": 40960,
-					"gpuProduct": "Test-GPU",
-					"gpus": [{"id": "` + driverTestGpuDevice0 + `", "status": {"allocatedBy": {"namespace": "", "pod": "", "container": ""}, "podGpuUsageStatus": {}}}],
-					"migStrategy": "none"
-				}`,
-			},
+			Name:        driverTestNodeName,
+			Annotations: map[string]string{},
 		},
 	}
 	_, err := client.CoreV1().Nodes().Create(context.Background(), node, metav1.CreateOptions{})

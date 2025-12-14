@@ -73,7 +73,7 @@ func (cdi *CDIHandler) CreateCommonSpecFile() error {
 	return cdi.cache.WriteSpec(spec, specName)
 }
 
-func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevices, topologyJSON string) error {
+func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevices) error {
 	specName := cdiapi.GenerateTransientSpecName(cdiVendor, cdiClass, claimUID)
 
 	spec := &cdispec.Spec{
@@ -86,11 +86,6 @@ func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevi
 		deviceID := strings.ReplaceAll(device.DeviceName, "-", "_")
 		envs := []string{
 			fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM=%s", deviceID, claimUID),
-		}
-
-		// Add topology JSON as environment variable
-		if topologyJSON != "" {
-			envs = append(envs, fmt.Sprintf("GPU_TOPOLOGY_JSON=%s", topologyJSON))
 		}
 
 		claimEdits := cdiapi.ContainerEdits{

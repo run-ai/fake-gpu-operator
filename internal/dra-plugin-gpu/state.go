@@ -11,7 +11,6 @@ import (
 	"time"
 
 	resourceapi "k8s.io/api/resource/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	coreclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
@@ -61,24 +60,19 @@ type DeviceState struct {
 	helper      *kubeletplugin.Helper
 }
 
-// waitForGPUAnnotation polls for the GPU annotation every 3 seconds until found.
-func waitForGPUAnnotation(ctx context.Context, coreclient coreclientset.Interface, nodeName string) (AllocatableDevices, error) {
+// waitForTopology polls for the topology from the HTTP server every 3 seconds until available.
+func waitForTopology(ctx context.Context, nodeName string) (AllocatableDevices, error) {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
 	for {
-		allocatable, err := enumerateAllPossibleDevices(ctx, coreclient, nodeName)
+		allocatable, err := enumerateAllPossibleDevices(nodeName)
 		if err == nil {
-			log.Printf("Successfully found GPU annotation, deviceCount=%d", len(allocatable))
+			log.Printf("Successfully fetched topology from server, deviceCount=%d", len(allocatable))
 			return allocatable, nil
 		}
 
-		// Retry only for missing/empty annotation errors
-		if !strings.Contains(err.Error(), "annotation") {
-			return nil, err
-		}
-
-		log.Printf("Waiting for GPU annotation on node %s", nodeName)
+		log.Printf("Waiting for topology server for node %s: %v", nodeName, err)
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -88,7 +82,7 @@ func waitForGPUAnnotation(ctx context.Context, coreclient coreclientset.Interfac
 }
 
 func NewDeviceState(ctx context.Context, config *Config, helper *kubeletplugin.Helper) (*DeviceState, error) {
-	allocatable, err := waitForGPUAnnotation(ctx, config.CoreClient, config.Flags.NodeName)
+	allocatable, err := waitForTopology(ctx, config.Flags.NodeName)
 	if err != nil {
 		return nil, fmt.Errorf("error enumerating all possible devices: %v", err)
 	}
@@ -123,13 +117,8 @@ func (s *DeviceState) Prepare(ctx context.Context, claim *resourceapi.ResourceCl
 		return nil, fmt.Errorf("prepare failed: %v", err)
 	}
 
-	topologyJSON, err := s.getTopologyJSON(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get topology JSON: %v", err)
-	}
-
 	// CDI file creation is idempotent (overwrites if exists)
-	if err = s.cdi.CreateClaimSpecFile(claimUID, preparedDevices, topologyJSON); err != nil {
+	if err = s.cdi.CreateClaimSpecFile(claimUID, preparedDevices); err != nil {
 		return nil, fmt.Errorf("unable to create CDI spec file for claim: %v", err)
 	}
 
@@ -239,17 +228,6 @@ func (s *DeviceState) prepareDevices(claim *resourceapi.ResourceClaim) (Prepared
 	return preparedDevices, nil
 }
 
-// getTopologyJSON retrieves topology JSON directly from node annotation
-func (s *DeviceState) getTopologyJSON(ctx context.Context) (string, error) {
-	node, err := s.coreclient.CoreV1().Nodes().Get(ctx, s.nodeName, metav1.GetOptions{})
-	if err != nil {
-		return "", fmt.Errorf("failed to get node %s: %w", s.nodeName, err)
-	}
-
-	// The annotation is already JSON, return it directly
-	return node.Annotations[AnnotationGpuFakeDevices], nil
-}
-
 // sanitizeDeviceNameForEnvVar replaces hyphens with underscores in device names
 // to make them valid shell environment variable names.
 func sanitizeDeviceNameForEnvVar(deviceName string) string {
@@ -326,15 +304,15 @@ func GetOpaqueDeviceConfigs(
 	return resultConfigs, nil
 }
 
-// UpdateDevicesFromAnnotation updates the allocatable devices from the node annotation
+// UpdateDevicesFromTopology updates the allocatable devices from the topology server
 // and re-publishes resources. This method is thread-safe.
-func (s *DeviceState) UpdateDevicesFromAnnotation(ctx context.Context) error {
+func (s *DeviceState) UpdateDevicesFromTopology(ctx context.Context) error {
 	s.Lock()
 	defer s.Unlock()
 
-	allocatable, err := enumerateAllPossibleDevices(ctx, s.coreclient, s.nodeName)
+	allocatable, err := enumerateAllPossibleDevices(s.nodeName)
 	if err != nil {
-		return fmt.Errorf("failed to enumerate devices from annotation: %w", err)
+		return fmt.Errorf("failed to enumerate devices from topology server: %w", err)
 	}
 
 	s.allocatable = allocatable

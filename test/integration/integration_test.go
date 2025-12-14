@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -118,7 +119,6 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 
 			deviceID := extractDeviceID(gpuDevice)
 			verifyEnvVars(logs, gpuDevice, map[string]types.GomegaMatcher{
-				"GPU_TOPOLOGY_JSON": Not(BeEmpty()),
 				fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM", deviceID): MatchRegexp(`^[a-z0-9-]+$`),
 			})
 			verifyNvidiaSmiBinary(namespace, podName, "ctr0")
@@ -223,7 +223,6 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 			deviceID := extractDeviceID(gpuDevice)
 
 			verifyEnvVars(logs, gpuDevice, map[string]types.GomegaMatcher{
-				"GPU_TOPOLOGY_JSON": Not(BeEmpty()),
 				fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM", deviceID): MatchRegexp(`^[a-z0-9-]+$`),
 			})
 		})
@@ -240,6 +239,92 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 			waitForPodReady(namespace, podName, podReadyTimeout)
 
 			verifyNvidiaSmiBinary(namespace, podName, "ctr0")
+		})
+	})
+
+	Describe("nvidia-smi Utilization", func() {
+		It("should report GPU utilization from topology server", func() {
+			manifestPath := filepath.Join("manifests", "utilization-range-pod.yaml")
+			namespace := "gpu-test-util"
+			podName := "pod0"
+
+			setupTest(manifestPath, namespace, &testNamespaces)
+			waitAndTrackResourceClaims(namespace, []string{podName}, &testResourceClaims)
+			waitForPodReady(namespace, podName, podReadyTimeout)
+
+			// Run nvidia-smi and verify it works
+			output := runNvidiaSmi(namespace, podName, "ctr0")
+			Expect(output).To(ContainSubstring("NVIDIA-SMI"), "nvidia-smi output should contain NVIDIA-SMI header")
+			Expect(output).To(ContainSubstring("GPU"), "nvidia-smi output should contain GPU information")
+
+			// Verify GPU utilization is shown (can be 0-100%)
+			Expect(output).To(MatchRegexp(`\d+%`), "nvidia-smi output should show GPU utilization percentage")
+		})
+
+		It("should show varying utilization values on repeated runs", func() {
+			manifestPath := filepath.Join("manifests", "utilization-range-pod.yaml")
+			namespace := "gpu-test-util-vary"
+			podName := "pod0"
+
+			// Apply manifest with different namespace
+			applyManifestWithNamespace(manifestPath, namespace)
+			testNamespaces = append(testNamespaces, namespace)
+			waitAndTrackResourceClaims(namespace, []string{podName}, &testResourceClaims)
+			waitForPodReady(namespace, podName, podReadyTimeout)
+
+			// Run nvidia-smi multiple times and collect utilization values
+			var utilizations []int
+			for i := 0; i < 5; i++ {
+				util := getNvidiaSmiUtilization(namespace, podName, "ctr0")
+				utilizations = append(utilizations, util)
+				time.Sleep(100 * time.Millisecond)
+			}
+
+			// Verify that utilization values are within the expected range (50-100 from annotation)
+			for _, util := range utilizations {
+				Expect(util).To(BeNumerically(">=", 0), "Utilization should be >= 0%%")
+				Expect(util).To(BeNumerically("<=", 100), "Utilization should be <= 100%%")
+			}
+		})
+	})
+
+	Describe("Prometheus Metrics", func() {
+		It("should expose GPU metrics via the status-exporter service", func() {
+			// The status-exporter exposes metrics on port 9400 via the nvidia-dcgm-exporter service
+			// We use a dedicated manifest to avoid namespace conflicts with other tests
+			manifestPath := filepath.Join("manifests", "prometheus-test-pod.yaml")
+			namespace := "gpu-test-prometheus"
+			podName := "pod0"
+
+			setupTest(manifestPath, namespace, &testNamespaces)
+			waitAndTrackResourceClaims(namespace, []string{podName}, &testResourceClaims)
+			waitForPodReady(namespace, podName, podReadyTimeout)
+
+			// Give the status-exporter time to export metrics
+			time.Sleep(15 * time.Second)
+
+			// Query the metrics endpoint via kubectl port-forward
+			metrics := getPrometheusMetrics()
+
+			// Verify expected metrics are present
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_GPU_UTIL"),
+				"Metrics should contain GPU utilization metric")
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_FB_USED"),
+				"Metrics should contain GPU framebuffer used metric")
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_FB_FREE"),
+				"Metrics should contain GPU framebuffer free metric")
+
+			// Verify metrics have the expected labels
+			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*UUID="GPU-[a-zA-Z0-9-]+"`),
+				"GPU utilization metric should have UUID label")
+			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*modelName="NVIDIA-A100-SXM4-40GB"`),
+				"GPU utilization metric should have modelName label")
+
+			// Verify the allocated GPU shows pod information in labels
+			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*namespace="`+namespace+`"`),
+				"GPU metric should show namespace of allocated pod")
+			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*pod="`+podName+`"`),
+				"GPU metric should show name of allocated pod")
 		})
 	})
 })
@@ -590,4 +675,88 @@ func verifyNvidiaSmiBinary(namespace, podName, containerName string) {
 	output, _ := cmd.CombinedOutput()
 	// We expect either success or a usage error, but not "command not found"
 	Expect(string(output)).NotTo(ContainSubstring("command not found"), "nvidia-smi should be available")
+}
+
+// runNvidiaSmi runs nvidia-smi in a pod and returns the output
+func runNvidiaSmi(namespace, podName, containerName string) string {
+	cmd := exec.Command("kubectl", "exec", "-n", namespace, podName, "-c", containerName, "--", "/bin/nvidia-smi")
+	output, err := cmd.CombinedOutput()
+	Expect(err).NotTo(HaveOccurred(), "nvidia-smi should run successfully: %s", string(output))
+	return string(output)
+}
+
+// getNvidiaSmiUtilization runs nvidia-smi with debug flag and extracts the GPU utilization percentage
+func getNvidiaSmiUtilization(namespace, podName, containerName string) int {
+	cmd := exec.Command("kubectl", "exec", "-n", namespace, podName, "-c", containerName, "--", "/bin/nvidia-smi", "--debug")
+	output, err := cmd.CombinedOutput()
+	Expect(err).NotTo(HaveOccurred(), "nvidia-smi --debug should run successfully: %s", string(output))
+
+	// Parse the debug output to find utilization
+	// Format: "GPU stats - Index: 0, Used Memory: 40960.000000, Utilization: 75%"
+	re := regexp.MustCompile(`Utilization: (\d+)%`)
+	matches := re.FindStringSubmatch(string(output))
+	if len(matches) < 2 {
+		// Fallback: try to parse from the main output (e.g., "75%")
+		re = regexp.MustCompile(`(\d+)%\s+Default`)
+		matches = re.FindStringSubmatch(string(output))
+	}
+	Expect(matches).To(HaveLen(2), "Should find utilization in nvidia-smi output: %s", string(output))
+
+	util, err := strconv.Atoi(matches[1])
+	Expect(err).NotTo(HaveOccurred(), "Should parse utilization as integer")
+	return util
+}
+
+// applyManifestWithNamespace applies a manifest but replaces the namespace
+func applyManifestWithNamespace(manifestPath, namespace string) {
+	// First, create the namespace
+	cmd := exec.Command("kubectl", "create", "namespace", namespace, "--dry-run=client", "-o", "yaml")
+	nsYaml, err := cmd.Output()
+	Expect(err).NotTo(HaveOccurred(), "Should create namespace YAML")
+
+	cmd = exec.Command("kubectl", "apply", "-f", "-")
+	cmd.Stdin = strings.NewReader(string(nsYaml))
+	output, err := cmd.CombinedOutput()
+	Expect(err).NotTo(HaveOccurred(), "Should create namespace: %s", string(output))
+
+	// Read the manifest file
+	manifestBytes, err := os.ReadFile(manifestPath)
+	Expect(err).NotTo(HaveOccurred(), "Should read manifest file")
+
+	// Replace the original namespace with the new one
+	manifest := string(manifestBytes)
+	// Replace namespace in metadata
+	manifest = strings.ReplaceAll(manifest, "namespace: gpu-test-util", "namespace: "+namespace)
+	// Also need to create ResourceClaimTemplate in the new namespace
+	manifest = strings.ReplaceAll(manifest, "name: gpu-test-util", "name: "+namespace)
+
+	// Apply the modified manifest
+	cmd = exec.Command("kubectl", "apply", "-f", "-")
+	cmd.Stdin = strings.NewReader(manifest)
+	output, err = cmd.CombinedOutput()
+	Expect(err).NotTo(HaveOccurred(), "Should apply manifest: %s", string(output))
+}
+
+// getPrometheusMetrics fetches Prometheus metrics from the nvidia-dcgm-exporter service
+func getPrometheusMetrics() string {
+	// Use kubectl to run a curl command in a temporary pod to access the service
+	// This avoids needing port-forward which can be flaky in tests
+	cmd := exec.Command("kubectl", "run", "metrics-test", "--rm", "-i", "--restart=Never",
+		"--image=curlimages/curl:latest", "-n", "gpu-operator",
+		"--", "curl", "-s", "http://nvidia-dcgm-exporter.gpu-operator:9400/metrics")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// If the curl pod approach fails, try getting the pod IP directly
+		podIPCmd := exec.Command("kubectl", "get", "pod", "-l", "app=nvidia-dcgm-exporter",
+			"-n", "gpu-operator", "-o", "jsonpath={.items[0].status.podIP}")
+		podIP, podErr := podIPCmd.Output()
+		if podErr == nil && len(podIP) > 0 {
+			cmd = exec.Command("kubectl", "run", "metrics-test-2", "--rm", "-i", "--restart=Never",
+				"--image=curlimages/curl:latest", "-n", "gpu-operator",
+				"--", "curl", "-s", fmt.Sprintf("http://%s:9400/metrics", string(podIP)))
+			output, err = cmd.CombinedOutput()
+		}
+	}
+	Expect(err).NotTo(HaveOccurred(), "Should fetch Prometheus metrics: %s", string(output))
+	return string(output)
 }

@@ -185,7 +185,7 @@ func TestCDIHandler_CreateClaimSpecFile(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := handler.CreateClaimSpecFile(test.claimUID, test.devices, "")
+			err := handler.CreateClaimSpecFile(test.claimUID, test.devices)
 			if test.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -210,7 +210,7 @@ func TestCDIHandler_DeleteClaimSpecFile(t *testing.T) {
 	// Create a spec file first
 	devices := PreparedDevices{{Device: drapbv1.Device{DeviceName: cdiTestGpu0}}}
 	claimUID := "claim-to-delete"
-	err = handler.CreateClaimSpecFile(claimUID, devices, "")
+	err = handler.CreateClaimSpecFile(claimUID, devices)
 	require.NoError(t, err)
 
 	// Now delete it

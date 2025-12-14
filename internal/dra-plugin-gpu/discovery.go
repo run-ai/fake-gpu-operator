@@ -1,49 +1,51 @@
 package dra_plugin_gpu
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	resourceapi "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	coreclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
 )
 
 const (
-	// AnnotationGpuFakeDevices is the annotation key for GPU fake devices on nodes
-	AnnotationGpuFakeDevices = "nvidia.com/gpu.fake.devices"
+	// topologyServerURL is the base URL for the topology server
+	topologyServerURL = "http://topology-server.gpu-operator/topology/nodes/"
 )
 
-func enumerateAllPossibleDevices(ctx context.Context, coreclient coreclientset.Interface, nodeName string) (AllocatableDevices, error) {
-	// Fetch the node
-	node, err := coreclient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+// getTopologyFromHTTP retrieves node topology from the HTTP topology server
+func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
+	resp, err := http.Get(topologyServerURL + nodeName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get node %s: %w", nodeName, err)
+		return nil, fmt.Errorf("failed to get topology from HTTP server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("topology server returned status %d for node %s", resp.StatusCode, nodeName)
 	}
 
-	// Read the annotation
-	annotationValue, exists := node.Annotations[AnnotationGpuFakeDevices]
-	if !exists {
-		return nil, fmt.Errorf("annotation %s not found on node %s", AnnotationGpuFakeDevices, nodeName)
-	}
-
-	if annotationValue == "" {
-		return nil, fmt.Errorf("annotation %s is empty on node %s", AnnotationGpuFakeDevices, nodeName)
-	}
-
-	// Parse JSON as NodeTopology
 	var nodeTopology topology.NodeTopology
-	if err := json.Unmarshal([]byte(annotationValue), &nodeTopology); err != nil {
-		return nil, fmt.Errorf("failed to parse annotation %s: %w", AnnotationGpuFakeDevices, err)
+	if err := json.NewDecoder(resp.Body).Decode(&nodeTopology); err != nil {
+		return nil, fmt.Errorf("failed to decode topology response: %w", err)
+	}
+
+	return &nodeTopology, nil
+}
+
+func enumerateAllPossibleDevices(nodeName string) (AllocatableDevices, error) {
+	// Get topology from HTTP server
+	nodeTopology, err := getTopologyFromHTTP(nodeName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get topology for node %s: %w", nodeName, err)
 	}
 
 	if len(nodeTopology.Gpus) == 0 {
-		return nil, fmt.Errorf("annotation %s contains no GPUs", AnnotationGpuFakeDevices)
+		return nil, fmt.Errorf("topology server returned no GPUs for node %s", nodeName)
 	}
 
 	// Convert GpuMemory from MB to bytes for resource.Quantity
@@ -53,7 +55,7 @@ func enumerateAllPossibleDevices(ctx context.Context, coreclient coreclientset.I
 	alldevices := make(AllocatableDevices)
 	for _, gpu := range nodeTopology.Gpus {
 		if gpu.ID == "" {
-			return nil, fmt.Errorf("GPU entry missing ID in annotation")
+			return nil, fmt.Errorf("GPU entry missing ID in topology")
 		}
 
 		// Use ID (UUID) as device name, convert to lowercase for RFC 1123 compliance

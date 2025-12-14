@@ -1,0 +1,60 @@
+# Integration test values for fake-gpu-operator
+# This enables status-updater, topology-server, and DRA plugin for end-to-end testing
+
+environment:
+  openshift: false
+  resourceReservationNamespace: runai-reservation
+
+# Enable DRA plugin for GPU allocation
+draPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Enable status-updater to manage node topology
+statusUpdater:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Enable topology server for nvidia-smi and DRA plugin to fetch topology
+topologyServer:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Enable topology ConfigMap for status-updater
+topologyConfigMap:
+  enabled: true
+
+# Disable components not needed for integration tests
+devicePlugin:
+  enabled: false
+
+statusExporter:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+kwokGpuDevicePlugin:
+  enabled: false
+
+migFaker:
+  enabled: false
+
+gpuOperator:
+  enabled: false
+
+runtimeClass:
+  enabled: false
+
+# GPU topology configuration
+# Status-updater will use this to create topology ConfigMaps
+topology:
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+  migStrategy: none
+  nodePools:
+    default:
+      gpuProduct: NVIDIA-A100-SXM4-40GB
+      gpuCount: 2
+      gpuMemory: 40960
