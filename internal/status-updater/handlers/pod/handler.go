@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	nodehandler "github.com/run-ai/fake-gpu-operator/internal/status-updater/handlers/node"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -48,7 +49,12 @@ func (p *PodHandler) HandleAdd(pod *v1.Pod) error {
 		return err
 	}
 
-	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
+	err = p.handleDraGpuPodAddition(pod, nodeTopology)
+	if err != nil {
+		return err
+	}
+
+	return p.updateNodeTopology(nodeTopology, pod.Spec.NodeName)
 }
 
 func (p *PodHandler) HandleUpdate(pod *v1.Pod) error {
@@ -69,7 +75,12 @@ func (p *PodHandler) HandleUpdate(pod *v1.Pod) error {
 		return err
 	}
 
-	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
+	err = p.handleDraGpuPodUpdate(pod, nodeTopology)
+	if err != nil {
+		return err
+	}
+
+	return p.updateNodeTopology(nodeTopology, pod.Spec.NodeName)
 }
 
 func (p *PodHandler) HandleDelete(pod *v1.Pod) error {
@@ -86,5 +97,24 @@ func (p *PodHandler) HandleDelete(pod *v1.Pod) error {
 	if err != nil {
 		return err
 	}
-	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
+
+	p.handleDraGpuPodDeletion(pod, nodeTopology)
+
+	return p.updateNodeTopology(nodeTopology, pod.Spec.NodeName)
+}
+
+// updateNodeTopology updates both the ConfigMap and the node annotation with the topology.
+// The ConfigMap is kept for backwards compatibility, while the annotation is used by the DRA plugin.
+func (p *PodHandler) updateNodeTopology(nodeTopology *topology.NodeTopology, nodeName string) error {
+	// Update the ConfigMap (for backwards compatibility)
+	if err := topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, nodeName); err != nil {
+		return fmt.Errorf("failed to update node topology CM: %w", err)
+	}
+
+	// Also update the node annotation (for DRA plugin compatibility)
+	if err := nodehandler.AnnotateNodeWithTopology(p.kubeClient, nodeTopology, nodeName); err != nil {
+		return fmt.Errorf("failed to annotate node with topology: %w", err)
+	}
+
+	return nil
 }

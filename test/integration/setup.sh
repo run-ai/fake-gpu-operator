@@ -57,7 +57,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     echo "Loading images into kind cluster..."
     DOCKER_REPO_BASE="${DOCKER_REPO_BASE:-ghcr.io/run-ai/fake-gpu-operator}"
-    for component in dra-plugin-gpu; do
+    for component in dra-plugin-gpu status-updater; do
         IMAGE="${DOCKER_REPO_BASE}/${component}:${DOCKER_TAG}"
         echo "Loading ${IMAGE}..."
         if [[ "${CONTAINER_TOOL}" == "podman" ]]; then
@@ -78,15 +78,12 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     echo "Waiting for nodes to be ready..."
     kubectl wait --for=condition=Ready nodes --all --timeout=120s
 
-    echo "Annotating all nodes with fake GPU devices..."
-    GPU_ANNOTATION='{"gpuMemory":40960,"gpuProduct":"NVIDIA-A100-SXM4-40GB","gpus":[{"id":"GPU-12345678-1234-1234-1234-123456789abc","status":{"allocatedBy":{"namespace":"","pod":"","container":""},"podGpuUsageStatus":{}}},{"id":"GPU-87654321-4321-4321-4321-cba987654321","status":{"allocatedBy":{"namespace":"","pod":"","container":""},"podGpuUsageStatus":{}}}],"migStrategy":"none"}'
-    
-    # Get all node names
+    echo "Labeling nodes for status-updater node pool..."
+    # Get all node names and label them with the node pool label
     NODES=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
     for NODE in ${NODES}; do
-        echo "Annotating node ${NODE}..."
-        kubectl annotate node "${NODE}" nvidia.com/gpu.fake.devices="${GPU_ANNOTATION}" --overwrite
-        kubectl label node "${NODE}" nvidia.com/gpu.deploy.dra-plugin-gpu=true --overwrite
+        echo "Labeling node ${NODE} with simulated-gpu-node-pool=default..."
+        kubectl label node "${NODE}" run.ai/simulated-gpu-node-pool=default --overwrite
     done
     
     # Store worker node name for later reference
@@ -94,25 +91,37 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     if [[ -z "${WORKER_NODE}" ]]; then
         WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
     fi
-    # Currently only with dra plugin enabled as it's the only one with the tests written
-    echo "Deploying fake-gpu-operator..."
+
+    echo "Deploying fake-gpu-operator with status-updater and DRA plugin..."
     cd "${PROJECT_ROOT}"
     helm upgrade -i fake-gpu-operator deploy/fake-gpu-operator \
         --namespace gpu-operator \
         --create-namespace \
-        --set draPlugin.enabled=true \
+        -f "${SCRIPTS_DIR}/values.yaml" \
         --set draPlugin.image.tag="${DOCKER_TAG}" \
-        --set draPlugin.image.pullPolicy=Never \
-        --set devicePlugin.enabled=false \
-        --set statusUpdater.enabled=false \
-        --set topologyServer.enabled=false \
-        --set statusExporter.enabled=false \
-        --set kwokGpuDevicePlugin.enabled=false \
-        --set migFaker.enabled=false \
-        --set gpuOperator.enabled=false \
-        --set runtimeClass.enabled=false \
-        --set topologyConfigMap.enabled=false
+        --set statusUpdater.image.tag="${DOCKER_TAG}"
 
+    echo "Waiting for status-updater pod to be ready..."
+    kubectl wait --for=condition=Ready pod -l app=status-updater -n gpu-operator --timeout=120s
+
+    echo "Waiting for status-updater to annotate nodes with GPU topology..."
+    # Wait for all nodes to have the GPU annotation
+    for NODE in ${NODES}; do
+        echo "Waiting for node ${NODE} to be annotated..."
+        for i in {1..60}; do
+            ANNOT=$(kubectl get node "${NODE}" -o jsonpath='{.metadata.annotations.nvidia\.com/gpu\.fake\.devices}' 2>/dev/null || echo "")
+            if [[ -n "${ANNOT}" ]]; then
+                echo "Node ${NODE} annotated successfully"
+                break
+            fi
+            if [[ $i -eq 60 ]]; then
+                echo "ERROR: Timeout waiting for node ${NODE} to be annotated"
+                kubectl logs -l app=status-updater -n gpu-operator --tail=50
+                exit 1
+            fi
+            sleep 2
+        done
+    done
 
     echo "Waiting for DRA plugin pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=kubeletplugin -n gpu-operator --timeout=120s

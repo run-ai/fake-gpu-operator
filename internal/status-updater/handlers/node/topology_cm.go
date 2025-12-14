@@ -11,6 +11,10 @@ import (
 func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 	nodeTopology, _ := topology.GetNodeTopologyFromCM(p.kubeClient, node.Name)
 	if nodeTopology != nil {
+		// Topology CM already exists, but ensure the node annotation is up to date
+		if err := p.annotateNodeWithTopology(node, nodeTopology); err != nil {
+			return fmt.Errorf("failed to annotate node with topology: %w", err)
+		}
 		return nil
 	}
 
@@ -35,6 +39,11 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 	err := topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology: %w", err)
+	}
+
+	// Also annotate the node with the topology for DRA plugin compatibility
+	if err := p.annotateNodeWithTopology(node, nodeTopology); err != nil {
+		return fmt.Errorf("failed to annotate node with topology: %w", err)
 	}
 
 	return nil

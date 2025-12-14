@@ -31,4 +31,12 @@ rules:
       - podgroups
     verbs:
       - get
+  - apiGroups:
+      - resource.k8s.io
+    resources:
+      - resourceclaims
+    verbs:
+      - get
+      - list
+      - watch
 {{- end -}}

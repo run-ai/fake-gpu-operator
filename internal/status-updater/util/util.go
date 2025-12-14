@@ -36,3 +36,9 @@ func IsGpuReservationPod(pod *v1.Pod) bool {
 	resourceReservationNs := viper.GetString(constants.EnvResourceReservationNamespace)
 	return pod.Namespace == resourceReservationNs
 }
+
+// IsDraPod returns true if the pod uses Dynamic Resource Allocation (DRA)
+// by checking if pod.Spec.ResourceClaims is non-empty.
+func IsDraPod(pod *v1.Pod) bool {
+	return len(pod.Spec.ResourceClaims) > 0
+}

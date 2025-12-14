@@ -40,7 +40,7 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 			case *v1.Pod:
 				return (pod != nil) &&
 					(util.IsPodScheduled(pod) && !util.IsPodTerminated(pod)) &&
-					(util.IsDedicatedGpuPod(pod) || util.IsSharedGpuPod(pod))
+					(util.IsDedicatedGpuPod(pod) || util.IsSharedGpuPod(pod) || util.IsDraPod(pod))
 			default:
 				return false
 			}
