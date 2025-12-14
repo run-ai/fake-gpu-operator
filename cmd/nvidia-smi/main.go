@@ -59,44 +59,29 @@ func main() {
 	printArgs(args)
 }
 
-// getTopologyFromHTTP retrieves topology from HTTP topology server
-func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
-	topologyUrl := "http://topology-server.gpu-operator/topology/nodes/" + nodeName
-	if conf.Debug {
-		fmt.Printf("Requesting topology from: %s\n", topologyUrl)
-	}
-	resp, err := http.Get(topologyUrl)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get topology from HTTP: %w", err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			// Ignore close errors on response body
-		}
-	}()
-
-	var nodeTopology topology.NodeTopology
-	err = json.NewDecoder(resp.Body).Decode(&nodeTopology)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode topology response: %w", err)
-	}
-
-	return &nodeTopology, nil
-}
-
 func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	nodeName := os.Getenv(constants.EnvNodeName)
 	if conf.Debug {
 		fmt.Printf("Node name: %s\n", nodeName)
 	}
 
-	// Get topology from HTTP topology server
-	nodeTopology, err := getTopologyFromHTTP(nodeName)
+	// Send http request to topology-server to get the topology
+	topologyUrl := "http://topology-server.gpu-operator/topology/nodes/" + nodeName
+	if conf.Debug {
+		fmt.Printf("Requesting topology from: %s\n", topologyUrl)
+	}
+	resp, err := http.Get(topologyUrl)
 	if err != nil {
-		panic(fmt.Errorf("failed to get topology from HTTP server: %w", err))
+		panic(err)
+	}
+
+	// Parse the response
+	var nodeTopology topology.NodeTopology
+	err = json.NewDecoder(resp.Body).Decode(&nodeTopology)
+	if err != nil {
+		panic(err)
 	}
 	if conf.Debug {
-		fmt.Printf("Successfully loaded topology from HTTP server\n")
 		fmt.Printf("Received topology: %+v\n", nodeTopology)
 	}
 
@@ -144,10 +129,8 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	}
 
 	args.GpuIdx = gpuIdx
-	if len(nodeTopology.Gpus) > 0 && gpuIdx < len(nodeTopology.Gpus) {
-		args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion)
-		args.GpuUtil = nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.Utilization()
-	}
+	args.GpuUsedMem = float32(nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion)
+	args.GpuUtil = nodeTopology.Gpus[gpuIdx].Status.PodGpuUsageStatus.Utilization()
 
 	if conf.Debug {
 		fmt.Printf("GPU stats - Index: %d, Used Memory: %f, Utilization: %d%%\n", args.GpuIdx, args.GpuUsedMem, args.GpuUtil)
