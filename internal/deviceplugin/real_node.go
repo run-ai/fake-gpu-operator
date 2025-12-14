@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 )
 
 const (
@@ -170,11 +172,17 @@ func (m *RealNodeDevicePlugin) GetPreferredAllocation(context.Context, *pluginap
 }
 
 func (m *RealNodeDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
+	ns := os.Getenv(constants.EnvTopologyCmNamespace)
+	if ns == "" {
+		ns = "gpu-operator"
+	}
+
 	responses := pluginapi.AllocateResponse{}
 	for _, req := range reqs.ContainerRequests {
 		response := pluginapi.ContainerAllocateResponse{
 			Envs: map[string]string{
-				"MOCK_NVIDIA_VISIBLE_DEVICES": strings.Join(req.DevicesIDs, ","),
+				"MOCK_NVIDIA_VISIBLE_DEVICES":    strings.Join(req.DevicesIDs, ","),
+				constants.EnvTopologyCmNamespace: ns,
 			},
 			Mounts: []*pluginapi.Mount{
 				{
