@@ -23,7 +23,9 @@ func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get topology from HTTP server: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("topology server returned status %d for node %s", resp.StatusCode, nodeName)

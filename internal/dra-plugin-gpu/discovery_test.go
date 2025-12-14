@@ -106,7 +106,7 @@ func TestEnumerateAllPossibleDevices(t *testing.T) {
 				}
 				if test.topology != nil {
 					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode(test.topology)
+					_ = json.NewEncoder(w).Encode(test.topology)
 				}
 			}))
 			defer server.Close()
