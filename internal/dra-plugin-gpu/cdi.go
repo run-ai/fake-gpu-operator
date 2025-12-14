@@ -82,22 +82,14 @@ func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevi
 	}
 
 	for _, device := range devices {
-		// Device name is now just the UUID (lowercase), so use it directly
-		deviceID := strings.ReplaceAll(device.DeviceName, "-", "_")
-		envs := []string{
-			fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM=%s", deviceID, claimUID),
+		var containerEdits cdispec.ContainerEdits
+		if device.ContainerEdits != nil && device.ContainerEdits.ContainerEdits != nil {
+			containerEdits = *device.ContainerEdits.ContainerEdits
 		}
-
-		claimEdits := cdiapi.ContainerEdits{
-			ContainerEdits: &cdispec.ContainerEdits{
-				Env: envs,
-			},
-		}
-		claimEdits.Append(device.ContainerEdits)
 
 		cdiDevice := cdispec.Device{
 			Name:           fmt.Sprintf("%s-%s", claimUID, device.DeviceName),
-			ContainerEdits: *claimEdits.ContainerEdits,
+			ContainerEdits: containerEdits,
 		}
 
 		spec.Devices = append(spec.Devices, cdiDevice)

@@ -163,13 +163,28 @@ func TestCDIHandler_CreateClaimSpecFile(t *testing.T) {
 	}{
 		"single device": {
 			claimUID: cdiTestClaim1,
-			devices:  PreparedDevices{{Device: drapbv1.Device{DeviceName: cdiTestGpu0}}},
+			devices: PreparedDevices{{
+				Device: drapbv1.Device{DeviceName: cdiTestGpu0},
+				ContainerEdits: &cdiapi.ContainerEdits{
+					ContainerEdits: &cdispec.ContainerEdits{Env: []string{"GPU_DEVICE_gpu_0=gpu-0"}},
+				},
+			}},
 		},
 		"multiple devices": {
 			claimUID: cdiTestClaim2,
 			devices: PreparedDevices{
-				{Device: drapbv1.Device{DeviceName: cdiTestGpu0}},
-				{Device: drapbv1.Device{DeviceName: cdiTestGpu1}},
+				{
+					Device: drapbv1.Device{DeviceName: cdiTestGpu0},
+					ContainerEdits: &cdiapi.ContainerEdits{
+						ContainerEdits: &cdispec.ContainerEdits{Env: []string{"GPU_DEVICE_gpu_0=gpu-0"}},
+					},
+				},
+				{
+					Device: drapbv1.Device{DeviceName: cdiTestGpu1},
+					ContainerEdits: &cdiapi.ContainerEdits{
+						ContainerEdits: &cdispec.ContainerEdits{Env: []string{"GPU_DEVICE_gpu_1=gpu-1"}},
+					},
+				},
 			},
 		},
 		"device with container edits": {
@@ -208,7 +223,12 @@ func TestCDIHandler_DeleteClaimSpecFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a spec file first
-	devices := PreparedDevices{{Device: drapbv1.Device{DeviceName: cdiTestGpu0}}}
+	devices := PreparedDevices{{
+		Device: drapbv1.Device{DeviceName: cdiTestGpu0},
+		ContainerEdits: &cdiapi.ContainerEdits{
+			ContainerEdits: &cdispec.ContainerEdits{Env: []string{"GPU_DEVICE_gpu_0=gpu-0"}},
+		},
+	}}
 	claimUID := "claim-to-delete"
 	err = handler.CreateClaimSpecFile(claimUID, devices)
 	require.NoError(t, err)

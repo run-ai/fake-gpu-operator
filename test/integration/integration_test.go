@@ -117,10 +117,6 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 			gpuDevice := envVars[0]
 			Expect(gpuDevice).To(MatchRegexp(`^gpu-[a-z0-9-]+$`), "GPU device should match pattern")
 
-			deviceID := extractDeviceID(gpuDevice)
-			verifyEnvVars(logs, gpuDevice, map[string]types.GomegaMatcher{
-				fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM", deviceID): MatchRegexp(`^[a-z0-9-]+$`),
-			})
 			verifyNvidiaSmiBinary(namespace, podName, "ctr0")
 		})
 	})
@@ -220,11 +216,7 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 			envVars := extractGPUEnvVars(logs)
 			Expect(envVars).To(HaveLen(1), "Expected 1 GPU device")
 			gpuDevice := envVars[0]
-			deviceID := extractDeviceID(gpuDevice)
-
-			verifyEnvVars(logs, gpuDevice, map[string]types.GomegaMatcher{
-				fmt.Sprintf("GPU_DEVICE_%s_RESOURCE_CLAIM", deviceID): MatchRegexp(`^[a-z0-9-]+$`),
-			})
+			Expect(gpuDevice).To(MatchRegexp(`^gpu-[a-z0-9-]+$`), "GPU device should match pattern")
 		})
 	})
 
