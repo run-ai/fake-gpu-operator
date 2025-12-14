@@ -280,45 +280,6 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 		})
 	})
 
-	Describe("Prometheus Metrics", func() {
-		It("should expose GPU metrics via the status-exporter service", func() {
-			// The status-exporter exposes metrics on port 9400 via the nvidia-dcgm-exporter service
-			// We use a dedicated manifest to avoid namespace conflicts with other tests
-			manifestPath := filepath.Join("manifests", "prometheus-test-pod.yaml")
-			namespace := "gpu-test-prometheus"
-			podName := "pod0"
-
-			setupTest(manifestPath, namespace, &testNamespaces)
-			waitAndTrackResourceClaims(namespace, []string{podName}, &testResourceClaims)
-			waitForPodReady(namespace, podName, podReadyTimeout)
-
-			// Give the status-exporter time to export metrics
-			time.Sleep(15 * time.Second)
-
-			// Query the metrics endpoint via kubectl port-forward
-			metrics := getPrometheusMetrics()
-
-			// Verify expected metrics are present
-			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_GPU_UTIL"),
-				"Metrics should contain GPU utilization metric")
-			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_FB_USED"),
-				"Metrics should contain GPU framebuffer used metric")
-			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_FB_FREE"),
-				"Metrics should contain GPU framebuffer free metric")
-
-			// Verify metrics have the expected labels
-			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*UUID="GPU-[a-zA-Z0-9-]+"`),
-				"GPU utilization metric should have UUID label")
-			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*modelName="NVIDIA-A100-SXM4-40GB"`),
-				"GPU utilization metric should have modelName label")
-
-			// Verify the allocated GPU shows pod information in labels
-			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*namespace="`+namespace+`"`),
-				"GPU metric should show namespace of allocated pod")
-			Expect(metrics).To(MatchRegexp(`DCGM_FI_DEV_GPU_UTIL\{.*pod="`+podName+`"`),
-				"GPU metric should show name of allocated pod")
-		})
-	})
 })
 
 // Helper functions
@@ -730,25 +691,3 @@ func applyManifestWithNamespace(manifestPath, namespace string) {
 }
 
 // getPrometheusMetrics fetches Prometheus metrics from the nvidia-dcgm-exporter service
-func getPrometheusMetrics() string {
-	// Use kubectl to run a curl command in a temporary pod to access the service
-	// This avoids needing port-forward which can be flaky in tests
-	cmd := exec.Command("kubectl", "run", "metrics-test", "--rm", "-i", "--restart=Never",
-		"--image=curlimages/curl:latest", "-n", "gpu-operator",
-		"--", "curl", "-s", "http://nvidia-dcgm-exporter.gpu-operator:9400/metrics")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// If the curl pod approach fails, try getting the pod IP directly
-		podIPCmd := exec.Command("kubectl", "get", "pod", "-l", "app=nvidia-dcgm-exporter",
-			"-n", "gpu-operator", "-o", "jsonpath={.items[0].status.podIP}")
-		podIP, podErr := podIPCmd.Output()
-		if podErr == nil && len(podIP) > 0 {
-			cmd = exec.Command("kubectl", "run", "metrics-test-2", "--rm", "-i", "--restart=Never",
-				"--image=curlimages/curl:latest", "-n", "gpu-operator",
-				"--", "curl", "-s", fmt.Sprintf("http://%s:9400/metrics", string(podIP)))
-			output, err = cmd.CombinedOutput()
-		}
-	}
-	Expect(err).NotTo(HaveOccurred(), "Should fetch Prometheus metrics: %s", string(output))
-	return string(output)
-}

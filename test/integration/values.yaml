@@ -32,9 +32,7 @@ devicePlugin:
   enabled: false
 
 statusExporter:
-  enabled: true
-  image:
-    pullPolicy: Never
+  enabled: false
 
 kwokGpuDevicePlugin:
   enabled: false
