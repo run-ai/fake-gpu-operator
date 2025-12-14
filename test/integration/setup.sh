@@ -5,7 +5,10 @@ set -e
 # A reference to the current directory where this script is located
 SCRIPTS_DIR="$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../.." &> /dev/null && pwd)"
-DOCKER_BUILDX_PUSH_FLAG="--load"
+
+# For integration tests, we need to load images into docker (not push to registry)
+# --load only works with single-platform builds, so we detect the current platform
+CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')"
 # The name of the kind cluster to create
 : ${KIND_CLUSTER_NAME:="fake-gpu-operator-cluster"}
 
@@ -44,9 +47,10 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         exit 1
     fi
 
-    echo "Building Docker images..."
+    echo "Building Docker images for platform ${CURRENT_PLATFORM}..."
     cd "${PROJECT_ROOT}"
-    make image DOCKER_TAG="${DOCKER_TAG}" SHOULD_PUSH=false
+    # Use --load to load images into docker, with single platform (required for --load)
+    make image DOCKER_TAG="${DOCKER_TAG}" DOCKER_BUILDX_PLATFORMS="${CURRENT_PLATFORM}" DOCKER_BUILDX_PUSH_FLAG="--load"
 
     echo "Creating kind cluster ${KIND_CLUSTER_NAME}..."
     ${KIND} create cluster \
