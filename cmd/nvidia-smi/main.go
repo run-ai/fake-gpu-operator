@@ -59,22 +59,6 @@ func main() {
 	printArgs(args)
 }
 
-// getTopologyFromEnv retrieves topology from GPU_TOPOLOGY_JSON environment variable
-func getTopologyFromEnv() (*topology.NodeTopology, error) {
-	topologyJSON := os.Getenv("GPU_TOPOLOGY_JSON")
-	if topologyJSON == "" {
-		return nil, fmt.Errorf("GPU_TOPOLOGY_JSON not set")
-	}
-
-	var nodeTopology topology.NodeTopology
-	err := json.Unmarshal([]byte(topologyJSON), &nodeTopology)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse GPU_TOPOLOGY_JSON: %w", err)
-	}
-
-	return &nodeTopology, nil
-}
-
 // getTopologyFromHTTP retrieves topology from HTTP topology server
 func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
 	topologyUrl := "http://topology-server.gpu-operator/topology/nodes/" + nodeName
@@ -106,30 +90,13 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 		fmt.Printf("Node name: %s\n", nodeName)
 	}
 
-	// Try to get topology from environment variable first
-	var nodeTopology *topology.NodeTopology
-	var err error
-
-	nodeTopology, err = getTopologyFromEnv()
+	// Get topology from HTTP topology server
+	nodeTopology, err := getTopologyFromHTTP(nodeName)
 	if err != nil {
-		if conf.Debug {
-			fmt.Printf("Failed to get topology from env: %v, falling back to HTTP\n", err)
-		}
-		// Fallback to HTTP topology server
-		nodeTopology, err = getTopologyFromHTTP(nodeName)
-		if err != nil {
-			panic(fmt.Errorf("failed to get topology from both env and HTTP: %w", err))
-		}
-		if conf.Debug {
-			fmt.Printf("Successfully loaded topology from HTTP server\n")
-		}
-	} else {
-		if conf.Debug {
-			fmt.Printf("Successfully loaded topology from GPU_TOPOLOGY_JSON env var\n")
-		}
+		panic(fmt.Errorf("failed to get topology from HTTP server: %w", err))
 	}
-
 	if conf.Debug {
+		fmt.Printf("Successfully loaded topology from HTTP server\n")
 		fmt.Printf("Received topology: %+v\n", nodeTopology)
 	}
 
