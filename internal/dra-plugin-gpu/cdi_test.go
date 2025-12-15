@@ -280,9 +280,5 @@ func TestCDIHandler_GetClaimDevices(t *testing.T) {
 	}
 }
 
-func TestCDIHandler_CreateCommonSpecFile_Errors(t *testing.T) {
-	// This test would require mocking the CDI library which is complex
-	// For now, we test the happy path and rely on integration tests
-	// for error scenarios
-	t.Skip("CDI library doesn't easily support mocking - tested via integration")
-}
+// Note: CDI error scenarios require mocking the CDI library which is complex.
+// Error handling is covered by integration tests.

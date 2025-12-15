@@ -566,9 +566,3 @@ func mustMarshalJSON(t *testing.T, v interface{}) []byte {
 	require.NoError(t, err)
 	return data
 }
-
-func TestWaitForTopology_ContextCancellation(t *testing.T) {
-	// This test is skipped because it requires a running topology server
-	// The function now uses HTTP to fetch topology instead of node annotations
-	t.Skip("Test requires refactoring to support HTTP mocking for topology server")
-}
