@@ -146,6 +146,44 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 		})
 	})
 
+	Describe("Shared ResourceClaim", func() {
+		It("should allocate the same GPU to multiple pods sharing a ResourceClaim", func() {
+			manifestPath := filepath.Join("manifests", "shared-claim-pods.yaml")
+			namespace := "gpu-test-shared-claim"
+			sharedClaimName := "shared-gpu-claim"
+			podNames := []string{"pod0", "pod1"}
+
+			setupTest(manifestPath, namespace, &testNamespaces)
+
+			// Track the shared claim (only one claim for both pods)
+			testResourceClaims = append(testResourceClaims, resourceClaimInfo{
+				namespace: namespace,
+				name:      sharedClaimName,
+			})
+
+			// Wait for the shared claim to be allocated
+			Eventually(func() error {
+				return waitForResourceClaimAllocated(namespace, sharedClaimName, 30*time.Second)
+			}).WithTimeout(60 * time.Second).Should(Succeed())
+
+			// Wait for both pods to be ready
+			for _, podName := range podNames {
+				waitForPodReady(namespace, podName, podReadyTimeout)
+			}
+
+			pod0Logs := getPodLogs(namespace, "pod0", "ctr0")
+			pod1Logs := getPodLogs(namespace, "pod1", "ctr0")
+
+			pod0GPUs := extractGPUEnvVars(pod0Logs)
+			pod1GPUs := extractGPUEnvVars(pod1Logs)
+
+			Expect(pod0GPUs).To(HaveLen(1), "Pod0 should have 1 GPU")
+			Expect(pod1GPUs).To(HaveLen(1), "Pod1 should have 1 GPU")
+			// Both pods should see the SAME GPU since they share the same ResourceClaim
+			Expect(pod0GPUs[0]).To(Equal(pod1GPUs[0]), "Pods sharing the same ResourceClaim should have the same GPU")
+		})
+	})
+
 	Describe("TimeSlicing Sharing Strategy", func() {
 		It("should share GPU between containers using TimeSlicing", func() {
 			manifestPath := filepath.Join("manifests", "timeslicing-pod.yaml")
