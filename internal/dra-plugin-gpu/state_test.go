@@ -181,11 +181,8 @@ func createMultiDeviceClaim(uid, poolName string, deviceIDs, requestNames []stri
 	}
 }
 
-// TestNewDeviceState is skipped because it requires a real kubeletplugin.Helper
-// which is complex to mock. Integration tests should cover this.
-func TestNewDeviceState(t *testing.T) {
-	t.Skip("Requires real kubeletplugin.Helper - tested via integration tests")
-}
+// Note: TestNewDeviceState requires a real kubeletplugin.Helper which is complex
+// to mock. This functionality is covered by integration tests.
 
 func TestDeviceState_Prepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)
