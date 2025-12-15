@@ -71,11 +71,6 @@ func (app *DraPluginGpuApp) Init(stop chan struct{}) {
 	if err != nil {
 		log.Fatalf("Failed to create driver: %v", err)
 	}
-
-	// Set up node controller to watch for annotation changes
-	if err := SetupNodeController(app.ctx, app.driver.GetState(), app.Flags.NodeName); err != nil {
-		log.Fatalf("Failed to setup node controller: %v", err)
-	}
 }
 
 func (app *DraPluginGpuApp) Run() {

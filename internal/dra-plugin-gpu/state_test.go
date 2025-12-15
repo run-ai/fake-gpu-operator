@@ -406,12 +406,6 @@ func TestGetOpaqueDeviceConfigs(t *testing.T) {
 	}
 }
 
-func TestDeviceState_UpdateDevicesFromTopology(t *testing.T) {
-	// This test is skipped because it requires a running topology server
-	// The function now uses HTTP to fetch topology instead of node annotations
-	t.Skip("Test requires refactoring to support HTTP mocking for topology server")
-}
-
 func TestDeviceState_ApplyConfig(t *testing.T) {
 	state := &DeviceState{}
 

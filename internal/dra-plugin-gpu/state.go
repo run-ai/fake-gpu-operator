@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -14,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	coreclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/dynamic-resource-allocation/kubeletplugin"
-	"k8s.io/dynamic-resource-allocation/resourceslice"
 	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1beta1"
 
 	configapi "sigs.k8s.io/dra-example-driver/api/example.com/resource/gpu/v1alpha1"
@@ -302,44 +300,4 @@ func GetOpaqueDeviceConfigs(
 		})
 	}
 	return resultConfigs, nil
-}
-
-// UpdateDevicesFromTopology updates the allocatable devices from the topology server
-// and re-publishes resources. This method is thread-safe.
-func (s *DeviceState) UpdateDevicesFromTopology(ctx context.Context) error {
-	s.Lock()
-	defer s.Unlock()
-
-	allocatable, err := enumerateAllPossibleDevices(s.nodeName)
-	if err != nil {
-		return fmt.Errorf("failed to enumerate devices from topology server: %w", err)
-	}
-
-	s.allocatable = allocatable
-
-	// Re-publish resources with updated devices
-	devices := make([]resourceapi.Device, 0, len(s.allocatable))
-	for device := range maps.Values(s.allocatable) {
-		devices = append(devices, device)
-	}
-	resources := resourceslice.DriverResources{
-		Pools: map[string]resourceslice.Pool{
-			s.nodeName: {
-				Slices: []resourceslice.Slice{
-					{
-						Devices: devices,
-					},
-				},
-			},
-		},
-	}
-
-	if s.helper != nil {
-		if err := s.helper.PublishResources(ctx, resources); err != nil {
-			return fmt.Errorf("failed to publish updated resources: %w", err)
-		}
-	}
-
-	log.Printf("Successfully updated devices from annotation, deviceCount=%d", len(devices))
-	return nil
 }
