@@ -46,11 +46,12 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	//nolint:staticcheck // grpc.DialContext and WithBlock are deprecated but supported throughout 1.x
 	c, err := grpc.DialContext(
 		ctx,
 		unixSocketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+		grpc.WithBlock(), //nolint:staticcheck
 		grpc.WithContextDialer(func(_ context.Context, addr string) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
 		}),

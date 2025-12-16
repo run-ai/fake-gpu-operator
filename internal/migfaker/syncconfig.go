@@ -55,9 +55,10 @@ func ContinuouslySyncMigConfigChanges(clientset kubernetes.Interface, migConfig 
 		fields.OneTermEqualSelector("metadata.name", viper.GetString(constants.EnvNodeName)),
 	)
 
-	_, controller := cache.NewInformer(
-		listWatch, &v1.Node{}, 0,
-		cache.ResourceEventHandlerFuncs{
+	_, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: listWatch,
+		ObjectType:    &v1.Node{},
+		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				migConfig.Set(obj.(*v1.Node).Annotations[MigConfigAnnotation])
 			},
@@ -69,7 +70,7 @@ func ContinuouslySyncMigConfigChanges(clientset kubernetes.Interface, migConfig 
 				}
 			},
 		},
-	)
+	})
 
 	go controller.Run(stop)
 }
