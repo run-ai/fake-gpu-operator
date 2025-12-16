@@ -1,3 +1,4 @@
+{{- if .Values.migFaker.enabled -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -47,4 +48,5 @@ spec:
       terminationGracePeriodSeconds: 30
       imagePullSecrets:
         - name: gcr-secret
-      
+{{- end -}}
+

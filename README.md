@@ -101,6 +101,57 @@ metadata:
     run.ai/simulated-gpu-utilization: "10-30"  # Simulate 10-30% GPU usage
 ```
 
+## 🔌 Dynamic Resource Allocation (DRA)
+
+For Kubernetes 1.31+, you can use the DRA plugin instead of the legacy device plugin.
+
+### Prerequisites
+
+Enable DynamicResourceAllocation feature gate and the resource.k8s.io/v1 API on your cluster if needed.
+
+### Enable DRA plugin in Helm chart
+
+```yaml
+# values.yaml
+draPlugin:
+  enabled: true
+devicePlugin:
+  enabled: false  # Disable legacy plugin
+```
+
+### Deploy with DRA
+
+```yaml
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-claim
+spec:
+  spec:
+    devices:
+      requests:
+      - name: gpu
+        exactly:
+          deviceClassName: gpu.nvidia.com
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-pod
+spec:
+  containers:
+  - name: main
+    image: ubuntu:22.04
+    resources:
+      claims:
+      - name: gpu
+  resourceClaims:
+  - name: gpu
+    resourceClaimTemplateName: gpu-claim
+```
+
+See [test/integration/manifests/](test/integration/manifests/) for more examples.
+
 ## 🔍 Troubleshooting
 
 ### Pod Security Admission

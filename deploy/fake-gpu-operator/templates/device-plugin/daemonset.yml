@@ -1,3 +1,4 @@
+{{- if .Values.devicePlugin.enabled -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -14,3 +15,4 @@ spec:
       {{- include "fake-gpu-operator.device-plugin.common.podTemplate.spec" . | nindent 6 }}
       nodeSelector:
         nvidia.com/gpu.deploy.device-plugin: "true"
+{{- end -}}

@@ -1,3 +1,4 @@
+{{- if .Values.kwokGpuDevicePlugin.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -37,3 +38,4 @@ spec:
       serviceAccountName: kwok-gpu-device-plugin
       imagePullSecrets:
         - name: gcr-secret
+{{- end -}}

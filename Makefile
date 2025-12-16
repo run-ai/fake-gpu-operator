@@ -1,7 +1,7 @@
 BUILD_DIR=$(shell pwd)/bin
-COMPONENTS?=device-plugin status-updater kwok-gpu-device-plugin status-exporter topology-server mig-faker jupyter-notebook
+COMPONENTS?=device-plugin dra-plugin-gpu status-updater kwok-gpu-device-plugin status-exporter topology-server mig-faker
 
-DOCKER_REPO_BASE=gcr.io/run-ai-lab/fake-gpu-operator
+DOCKER_REPO_BASE=ghcr.io/run-ai/fake-gpu-operator
 DOCKER_TAG?=0.0.0-dev
 NAMESPACE=gpu-operator
 
@@ -35,8 +35,23 @@ image:
 .PHONY: image
 
 test: ginkgo
-	$(GINKGO) -r --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
+	$(GINKGO) ./internal/... ./cmd/... --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
 .PHONY: test
+
+setup-integration:
+	test/integration/setup.sh
+.PHONY: setup-integration
+
+test-integration: ginkgo
+	cd test/integration && $(GINKGO) --procs=1 --timeout=30m --trace
+.PHONY: test-integration
+
+teardown-integration:
+	test/integration/teardown.sh
+.PHONY: teardown-integration
+
+integration: setup-integration test-integration teardown-integration
+.PHONY: integration
 
 clean:
 	rm -rf ${BUILD_DIR}

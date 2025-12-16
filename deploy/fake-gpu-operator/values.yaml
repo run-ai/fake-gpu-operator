@@ -4,6 +4,7 @@ environment:
   resourceReservationNamespace: runai-reservation
 
 devicePlugin:
+  enabled: true
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/device-plugin
@@ -17,6 +18,7 @@ devicePlugin:
       memory: "200Mi"
 
 statusUpdater:
+  enabled: true
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-updater
@@ -30,6 +32,7 @@ statusUpdater:
       memory: "400Mi"
 
 topologyServer:
+  enabled: true
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/topology-server
@@ -43,6 +46,7 @@ topologyServer:
       memory: "200Mi"
 
 statusExporter:
+  enabled: true
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-exporter
@@ -57,6 +61,7 @@ statusExporter:
   topologyMaxExportInterval: 10s
 
 kwokGpuDevicePlugin:
+  enabled: true
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/kwok-gpu-device-plugin
@@ -70,10 +75,63 @@ kwokGpuDevicePlugin:
       memory: "400Mi"
 
 migFaker:
+  enabled: true
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/mig-faker
     tag: ""
+
+gpuOperator:
+  enabled: true
+
+runtimeClass:
+  enabled: true
+
+topologyConfigMap:
+  enabled: true
+
+draPlugin:
+  enabled: false
+  image:
+    repository: ghcr.io/run-ai/fake-gpu-operator/dra-plugin-gpu
+    pullPolicy: Always
+    tag: ""
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+  kubeletPlugin:
+    priorityClassName: "system-node-critical"
+    updateStrategy:
+      type: RollingUpdate
+    podAnnotations: {}
+    podSecurityContext: {}
+    nodeSelector: 
+      nvidia.com/gpu.deploy.dra-plugin-gpu: "true"
+    tolerations: []
+    affinity: {}
+    kubeletRegistrarDirectoryPath: /var/lib/kubelet/plugins_registry
+    kubeletPluginsDirectoryPath: /var/lib/kubelet/plugins
+    containers:
+      plugin:
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "100Mi"
+          limits:
+            cpu: "200m"
+            memory: "200Mi"
+        healthcheckPort: 51515
+        livenessProbe:
+          service: liveness
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+  imagePullSecrets: []
 
 ubuntu:
   image:

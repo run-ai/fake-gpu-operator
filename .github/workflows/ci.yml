@@ -48,6 +48,26 @@ jobs:
       - name: Run tests
         run: make test
 
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Install kind
+        uses: helm/kind-action@v1.13.0
+      - name: Run integration tests
+        run: make integration
+        env:
+          DOCKER_TAG: 0.0.0-dev
+          DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
+          DOCKER_BUILDX_PLATFORMS: linux/amd64
+
   set-release-vars:
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
@@ -67,14 +87,14 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars, lint, test]
+    needs: [set-release-vars, lint, test, integration]
     if: ${{ needs.set-release-vars.outputs.release_version != '' }}
     permissions:
       contents: read
       packages: write
     strategy:
       matrix:
-        component: [device-plugin, status-updater, kwok-gpu-device-plugin, status-exporter, topology-server, mig-faker, jupyter-notebook]
+        component: [device-plugin, dra-plugin-gpu, status-updater, kwok-gpu-device-plugin, status-exporter, topology-server, mig-faker, jupyter-notebook]
     steps:
       - uses: actions/checkout@v4
       - name: Log in to GitHub Container Registry

@@ -1,3 +1,4 @@
+{{- if .Values.statusUpdater.enabled -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -7,6 +8,13 @@ rules:
       - ""
     resources:
       - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
       - nodes
     verbs:
       - get
@@ -30,3 +38,12 @@ rules:
       - podgroups
     verbs:
       - get
+  - apiGroups:
+      - resource.k8s.io
+    resources:
+      - resourceclaims
+    verbs:
+      - get
+      - list
+      - watch
+{{- end -}}

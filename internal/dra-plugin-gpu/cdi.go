@@ -1,0 +1,128 @@
+package dra_plugin_gpu
+
+import (
+	"fmt"
+	"strings"
+
+	cdiapi "tags.cncf.io/container-device-interface/pkg/cdi"
+	cdiparser "tags.cncf.io/container-device-interface/pkg/parser"
+	cdispec "tags.cncf.io/container-device-interface/specs-go"
+)
+
+const (
+	cdiVendor = "k8s." + DriverName
+	cdiClass  = "gpu"
+	cdiKind   = cdiVendor + "/" + cdiClass
+
+	cdiCommonDeviceName = "common"
+)
+
+type CDIHandler struct {
+	cache    *cdiapi.Cache
+	nodeName string
+}
+
+func NewCDIHandler(config *Config) (*CDIHandler, error) {
+	cache, err := cdiapi.NewCache(
+		cdiapi.WithSpecDirs(config.Flags.CDIRoot),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create a new CDI cache: %w", err)
+	}
+	handler := &CDIHandler{
+		cache:    cache,
+		nodeName: config.Flags.NodeName,
+	}
+
+	return handler, nil
+}
+
+func (cdi *CDIHandler) CreateCommonSpecFile() error {
+	spec := &cdispec.Spec{
+		Kind: cdiKind,
+		Devices: []cdispec.Device{
+			{
+				Name: cdiCommonDeviceName,
+				ContainerEdits: cdispec.ContainerEdits{
+					Env: []string{
+						fmt.Sprintf("NODE_NAME=%s", cdi.nodeName),
+					},
+					Mounts: []*cdispec.Mount{
+						{
+							HostPath:      "/var/lib/runai/bin/nvidia-smi",
+							ContainerPath: "/bin/nvidia-smi",
+							Options:       []string{"ro", "bind"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	minVersion, err := cdiapi.MinimumRequiredVersion(spec)
+	if err != nil {
+		return fmt.Errorf("failed to get minimum required CDI spec version: %v", err)
+	}
+	spec.Version = minVersion
+
+	specName, err := cdiapi.GenerateNameForTransientSpec(spec, cdiCommonDeviceName)
+	if err != nil {
+		return fmt.Errorf("failed to generate Spec name: %w", err)
+	}
+
+	return cdi.cache.WriteSpec(spec, specName)
+}
+
+func (cdi *CDIHandler) CreateClaimSpecFile(claimUID string, devices PreparedDevices) error {
+	specName := cdiapi.GenerateTransientSpecName(cdiVendor, cdiClass, claimUID)
+
+	spec := &cdispec.Spec{
+		Kind:    cdiKind,
+		Devices: []cdispec.Device{},
+	}
+
+	for _, device := range devices {
+		var containerEdits cdispec.ContainerEdits
+		if device.ContainerEdits != nil && device.ContainerEdits.ContainerEdits != nil {
+			containerEdits = *device.ContainerEdits.ContainerEdits
+		}
+
+		cdiDevice := cdispec.Device{
+			Name:           fmt.Sprintf("%s-%s", claimUID, device.DeviceName),
+			ContainerEdits: containerEdits,
+		}
+
+		spec.Devices = append(spec.Devices, cdiDevice)
+	}
+
+	minVersion, err := cdiapi.MinimumRequiredVersion(spec)
+	if err != nil {
+		return fmt.Errorf("failed to get minimum required CDI spec version: %v", err)
+	}
+	spec.Version = minVersion
+
+	return cdi.cache.WriteSpec(spec, specName)
+}
+
+func (cdi *CDIHandler) DeleteClaimSpecFile(claimUID string) error {
+	specName := cdiapi.GenerateTransientSpecName(cdiVendor, cdiClass, claimUID)
+	err := cdi.cache.RemoveSpec(specName)
+	// Handle "not found" gracefully - file already deleted is fine
+	if err != nil && strings.Contains(err.Error(), "not found") {
+		return nil
+	}
+	return err
+}
+
+func (cdi *CDIHandler) GetClaimDevices(claimUID string, devices []string) []string {
+	cdiDevices := []string{
+		cdiparser.QualifiedName(cdiVendor, cdiClass, cdiCommonDeviceName),
+	}
+
+	for _, device := range devices {
+		cdiDevice := cdiparser.QualifiedName(cdiVendor, cdiClass, fmt.Sprintf("%s-%s", claimUID, device))
+		cdiDevices = append(cdiDevices, cdiDevice)
+	}
+
+	return cdiDevices
+}

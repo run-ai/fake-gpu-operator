@@ -1,3 +1,4 @@
+{{- if .Values.statusExporter.enabled -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -27,3 +28,4 @@ spec:
           privileged: true
       nodeSelector:
         nvidia.com/gpu.deploy.dcgm-exporter: "true"
+{{- end -}}

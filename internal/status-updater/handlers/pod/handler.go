@@ -48,6 +48,11 @@ func (p *PodHandler) HandleAdd(pod *v1.Pod) error {
 		return err
 	}
 
+	err = p.handleDraGpuPodAddition(pod, nodeTopology)
+	if err != nil {
+		return err
+	}
+
 	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
 }
 
@@ -69,6 +74,11 @@ func (p *PodHandler) HandleUpdate(pod *v1.Pod) error {
 		return err
 	}
 
+	err = p.handleDraGpuPodUpdate(pod, nodeTopology)
+	if err != nil {
+		return err
+	}
+
 	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
 }
 
@@ -86,5 +96,8 @@ func (p *PodHandler) HandleDelete(pod *v1.Pod) error {
 	if err != nil {
 		return err
 	}
+
+	p.handleDraGpuPodDeletion(pod, nodeTopology)
+
 	return topology.UpdateNodeTopologyCM(p.kubeClient, nodeTopology, pod.Spec.NodeName)
 }
