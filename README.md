@@ -152,6 +152,119 @@ spec:
 
 See [test/integration/manifests/](test/integration/manifests/) for more examples.
 
+## 🎭 KWOK Integration (Simulated Nodes)
+
+[KWOK](https://kwok.sigs.k8s.io/) (Kubernetes WithOut Kubelet) is a toolkit that allows you to simulate thousands of Kubernetes nodes without running actual kubelet processes. When combined with the Fake GPU Operator, you can create large-scale GPU cluster simulations entirely without hardware - perfect for testing schedulers, autoscalers, and resource management at scale.
+
+### Why KWOK + Fake GPU Operator?
+
+- **Scale Testing**: Simulate hundreds of GPU nodes to test scheduler behavior
+- **Cost Efficiency**: No cloud VMs or physical hardware needed
+- **Fast Iteration**: Spin up/down simulated clusters in seconds
+- **CI/CD**: Run integration tests against realistic cluster topologies
+
+### Prerequisites
+
+1. Install KWOK controller in your cluster:
+   ```bash
+   KWOK_VERSION=v0.7.0
+   kubectl apply -f "https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_VERSION}/kwok.yaml"
+   kubectl apply -f "https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_VERSION}/stage-fast.yaml"
+   ```
+
+2. Enable the `kwok-dra-plugin` in your Helm values:
+   ```yaml
+   # values.yaml
+   kwokDraPlugin:
+     enabled: true
+   draPlugin:
+     enabled: true
+   ```
+
+### Create a Simulated GPU Node
+
+```yaml
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    kwok.x-k8s.io/node: fake
+  labels:
+    type: kwok
+    run.ai/simulated-gpu-node-pool: default
+  name: kwok-gpu-node-1
+spec:
+  taints:
+  - effect: NoSchedule
+    key: kwok.x-k8s.io/node
+    value: fake
+status:
+  allocatable:
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+  capacity:
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+```
+
+The `status-updater` will automatically create a topology ConfigMap for this node, and the `kwok-dra-plugin` will create a ResourceSlice with the configured GPUs.
+
+### Schedule a GPU Pod on KWOK Node
+
+```yaml
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: gpu-claim
+spec:
+  spec:
+    devices:
+      requests:
+      - name: gpu
+        exactly:
+          deviceClassName: gpu.nvidia.com
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kwok-gpu-pod
+spec:
+  nodeSelector:
+    type: kwok
+  tolerations:
+  - key: kwok.x-k8s.io/node
+    operator: Equal
+    value: fake
+    effect: NoSchedule
+  containers:
+  - name: main
+    image: ubuntu:22.04
+    command: ["sleep", "infinity"]
+    resources:
+      claims:
+      - name: gpu
+  resourceClaims:
+  - name: gpu
+    resourceClaimTemplateName: gpu-claim
+```
+
+The pod will be "scheduled" on the KWOK node and appear as Running (KWOK simulates the pod lifecycle). The ResourceClaim will be allocated from the simulated GPU ResourceSlice.
+
+### Verify Setup
+
+```bash
+# Check KWOK node is Ready
+kubectl get nodes -l type=kwok
+
+# Check ResourceSlice was created
+kubectl get resourceslices | grep kwok
+
+# Check pod is running on KWOK node
+kubectl get pod kwok-gpu-pod -o wide
+```
+
 ## 🔍 Troubleshooting
 
 ### Pod Security Admission

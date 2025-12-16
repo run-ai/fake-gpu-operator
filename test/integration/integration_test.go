@@ -320,6 +320,114 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 
 })
 
+var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
+	const (
+		kwokNodeName       = "kwok-gpu-node-1"
+		gpuOperatorNS      = "gpu-operator"
+		expectedDriver     = "gpu.nvidia.com"
+		expectedGpuProduct = "NVIDIA-A100-SXM4-40GB"
+	)
+
+	Describe("ResourceSlice Creation", func() {
+		It("should create ResourceSlice for KWOK node from topology ConfigMap", func() {
+			// The setup.sh script creates a KWOK node with topology ConfigMap
+			// Verify that the kwok-dra-plugin created a ResourceSlice for it
+			resourceSliceName := fmt.Sprintf("kwok-%s-gpu", kwokNodeName)
+
+			resourceSlice, err := kubeClient.ResourceV1().ResourceSlices().Get(
+				context.Background(), resourceSliceName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "ResourceSlice should exist")
+
+			// Verify driver and node name
+			Expect(resourceSlice.Spec.Driver).To(Equal(expectedDriver), "ResourceSlice should have correct driver")
+			Expect(resourceSlice.Spec.NodeName).NotTo(BeNil(), "ResourceSlice should have node name")
+			Expect(*resourceSlice.Spec.NodeName).To(Equal(kwokNodeName), "ResourceSlice should reference the KWOK node")
+		})
+
+		It("should have correct GPU devices from topology", func() {
+			resourceSliceName := fmt.Sprintf("kwok-%s-gpu", kwokNodeName)
+
+			resourceSlice, err := kubeClient.ResourceV1().ResourceSlices().Get(
+				context.Background(), resourceSliceName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Should get ResourceSlice")
+
+			Expect(resourceSlice.Spec.Devices).To(HaveLen(2), "ResourceSlice should have 2 GPU devices")
+
+			// Verify device names are lowercase UUIDs (format: gpu-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+			for _, device := range resourceSlice.Spec.Devices {
+				Expect(device.Name).To(MatchRegexp(`^gpu-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
+					"Device name should be lowercase UUID: %s", device.Name)
+			}
+		})
+
+		It("should have correct GPU attributes", func() {
+			resourceSliceName := fmt.Sprintf("kwok-%s-gpu", kwokNodeName)
+
+			resourceSlice, err := kubeClient.ResourceV1().ResourceSlices().Get(
+				context.Background(), resourceSliceName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Should get ResourceSlice")
+
+			Expect(resourceSlice.Spec.Devices).NotTo(BeEmpty(), "Should have at least one device")
+
+			// Check the model attribute on the first device
+			device := resourceSlice.Spec.Devices[0]
+			modelAttr, ok := device.Attributes["model"]
+			Expect(ok).To(BeTrue(), "Device should have model attribute")
+			Expect(modelAttr.StringValue).NotTo(BeNil(), "Model attribute should have string value")
+			Expect(*modelAttr.StringValue).To(Equal(expectedGpuProduct), "GPU model should match topology")
+
+			// Check the uuid attribute
+			uuidAttr, ok := device.Attributes["uuid"]
+			Expect(ok).To(BeTrue(), "Device should have uuid attribute")
+			Expect(uuidAttr.StringValue).NotTo(BeNil(), "UUID attribute should have string value")
+			Expect(*uuidAttr.StringValue).To(MatchRegexp(`^GPU-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
+				"UUID should match expected format")
+		})
+	})
+
+	Describe("ResourceSlice Consistency", func() {
+		It("should maintain ResourceSlice when topology ConfigMap is updated", func() {
+			resourceSliceName := fmt.Sprintf("kwok-%s-gpu", kwokNodeName)
+
+			// Get initial ResourceSlice
+			resourceSlice, err := kubeClient.ResourceV1().ResourceSlices().Get(
+				context.Background(), resourceSliceName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Should get ResourceSlice")
+			initialDeviceCount := len(resourceSlice.Spec.Devices)
+			Expect(initialDeviceCount).To(Equal(2), "Should have 2 devices initially")
+
+			// Find the topology ConfigMap for this KWOK node
+			cmList, err := kubeClient.CoreV1().ConfigMaps(gpuOperatorNS).List(
+				context.Background(), metav1.ListOptions{
+					LabelSelector: fmt.Sprintf("node-name=%s", kwokNodeName),
+				})
+			Expect(err).NotTo(HaveOccurred(), "Should list ConfigMaps")
+			Expect(cmList.Items).NotTo(BeEmpty(), "Should find topology ConfigMap")
+
+			cm := &cmList.Items[0]
+
+			// Update the ConfigMap labels to trigger reconciliation
+			if cm.Labels == nil {
+				cm.Labels = make(map[string]string)
+			}
+			cm.Labels["test-label"] = "test-value"
+			_, err = kubeClient.CoreV1().ConfigMaps(gpuOperatorNS).Update(
+				context.Background(), cm, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Should update ConfigMap")
+
+			// Wait a moment for reconciliation
+			time.Sleep(2 * time.Second)
+
+			// Verify ResourceSlice still has correct device count
+			resourceSlice, err = kubeClient.ResourceV1().ResourceSlices().Get(
+				context.Background(), resourceSliceName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Should get ResourceSlice after update")
+			Expect(len(resourceSlice.Spec.Devices)).To(Equal(initialDeviceCount),
+				"ResourceSlice should maintain device count after ConfigMap update")
+		})
+	})
+})
+
 // Helper functions
 
 // trackResourceClaimsForPod tracks ResourceClaims for a pod and adds them to testResourceClaims
