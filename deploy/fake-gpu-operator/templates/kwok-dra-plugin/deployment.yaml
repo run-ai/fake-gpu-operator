@@ -1,0 +1,38 @@
+{{- if .Values.kwokDraPlugin.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kwok-dra-plugin
+  labels:
+    app: kwok-dra-plugin
+spec:
+  selector:
+    matchLabels:
+      app: kwok-dra-plugin
+      component: kwok-dra-plugin
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kwok-dra-plugin
+        component: kwok-dra-plugin
+    spec:
+      containers:
+        - name: kwok-dra-plugin
+          image: "{{ .Values.kwokDraPlugin.image.repository }}:{{ .Values.kwokDraPlugin.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ .Values.kwokDraPlugin.image.pullPolicy }}"
+          resources:
+            {{- toYaml .Values.kwokDraPlugin.resources | nindent 12 }}
+          env:
+            - name: TOPOLOGY_CM_NAME
+              value: topology
+            - name: TOPOLOGY_CM_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+            - name: FAKE_GPU_OPERATOR_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+      restartPolicy: Always
+      serviceAccountName: kwok-dra-plugin
+      imagePullSecrets:
+        - name: gcr-secret
+{{- end }}
+
