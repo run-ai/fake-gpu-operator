@@ -13,7 +13,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	cmcontroller "github.com/run-ai/fake-gpu-operator/internal/kwok-dra-plugin/controllers/configmap"
 )
 
@@ -75,20 +74,14 @@ func (app *KWOKDraPluginApp) Init(stopCh chan struct{}) {
 		log.Fatalf("Failed to create manager: %v", err)
 	}
 
-	// Create kubernetes client for topology operations (uses client-go interface)
+	// Create kubernetes client for ResourceSlice operations (uses client-go interface)
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create kubernetes client: %v", err)
 	}
 
-	// Get cluster topology
-	clusterTopology, err := topology.GetClusterTopologyFromCM(kubeClient)
-	if err != nil {
-		log.Fatalf("Failed to get cluster topology: %v", err)
-	}
-
 	// Setup ConfigMap reconciler
-	if err := cmcontroller.SetupWithManager(app.mgr, kubeClient, namespace, topologyCMName, clusterTopology); err != nil {
+	if err := cmcontroller.SetupWithManager(app.mgr, kubeClient, namespace, topologyCMName); err != nil {
 		log.Fatalf("Failed to setup ConfigMap controller: %v", err)
 	}
 }

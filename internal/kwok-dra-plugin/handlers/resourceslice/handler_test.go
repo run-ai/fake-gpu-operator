@@ -50,7 +50,7 @@ var _ = Describe("ResourceSliceHandler", func() {
 
 			fakeClient := fake.NewSimpleClientset()
 
-			handler := NewResourceSliceHandler(fakeClient, nil)
+			handler := NewResourceSliceHandler(fakeClient)
 			err = handler.HandleAddOrUpdate(configMap)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -90,7 +90,7 @@ var _ = Describe("ResourceSliceHandler", func() {
 
 			fakeClient := fake.NewSimpleClientset()
 
-			handler := NewResourceSliceHandler(fakeClient, nil)
+			handler := NewResourceSliceHandler(fakeClient)
 
 			// Create initial ResourceSlice
 			err = handler.HandleAddOrUpdate(configMap)
@@ -146,7 +146,7 @@ var _ = Describe("ResourceSliceHandler", func() {
 
 			fakeClient := fake.NewSimpleClientset()
 
-			handler := NewResourceSliceHandler(fakeClient, nil)
+			handler := NewResourceSliceHandler(fakeClient)
 
 			// Create ResourceSlice
 			err = handler.HandleAddOrUpdate(configMap)

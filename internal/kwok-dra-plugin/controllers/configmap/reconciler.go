@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	rshandler "github.com/run-ai/fake-gpu-operator/internal/kwok-dra-plugin/handlers/resourceslice"
 )
 
@@ -101,8 +100,8 @@ func isFakeGpuKWOKNodeConfigMap(cm *corev1.ConfigMap) bool {
 }
 
 // SetupWithManager creates and sets up the ConfigMap reconciler with the manager
-func SetupWithManager(mgr ctrl.Manager, kubeClient kubernetes.Interface, namespace, topologyCMName string, clusterTopology *topology.ClusterTopology) error {
-	handler := rshandler.NewResourceSliceHandler(kubeClient, clusterTopology)
+func SetupWithManager(mgr ctrl.Manager, kubeClient kubernetes.Interface, namespace, topologyCMName string) error {
+	handler := rshandler.NewResourceSliceHandler(kubeClient)
 
 	reconciler := &ConfigMapReconciler{
 		Client:           mgr.GetClient(),

@@ -30,17 +30,15 @@ type Interface interface {
 
 // ResourceSliceHandler handles ResourceSlice operations for KWOK nodes
 type ResourceSliceHandler struct {
-	kubeClient      kubernetes.Interface
-	clusterTopology *topology.ClusterTopology
+	kubeClient kubernetes.Interface
 }
 
 var _ Interface = &ResourceSliceHandler{}
 
 // NewResourceSliceHandler creates a new ResourceSliceHandler
-func NewResourceSliceHandler(kubeClient kubernetes.Interface, clusterTopology *topology.ClusterTopology) *ResourceSliceHandler {
+func NewResourceSliceHandler(kubeClient kubernetes.Interface) *ResourceSliceHandler {
 	return &ResourceSliceHandler{
-		kubeClient:      kubeClient,
-		clusterTopology: clusterTopology,
+		kubeClient: kubeClient,
 	}
 }
 
