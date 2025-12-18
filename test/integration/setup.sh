@@ -61,7 +61,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     echo "Loading images into kind cluster..."
     DOCKER_REPO_BASE="${DOCKER_REPO_BASE:-ghcr.io/run-ai/fake-gpu-operator}"
-    for component in dra-plugin-gpu status-updater topology-server; do
+    for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-dra-plugin; do
         IMAGE="${DOCKER_REPO_BASE}/${component}:${DOCKER_TAG}"
         echo "Loading ${IMAGE}..."
         if [[ "${CONTAINER_TOOL}" == "podman" ]]; then
@@ -90,6 +90,8 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         kubectl label node "${NODE}" nvidia.com/gpu.deploy.dra-plugin-gpu=true --overwrite
         # Label for status-updater topology (node pool name)
         kubectl label node "${NODE}" run.ai/simulated-gpu-node-pool=default --overwrite
+        # Label for status-exporter DaemonSet
+        kubectl label node "${NODE}" nvidia.com/gpu.deploy.dcgm-exporter=true --overwrite
     done
     
     # Store worker node name for later reference
@@ -106,10 +108,15 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         -f "${SCRIPTS_DIR}/values.yaml" \
         --set draPlugin.image.tag="${DOCKER_TAG}" \
         --set statusUpdater.image.tag="${DOCKER_TAG}" \
-        --set topologyServer.image.tag="${DOCKER_TAG}"
+        --set statusExporter.image.tag="${DOCKER_TAG}" \
+        --set topologyServer.image.tag="${DOCKER_TAG}" \
+        --set kwokDraPlugin.image.tag="${DOCKER_TAG}"
 
     echo "Waiting for status-updater pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app=status-updater -n gpu-operator --timeout=120s
+
+    echo "Waiting for status-exporter pod to be ready..."
+    kubectl wait --for=condition=Ready pod -l app=nvidia-dcgm-exporter -n gpu-operator --timeout=120s
 
     echo "Waiting for topology-server pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app=topology-server -n gpu-operator --timeout=120s
