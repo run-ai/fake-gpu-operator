@@ -46,6 +46,12 @@ COPY ./cmd/dra-plugin-gpu/ ./cmd/dra-plugin-gpu/
 COPY ./internal/dra-plugin-gpu/ ./internal/dra-plugin-gpu/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=dra-plugin-gpu
 
+FROM common-builder AS kwok-dra-plugin-builder
+COPY ./cmd/kwok-dra-plugin/ ./cmd/kwok-dra-plugin/
+COPY ./internal/status-updater/ ./internal/status-updater/
+COPY ./internal/kwok-dra-plugin/ ./internal/kwok-dra-plugin/
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=kwok-dra-plugin
+
 FROM common-builder AS preloader-builder 
 COPY ./cmd/preloader/ ./cmd/preloader/
 RUN make build-preloader
@@ -84,3 +90,7 @@ FROM ubuntu AS dra-plugin-gpu
 COPY --from=dra-plugin-gpu-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/dra-plugin-gpu /bin/
 COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
 ENTRYPOINT ["/bin/dra-plugin-gpu"]
+
+FROM ubuntu AS kwok-dra-plugin
+COPY --from=kwok-dra-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/kwok-dra-plugin /bin/
+ENTRYPOINT ["/bin/kwok-dra-plugin"]

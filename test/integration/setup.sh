@@ -124,9 +124,116 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     echo "Waiting for DRA plugin pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=kubeletplugin -n gpu-operator --timeout=120s
 
+    echo "Waiting for kwok-dra-plugin pod to be ready..."
+    kubectl wait --for=condition=Ready pod -l app=kwok-dra-plugin -n gpu-operator --timeout=120s
+
+    # Install KWOK controller for simulated nodes
+    echo "Installing KWOK controller..."
+    KWOK_VERSION="${KWOK_VERSION:-v0.7.0}"
+    kubectl apply -f "https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_VERSION}/kwok.yaml"
+    
+    echo "Waiting for KWOK controller to be ready..."
+    kubectl wait --for=condition=Ready pod -l app=kwok-controller -n kube-system --timeout=120s
+
+    # Install KWOK stages for node heartbeat and pod lifecycle simulation
+    echo "Installing KWOK stages..."
+    kubectl apply -f "https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_VERSION}/stage-fast.yaml"
+
+    # Create a KWOK simulated node with GPU topology
+    echo "Creating KWOK simulated GPU node..."
+    KWOK_NODE_NAME="kwok-gpu-node-1"
+    
+    # Create the KWOK node
+    cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    kwok.x-k8s.io/node: fake
+    node.alpha.kubernetes.io/ttl: "0"
+  labels:
+    kubernetes.io/role: worker
+    node.kubernetes.io/instance-type: gpu-node
+    run.ai/simulated-gpu-node-pool: default
+    type: kwok
+  name: ${KWOK_NODE_NAME}
+spec:
+  taints:
+  - effect: NoSchedule
+    key: kwok.x-k8s.io/node
+    value: fake
+status:
+  allocatable:
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+  capacity:
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+  conditions:
+  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    message: kubelet has sufficient memory available
+    reason: KubeletHasSufficientMemory
+    status: "False"
+    type: MemoryPressure
+  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    message: kubelet has no disk pressure
+    reason: KubeletHasNoDiskPressure
+    status: "False"
+    type: DiskPressure
+  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    message: kubelet has sufficient PID available
+    reason: KubeletHasSufficientPID
+    status: "False"
+    type: PIDPressure
+  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    message: kubelet is posting ready status
+    reason: KubeletReady
+    status: "True"
+    type: Ready
+  nodeInfo:
+    architecture: amd64
+    containerRuntimeVersion: ""
+    kernelVersion: ""
+    kubeProxyVersion: fake
+    kubeletVersion: fake
+    operatingSystem: linux
+    osImage: ""
+EOF
+
+    # The status-updater will automatically create a topology ConfigMap for the KWOK node
+    # because it has the run.ai/simulated-gpu-node-pool label. The kwok.x-k8s.io/node annotation
+    # is copied from the node to the ConfigMap by the status-updater.
+
+    echo "Waiting for status-updater to create topology ConfigMap for KWOK node..."
+    for i in {1..30}; do
+        if kubectl get cm -n gpu-operator -l "run.ai/node-name=${KWOK_NODE_NAME}" >/dev/null 2>&1; then
+            echo "Topology ConfigMap created by status-updater!"
+            break
+        fi
+        echo "Waiting for topology ConfigMap... ($i/30)"
+        sleep 2
+    done
+
+    # Wait for ResourceSlice to be created by kwok-dra-plugin
+    echo "Waiting for ResourceSlice to be created for KWOK node..."
+    for i in {1..30}; do
+        if kubectl get resourceslice "kwok-${KWOK_NODE_NAME}-gpu" >/dev/null 2>&1; then
+            echo "ResourceSlice created successfully!"
+            break
+        fi
+        echo "Waiting for ResourceSlice... ($i/30)"
+        sleep 2
+    done
+
     echo "Setup complete! Cluster ${KIND_CLUSTER_NAME} is ready."
     echo "Worker node: ${WORKER_NODE}"
+    echo "KWOK GPU node: ${KWOK_NODE_NAME}"
 else
     echo "Skipping setup (SKIP_SETUP=true)"
 fi
-

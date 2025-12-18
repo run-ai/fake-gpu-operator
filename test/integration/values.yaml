@@ -39,6 +39,11 @@ statusExporter:
 kwokGpuDevicePlugin:
   enabled: false
 
+kwokDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
 migFaker:
   enabled: false
 
