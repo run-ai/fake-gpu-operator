@@ -3,13 +3,6 @@ apiVersion: kind.x-k8s.io/v1alpha4
 name: dra-cluster
 featureGates:
   DynamicResourceAllocation: true
-containerdConfigPatches:
-# Enable CDI as described in
-# https://tags.cncf.io/container-device-interface#containerd-configuration
-- |-
-  [plugins."io.containerd.grpc.v1.cri"]
-    enable_cdi = true
-    cdi_spec_dirs = ["/etc/cdi", "/var/run/cdi"]
 nodes:
 - role: control-plane
   image: kindest/node:v1.34.0
@@ -19,22 +12,3 @@ nodes:
     apiServer:
       extraArgs:
         runtime-config: "resource.k8s.io/v1beta1=true"
-    scheduler:
-      extraArgs:
-        v: "1"
-    controllerManager:
-      extraArgs:
-        v: "1"
-  - |
-    kind: InitConfiguration
-    nodeRegistration:
-      kubeletExtraArgs:
-        v: "4"
-- role: worker
-  image: kindest/node:v1.34.0
-  kubeadmConfigPatches:
-  - |
-    kind: JoinConfiguration
-    nodeRegistration:
-      kubeletExtraArgs:
-        v: "4"
