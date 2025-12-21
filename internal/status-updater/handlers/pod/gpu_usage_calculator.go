@@ -104,9 +104,7 @@ func calculateUtilizationFromAnnotation(annotationValue string) (*topology.Range
 }
 
 func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
-	// First, try to get workload type from pod labels
 	if workloadKind, ok := pod.Labels["workloadKind"]; ok {
-		// Map Run:AI workload kinds to utilization types
 		switch workloadKind {
 		case "TrainingWorkload":
 			return "train", nil
