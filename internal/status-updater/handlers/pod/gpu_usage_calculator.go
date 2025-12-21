@@ -71,7 +71,7 @@ func calculateGpuUsageFromPodType(dynamicclient dynamic.Interface, pod *v1.Pod, 
 	switch podType {
 	case "train":
 		return generateGpuUsageStatus(topology.Range{Min: 80, Max: 100}, gpuFraction, totalGpuMemory, false)
-	case "build", "interactive-preemptible":
+	case "build", "interactive-preemptible", "interactive", "distributed":
 		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, false)
 	case "inference":
 		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, true)
@@ -104,6 +104,20 @@ func calculateUtilizationFromAnnotation(annotationValue string) (*topology.Range
 }
 
 func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
+	if workloadKind, ok := pod.Labels["workloadKind"]; ok {
+		switch workloadKind {
+		case "TrainingWorkload":
+			return "train", nil
+		case "DistributedWorkload":
+			return "distributed", nil
+		case "InferenceWorkload":
+			return "inference", nil
+		case "InteractiveWorkload":
+			return "interactive", nil
+		}
+	}
+
+	// Fallback to existing PodGroup lookup
 	podGroupName := pod.Annotations[constants.AnnotationPodGroupName]
 	if podGroupName == "" {
 		return "", fmt.Errorf("pod %s has no constants.PodGroupNameAnnotation annotation", pod.Name)
