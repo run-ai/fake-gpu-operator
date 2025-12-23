@@ -16,12 +16,12 @@ import (
 )
 
 type MetricsExporter interface {
-	ExportForNode(nodeName string, nodeTopology *topology.NodeTopology) error
+	SetMetricsForNode(nodeName string, nodeTopology *topology.NodeTopology) error
 	DeleteNode(nodeName string) error
 }
 
 type LabelsExporter interface {
-	ExportForNode(nodeName string, nodeTopology *topology.NodeTopology) error
+	SetLabelsForNode(nodeName string, nodeTopology *topology.NodeTopology) error
 }
 
 type MultiNodeWatcher struct {
@@ -79,11 +79,11 @@ func (w *MultiNodeWatcher) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 
 func (w *MultiNodeWatcher) handleNodeUpdate(nodeName string, nodeTopology *topology.NodeTopology) {
-	if err := w.metricsExporter.ExportForNode(nodeName, nodeTopology); err != nil {
+	if err := w.metricsExporter.SetMetricsForNode(nodeName, nodeTopology); err != nil {
 		log.Printf("Metrics exporter failed for node %s: %v\n", nodeName, err)
 	}
 
-	if err := w.labelsExporter.ExportForNode(nodeName, nodeTopology); err != nil {
+	if err := w.labelsExporter.SetLabelsForNode(nodeName, nodeTopology); err != nil {
 		log.Printf("Labels exporter failed for node %s: %v\n", nodeName, err)
 	}
 }

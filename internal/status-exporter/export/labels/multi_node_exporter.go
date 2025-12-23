@@ -28,8 +28,8 @@ func NewMultiNodeLabelsExporter(kubeClient kubernetes.Interface) *MultiNodeLabel
 	}
 }
 
-// ExportForNode exports labels for a specific node
-func (e *MultiNodeLabelsExporter) ExportForNode(nodeName string, nodeTopology *topology.NodeTopology) error {
+// SetLabelsForNode exports labels for a specific node
+func (e *MultiNodeLabelsExporter) SetLabelsForNode(nodeName string, nodeTopology *topology.NodeTopology) error {
 	labels := BuildNodeLabels(nodeTopology)
 
 	if err := e.setNodeLabels(nodeName, labels); err != nil {
