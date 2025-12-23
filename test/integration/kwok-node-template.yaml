@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    kwok.x-k8s.io/node: fake
+    node.alpha.kubernetes.io/ttl: "0"
+  labels:
+    kubernetes.io/role: worker
+    node.kubernetes.io/instance-type: gpu-node
+    run.ai/simulated-gpu-node-pool: default
+    type: kwok
+  name: KWOK_NODE_NAME_PLACEHOLDER
+spec:
+  taints:
+  - effect: NoSchedule
+    key: kwok.x-k8s.io/node
+    value: fake
+status:
+  allocatable:
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+  capacity:
+    cpu: "32"
+    memory: 128Gi
+    pods: "110"
+  nodeInfo:
+    architecture: amd64
+    containerRuntimeVersion: fake
+    kernelVersion: fake
+    kubeProxyVersion: fake
+    kubeletVersion: fake
+    operatingSystem: linux
+    osImage: fake
+

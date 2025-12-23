@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -70,16 +68,7 @@ func (e *MetricsExporter) export(nodeTopology *topology.NodeTopology) error {
 
 	for gpuIdx, gpu := range nodeTopology.Gpus {
 		log.Printf("Exporting metrics for node %v, gpu %v\n", nodeName, gpu.ID)
-		labels := prometheus.Labels{
-			"gpu":       strconv.Itoa(gpuIdx),
-			"UUID":      gpu.ID,
-			"device":    "nvidia" + strconv.Itoa(gpuIdx),
-			"modelName": nodeTopology.GpuProduct,
-			"Hostname":  generateFakeHostname(nodeName),
-			"namespace": gpu.Status.AllocatedBy.Namespace,
-			"pod":       gpu.Status.AllocatedBy.Pod,
-			"container": gpu.Status.AllocatedBy.Container,
-		}
+		labels := buildGpuMetricLabels(nodeName, gpuIdx, &gpu, nodeTopology)
 
 		utilization := gpu.Status.PodGpuUsageStatus.Utilization()
 		fbUsed := gpu.Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)

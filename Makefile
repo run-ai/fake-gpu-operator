@@ -1,5 +1,5 @@
 BUILD_DIR=$(shell pwd)/bin
-COMPONENTS?=device-plugin dra-plugin-gpu status-updater kwok-gpu-device-plugin kwok-dra-plugin status-exporter topology-server mig-faker
+COMPONENTS?=device-plugin dra-plugin-gpu status-updater kwok-gpu-device-plugin kwok-dra-plugin status-exporter status-exporter-kwok topology-server mig-faker
 
 DOCKER_REPO_BASE=ghcr.io/run-ai/fake-gpu-operator
 DOCKER_TAG?=0.0.0-dev

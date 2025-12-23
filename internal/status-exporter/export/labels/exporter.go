@@ -3,7 +3,6 @@ package labels
 import (
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -43,15 +42,7 @@ func (e *LabelsExporter) Run(stopCh <-chan struct{}) {
 }
 
 func (e *LabelsExporter) export(nodeTopology *topology.NodeTopology) error {
-
-	labels := map[string]string{
-		"nvidia.com/gpu.memory":   strconv.Itoa(nodeTopology.GpuMemory),
-		"nvidia.com/gpu.product":  nodeTopology.GpuProduct,
-		"nvidia.com/mig.strategy": nodeTopology.MigStrategy,
-		"nvidia.com/gpu.count":    strconv.Itoa(len(nodeTopology.Gpus)),
-		"nvidia.com/gpu.present":  "true",
-		"run.ai/fake.gpu":         "true",
-	}
+	labels := BuildNodeLabels(nodeTopology)
 
 	err := e.kubeclient.SetNodeLabels(labels)
 	if err != nil {

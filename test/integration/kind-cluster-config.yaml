@@ -12,3 +12,7 @@ nodes:
     apiServer:
       extraArgs:
         runtime-config: "resource.k8s.io/v1beta1=true"
+- role: worker
+  image: kindest/node:v1.34.0
+  labels:
+    run.ai/simulated-gpu-node-pool: default

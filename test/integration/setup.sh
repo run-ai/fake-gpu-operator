@@ -24,25 +24,17 @@ CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm6
 # Docker image tag
 : ${DOCKER_TAG:="0.0.0-dev"}
 
-# Container tool, e.g. docker/podman
-if [[ -z "${CONTAINER_TOOL}" ]]; then
-    if [[ -n "$(which docker)" ]]; then
-        echo "Docker found in PATH."
-        CONTAINER_TOOL=docker
-    elif [[ -n "$(which podman)" ]]; then
-        echo "Podman found in PATH."
-        CONTAINER_TOOL=podman
-    else
-        echo "No container tool detected. Please install Docker or Podman."
+# Check if docker is available
+if ! command -v docker &> /dev/null; then
+    echo "Docker not found. Please install Docker."
         exit 1
-    fi
 fi
 
-: ${KIND:="env KIND_EXPERIMENTAL_PROVIDER=${CONTAINER_TOOL} kind"}
+echo "Docker found in PATH."
 
 # Check if cluster already exists
 if [[ "${SKIP_SETUP}" != "true" ]]; then
-    if ${KIND} get clusters | grep -q "^${KIND_CLUSTER_NAME}$"; then
+    if kind get clusters | grep -q "^${KIND_CLUSTER_NAME}$"; then
         echo "Cluster ${KIND_CLUSTER_NAME} already exists. Use SKIP_SETUP=true to skip setup or delete the cluster first."
         exit 1
     fi
@@ -53,7 +45,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     make image DOCKER_TAG="${DOCKER_TAG}" DOCKER_BUILDX_PLATFORMS="${CURRENT_PLATFORM}" DOCKER_BUILDX_PUSH_FLAG="--load"
 
     echo "Creating kind cluster ${KIND_CLUSTER_NAME}..."
-    ${KIND} create cluster \
+    kind create cluster \
         --name "${KIND_CLUSTER_NAME}" \
         --image "${KIND_IMAGE}" \
         --config "${KIND_CLUSTER_CONFIG_PATH}" \
@@ -64,41 +56,20 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-dra-plugin; do
         IMAGE="${DOCKER_REPO_BASE}/${component}:${DOCKER_TAG}"
         echo "Loading ${IMAGE}..."
-        if [[ "${CONTAINER_TOOL}" == "podman" ]]; then
-            # Work around kind not loading image with podman
-            IMAGE_ARCHIVE="/tmp/${component}_image.tar"
-            ${CONTAINER_TOOL} save -o "${IMAGE_ARCHIVE}" "${IMAGE}" && \
-            ${KIND} load image-archive \
-                --name "${KIND_CLUSTER_NAME}" \
-                "${IMAGE_ARCHIVE}"
-            rm -f "${IMAGE_ARCHIVE}"
-        else
-            ${KIND} load docker-image \
+        kind load docker-image \
                 --name "${KIND_CLUSTER_NAME}" \
                 "${IMAGE}"
-        fi
     done
 
     echo "Waiting for nodes to be ready..."
     kubectl wait --for=condition=Ready nodes --all --timeout=120s
-
-    echo "Labeling all nodes for fake GPU operator..."
-    # Get all node names
-    NODES=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
-    for NODE in ${NODES}; do
-        echo "Labeling node ${NODE}..."
-        kubectl label node "${NODE}" nvidia.com/gpu.deploy.dra-plugin-gpu=true --overwrite
-        # Label for status-updater topology (node pool name)
-        kubectl label node "${NODE}" run.ai/simulated-gpu-node-pool=default --overwrite
-        # Label for status-exporter DaemonSet
-        kubectl label node "${NODE}" nvidia.com/gpu.deploy.dcgm-exporter=true --overwrite
-    done
     
     # Store worker node name for later reference
-    WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.kubernetes\.io/role=="")].metadata.name}' | awk '{print $1}')
+    WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.kubernetes\.io/hostname!="")].metadata.name}' | awk '{print $1}')
     if [[ -z "${WORKER_NODE}" ]]; then
-        WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
+        WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[1].metadata.name}')
     fi
+    echo "Worker node: ${WORKER_NODE}"
     # Deploy fake-gpu-operator with DRA plugin, status-updater, topology-server, and status-exporter
     echo "Deploying fake-gpu-operator..."
     cd "${PROJECT_ROOT}"
@@ -139,81 +110,40 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     echo "Installing KWOK stages..."
     kubectl apply -f "https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_VERSION}/stage-fast.yaml"
 
-    # Create a KWOK simulated node with GPU topology
-    echo "Creating KWOK simulated GPU node..."
-    KWOK_NODE_NAME="kwok-gpu-node-1"
+    # Create KWOK simulated nodes with GPU topology
+    echo "Creating KWOK simulated GPU nodes..."
+    KWOK_NODE_COUNT=5
+    KWOK_NODES=()
+    for i in $(seq 1 ${KWOK_NODE_COUNT}); do
+        KWOK_NODES+=("kwok-gpu-node-${i}")
+    done
+    KWOK_NODE_TEMPLATE="${SCRIPTS_DIR}/kwok-node-template.yaml"
     
-    # Create the KWOK node
-    cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Node
-metadata:
-  annotations:
-    kwok.x-k8s.io/node: fake
-    node.alpha.kubernetes.io/ttl: "0"
-  labels:
-    kubernetes.io/role: worker
-    node.kubernetes.io/instance-type: gpu-node
-    run.ai/simulated-gpu-node-pool: default
-    type: kwok
-  name: ${KWOK_NODE_NAME}
-spec:
-  taints:
-  - effect: NoSchedule
-    key: kwok.x-k8s.io/node
-    value: fake
-status:
-  allocatable:
-    cpu: "32"
-    memory: 128Gi
-    pods: "110"
-  capacity:
-    cpu: "32"
-    memory: 128Gi
-    pods: "110"
-  conditions:
-  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    message: kubelet has sufficient memory available
-    reason: KubeletHasSufficientMemory
-    status: "False"
-    type: MemoryPressure
-  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    message: kubelet has no disk pressure
-    reason: KubeletHasNoDiskPressure
-    status: "False"
-    type: DiskPressure
-  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    message: kubelet has sufficient PID available
-    reason: KubeletHasSufficientPID
-    status: "False"
-    type: PIDPressure
-  - lastHeartbeatTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    lastTransitionTime: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    message: kubelet is posting ready status
-    reason: KubeletReady
-    status: "True"
-    type: Ready
-  nodeInfo:
-    architecture: amd64
-    containerRuntimeVersion: ""
-    kernelVersion: ""
-    kubeProxyVersion: fake
-    kubeletVersion: fake
-    operatingSystem: linux
-    osImage: ""
-EOF
+    # Function to create a KWOK node from template
+    create_kwok_node() {
+        local NODE_NAME=$1
+        
+        # Replace node name placeholder in template and apply
+        # KWOK stages will handle node conditions and heartbeats automatically
+        sed "s/KWOK_NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" "${KWOK_NODE_TEMPLATE}" | kubectl apply -f -
+    }
 
-    # The status-updater will automatically create a topology ConfigMap for the KWOK node
-    # because it has the run.ai/simulated-gpu-node-pool label. The kwok.x-k8s.io/node annotation
+    # Create all KWOK nodes
+    for NODE_NAME in "${KWOK_NODES[@]}"; do
+        echo "Creating KWOK node: ${NODE_NAME}..."
+        create_kwok_node "${NODE_NAME}"
+    done
+
+    # The status-updater will automatically create a topology ConfigMap for each KWOK node
+    # because they have the run.ai/simulated-gpu-node-pool label. The kwok.x-k8s.io/node annotation
     # is copied from the node to the ConfigMap by the status-updater.
 
-    echo "Waiting for status-updater to create topology ConfigMap for KWOK node..."
+    # Wait for topology ConfigMaps to be created
+    for NODE_NAME in "${KWOK_NODES[@]}"; do
+        echo "Waiting for status-updater to create topology ConfigMap for ${NODE_NAME}..."
     for i in {1..30}; do
-        if kubectl get cm -n gpu-operator -l "run.ai/node-name=${KWOK_NODE_NAME}" >/dev/null 2>&1; then
-            echo "Topology ConfigMap created by status-updater!"
+            if kubectl get cm -n gpu-operator -l "node-name=${NODE_NAME}" >/dev/null 2>&1; then
+                echo "Topology ConfigMap created for ${NODE_NAME}!"
             break
         fi
         echo "Waiting for topology ConfigMap... ($i/30)"
@@ -221,19 +151,20 @@ EOF
     done
 
     # Wait for ResourceSlice to be created by kwok-dra-plugin
-    echo "Waiting for ResourceSlice to be created for KWOK node..."
+        echo "Waiting for ResourceSlice to be created for ${NODE_NAME}..."
     for i in {1..30}; do
-        if kubectl get resourceslice "kwok-${KWOK_NODE_NAME}-gpu" >/dev/null 2>&1; then
-            echo "ResourceSlice created successfully!"
+            if kubectl get resourceslice "kwok-${NODE_NAME}-gpu" >/dev/null 2>&1; then
+                echo "ResourceSlice created for ${NODE_NAME}!"
             break
         fi
         echo "Waiting for ResourceSlice... ($i/30)"
         sleep 2
+        done
     done
 
     echo "Setup complete! Cluster ${KIND_CLUSTER_NAME} is ready."
     echo "Worker node: ${WORKER_NODE}"
-    echo "KWOK GPU node: ${KWOK_NODE_NAME}"
+    echo "KWOK GPU nodes: ${KWOK_NODES[*]}"
 else
     echo "Skipping setup (SKIP_SETUP=true)"
 fi

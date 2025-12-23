@@ -428,6 +428,59 @@ var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
 	})
 })
 
+var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
+	const (
+		kwokNodeName  = "kwok-gpu-node-1"
+		gpuOperatorNS = "gpu-operator"
+	)
+
+	Describe("KWOK Deployment", func() {
+		It("should have nvidia-dcgm-exporter-kwok deployment running", func() {
+			deployment, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "nvidia-dcgm-exporter-kwok", metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "KWOK status-exporter deployment should exist")
+			Expect(deployment.Spec.Replicas).NotTo(BeNil(), "Deployment should have replicas set")
+			Expect(*deployment.Spec.Replicas).To(Equal(int32(1)), "Deployment should have 1 replica")
+
+			// Verify deployment labels match service selector
+			Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app", "nvidia-dcgm-exporter"),
+				"KWOK deployment should have correct app label")
+		})
+
+		It("should have exactly one pod running", func() {
+			pods, err := kubeClient.CoreV1().Pods(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: "app=nvidia-dcgm-exporter,component=status-exporter-kwok",
+			})
+			Expect(err).NotTo(HaveOccurred(), "Should list KWOK exporter pods")
+			Expect(pods.Items).To(HaveLen(1), "Should have exactly 1 KWOK exporter pod")
+
+			pod := pods.Items[0]
+			Expect(pod.Status.Phase).To(Equal(corev1.PodRunning), "KWOK exporter pod should be running")
+		})
+	})
+
+	Describe("Node Labels", func() {
+		It("should set GPU-related labels on KWOK node", func() {
+			node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), kwokNodeName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Should get KWOK node")
+
+			// Verify expected labels
+			expectedLabels := map[string]string{
+				"nvidia.com/gpu.present": "true",
+				"run.ai/fake.gpu":        "true",
+				"nvidia.com/gpu.count":   "2",
+				"nvidia.com/gpu.product": "NVIDIA-A100-SXM4-40GB",
+			}
+
+			for key, expectedValue := range expectedLabels {
+				Expect(node.Labels).To(HaveKeyWithValue(key, expectedValue),
+					"Node should have label %s=%s", key, expectedValue)
+			}
+		})
+	})
+
+})
+
 // Helper functions
 
 // trackResourceClaimsForPod tracks ResourceClaims for a pod and adds them to testResourceClaims
