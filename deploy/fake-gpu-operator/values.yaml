@@ -59,6 +59,15 @@ statusExporter:
       cpu: "200m"
       memory: "200Mi"
   topologyMaxExportInterval: 10s
+  # If using many KWOK nodes, you may need to increase the resources for the KWOK status-exporter
+  kwok:
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "100Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
 
 kwokGpuDevicePlugin:
   enabled: true

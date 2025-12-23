@@ -25,8 +25,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH
 
 FROM common-builder AS status-exporter-builder
 COPY ./cmd/status-exporter/ ./cmd/status-exporter/
+COPY ./cmd/status-exporter-kwok/ ./cmd/status-exporter-kwok/
 COPY ./internal/ ./internal/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=status-exporter
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS="status-exporter status-exporter-kwok"
 
 FROM common-builder AS topology-server-builder
 COPY ./cmd/topology-server/ ./cmd/topology-server/
@@ -71,8 +72,14 @@ COPY --from=status-updater-builder /go/src/github.com/run-ai/fake-gpu-operator/b
 ENTRYPOINT ["/bin/status-updater"]
 
 FROM ubuntu AS status-exporter
-COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /bin/
-ENTRYPOINT ["/bin/status-exporter"]
+COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /usr/local/bin/
+COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter-kwok /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/status-exporter"]
+
+FROM ubuntu AS status-exporter-kwok
+COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter /usr/local/bin/
+COPY --from=status-exporter-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/status-exporter-kwok /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/status-exporter-kwok"]
 
 FROM ubuntu AS topology-server
 COPY --from=topology-server-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/topology-server /bin/

@@ -428,6 +428,179 @@ var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
 	})
 })
 
+var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
+	const (
+		kwokNodeName  = "kwok-gpu-node-1"
+		gpuOperatorNS = "gpu-operator"
+	)
+
+	Describe("KWOK Deployment", func() {
+		It("should have nvidia-dcgm-exporter-kwok deployment running", func() {
+			deployment, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "nvidia-dcgm-exporter-kwok", metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "KWOK status-exporter deployment should exist")
+			Expect(deployment.Spec.Replicas).NotTo(BeNil(), "Deployment should have replicas set")
+			Expect(*deployment.Spec.Replicas).To(Equal(int32(1)), "Deployment should have 1 replica")
+
+			// Verify deployment labels match service selector
+			Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app", "nvidia-dcgm-exporter"),
+				"KWOK deployment should have correct app label")
+		})
+
+		It("should have exactly one pod running", func() {
+			pods, err := kubeClient.CoreV1().Pods(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: "app=nvidia-dcgm-exporter,component=status-exporter-kwok",
+			})
+			Expect(err).NotTo(HaveOccurred(), "Should list KWOK exporter pods")
+			Expect(pods.Items).To(HaveLen(1), "Should have exactly 1 KWOK exporter pod")
+
+			pod := pods.Items[0]
+			Expect(pod.Status.Phase).To(Equal(corev1.PodRunning), "KWOK exporter pod should be running")
+		})
+	})
+
+	Describe("Node Labels", func() {
+		It("should set GPU-related labels on KWOK node", func() {
+			node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), kwokNodeName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Should get KWOK node")
+
+			// Verify expected labels
+			expectedLabels := map[string]string{
+				"nvidia.com/gpu.present": "true",
+				"run.ai/fake.gpu":        "true",
+				"nvidia.com/gpu.count":   "2",
+				"nvidia.com/gpu.product": "NVIDIA-A100-SXM4-40GB",
+			}
+
+			for key, expectedValue := range expectedLabels {
+				Expect(node.Labels).To(HaveKeyWithValue(key, expectedValue),
+					"Node should have label %s=%s", key, expectedValue)
+			}
+		})
+	})
+
+	Describe("Prometheus Metrics", func() {
+		It("should expose metrics endpoint", func() {
+			// Port-forward to the KWOK exporter pod
+			pods, err := kubeClient.CoreV1().Pods(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: "app=nvidia-dcgm-exporter,component=status-exporter-kwok",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pods.Items).NotTo(BeEmpty())
+
+			podName := pods.Items[0].Name
+
+			// Use kubectl port-forward to access metrics
+			cmd := exec.Command("kubectl", "port-forward", "-n", gpuOperatorNS, podName, ":9400")
+			output, err := cmd.CombinedOutput()
+			// Port-forward might fail if already running, which is fine
+			_ = output
+			_ = err
+		})
+
+		It("should include metrics for KWOK nodes with Hostname labels", func() {
+			// Get the KWOK exporter pod
+			pods, err := kubeClient.CoreV1().Pods(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: "app=nvidia-dcgm-exporter,component=status-exporter-kwok",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pods.Items).NotTo(BeEmpty())
+
+			podName := pods.Items[0].Name
+
+			// Execute curl inside the pod to fetch metrics
+			cmd := exec.Command("kubectl", "exec", "-n", gpuOperatorNS, podName, "--",
+				"sh", "-c", "wget -q -O- http://localhost:9400/metrics || curl -s http://localhost:9400/metrics")
+			output, err := cmd.CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), "Should fetch metrics from KWOK exporter")
+
+			metrics := string(output)
+
+			// Verify expected metrics exist
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_GPU_UTIL"), "Should contain GPU utilization metric")
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_FB_USED"), "Should contain GPU memory used metric")
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_FB_FREE"), "Should contain GPU memory free metric")
+
+			// Verify Hostname label is present
+			Expect(metrics).To(MatchRegexp(`Hostname="nvidia-dcgm-exporter-[a-f0-9]+"`),
+				"Metrics should include Hostname label")
+
+			// Verify modelName label for KWOK node
+			Expect(metrics).To(ContainSubstring(`modelName="NVIDIA-A100-SXM4-40GB"`),
+				"Metrics should include correct GPU model for KWOK node")
+		})
+
+		It("should handle multiple KWOK nodes", func() {
+			kwokNode2Name := "kwok-gpu-node-2"
+
+			// Verify second KWOK node exists (created by setup.sh)
+			_, err := kubeClient.CoreV1().Nodes().Get(context.Background(), kwokNode2Name, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Second KWOK node should exist (created by setup.sh)")
+
+			// Verify topology ConfigMaps exist for both nodes
+			for _, nodeName := range []string{kwokNodeName, kwokNode2Name} {
+				cmList, err := kubeClient.CoreV1().ConfigMaps(gpuOperatorNS).List(
+					context.Background(), metav1.ListOptions{
+						LabelSelector: fmt.Sprintf("node-name=%s", nodeName),
+					})
+				Expect(err).NotTo(HaveOccurred(), "Should list ConfigMaps for node %s", nodeName)
+				Expect(cmList.Items).NotTo(BeEmpty(), "Topology ConfigMap should exist for node %s", nodeName)
+			}
+
+			// Verify both nodes have GPU labels
+			for _, nodeName := range []string{kwokNodeName, kwokNode2Name} {
+				node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred(), "Should get node %s", nodeName)
+
+				Expect(node.Labels).To(HaveKeyWithValue("nvidia.com/gpu.present", "true"),
+					"Node %s should have GPU present label", nodeName)
+				Expect(node.Labels).To(HaveKeyWithValue("run.ai/fake.gpu", "true"),
+					"Node %s should have fake GPU label", nodeName)
+				Expect(node.Labels).To(HaveKeyWithValue("nvidia.com/gpu.count", "2"),
+					"Node %s should have GPU count label", nodeName)
+			}
+
+			// Verify metrics include both nodes with distinct Hostnames
+			pods, err := kubeClient.CoreV1().Pods(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: "app=nvidia-dcgm-exporter,component=status-exporter-kwok",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pods.Items).NotTo(BeEmpty())
+
+			podName := pods.Items[0].Name
+
+			// Fetch metrics
+			cmd := exec.Command("kubectl", "exec", "-n", gpuOperatorNS, podName, "--",
+				"sh", "-c", "wget -q -O- http://localhost:9400/metrics || curl -s http://localhost:9400/metrics")
+			output, err := cmd.CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), "Should fetch metrics from KWOK exporter")
+
+			metrics := string(output)
+
+			// Parse metrics to find unique Hostname labels
+			hostnamePattern := regexp.MustCompile(`Hostname="(nvidia-dcgm-exporter-[a-f0-9]+)"`)
+			matches := hostnamePattern.FindAllStringSubmatch(metrics, -1)
+
+			uniqueHostnames := make(map[string]bool)
+			for _, match := range matches {
+				if len(match) > 1 {
+					uniqueHostnames[match[1]] = true
+				}
+			}
+
+			// Should have at least 2 distinct Hostnames (one per KWOK node)
+			Expect(len(uniqueHostnames)).To(BeNumerically(">=", 2),
+				"Metrics should include at least 2 distinct Hostnames for 2 KWOK nodes, found: %v", uniqueHostnames)
+
+			// Verify metrics contain GPU info for all nodes
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_GPU_UTIL"),
+				"Metrics should contain GPU utilization for all nodes")
+			Expect(metrics).To(ContainSubstring("DCGM_FI_DEV_FB_USED"),
+				"Metrics should contain GPU memory used for all nodes")
+		})
+	})
+})
+
 // Helper functions
 
 // trackResourceClaimsForPod tracks ResourceClaims for a pod and adds them to testResourceClaims

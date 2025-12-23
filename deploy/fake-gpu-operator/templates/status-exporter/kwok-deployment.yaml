@@ -1,0 +1,43 @@
+{{- if .Values.statusExporter.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nvidia-dcgm-exporter-kwok
+  labels:
+    app: nvidia-dcgm-exporter
+    component: status-exporter-kwok
+    app.kubernetes.io/name: nvidia-container-toolkit
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-dcgm-exporter
+      component: status-exporter-kwok
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nvidia-dcgm-exporter
+        component: status-exporter-kwok
+        app.kubernetes.io/name: nvidia-container-toolkit
+    spec:
+      containers:
+        - name: nvidia-dcgm-exporter-kwok
+          image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
+          command: ["/usr/local/bin/status-exporter-kwok"]
+          resources:
+            {{- toYaml .Values.statusExporter.kwok.resources | nindent 12 }}
+          env:
+            - name: TOPOLOGY_CM_NAME
+              value: topology
+            - name: TOPOLOGY_CM_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+          ports:
+            - containerPort: 9400
+              name: http
+      restartPolicy: Always
+      serviceAccountName: status-exporter
+      imagePullSecrets:
+        - name: gcr-secret
+{{- end }}
+
