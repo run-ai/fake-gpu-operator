@@ -153,7 +153,7 @@ When requests flow to this inference pod, GPU utilization metrics will reflect t
 
 **Supported Knative Workload Types:**
 - `workloadKind: "InferenceWorkload"` - Single-node inference with Knative metrics
-- `workloadKind: "DistributedInferenceWorkload"` - Distributed inference with Knative metrics
+- `workloadKind: "DistributedWorkload"` - Distributed inference with Knative metrics
 
 ## 🔌 Dynamic Resource Allocation (DRA)
 
