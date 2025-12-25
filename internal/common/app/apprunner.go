@@ -100,4 +100,5 @@ func setDefaults() {
 	viper.SetDefault(constants.EnvTopologyCmName, "topology")
 	viper.SetDefault(constants.EnvTopologyCmNamespace, "gpu-operator")
 	viper.SetDefault(constants.EnvResourceReservationNamespace, "runai-reservation")
+	viper.SetDefault(constants.EnvPrometheusURL, "http://prometheus-operated.runai:9090")
 }

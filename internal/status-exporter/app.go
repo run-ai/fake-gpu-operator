@@ -61,9 +61,6 @@ func (app *StatusExporterApp) Run() {
 func (app *StatusExporterApp) Init(stop chan struct{}) {
 	// Initialize Prometheus configuration
 	prometheusURL := viper.GetString(constants.EnvPrometheusURL)
-	if prometheusURL == "" {
-		prometheusURL = "http://prometheus-operated.runai:9090"
-	}
 	topology.InitPrometheusConfig(prometheusURL)
 
 	if app.Kubeclient == nil {

@@ -26,8 +26,8 @@ func NewMultiNodeMetricsExporter() *MultiNodeMetricsExporter {
 	}
 }
 
-// SetMetricsForNode exports metrics for a specific node
-func (e *MultiNodeMetricsExporter) SetMetricsForNode(nodeName string, nodeTopology *topology.NodeTopology) error {
+// ExportForNode exports metrics for a specific node
+func (e *MultiNodeMetricsExporter) ExportForNode(nodeName string, nodeTopology *topology.NodeTopology) error {
 	// Update cache
 	e.mu.Lock()
 	e.nodeTopologies[nodeName] = nodeTopology

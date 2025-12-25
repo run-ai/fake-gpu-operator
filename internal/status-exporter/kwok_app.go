@@ -84,9 +84,6 @@ func (app *KWOKStatusExporterApp) Init(stopCh chan struct{}) {
 
 	// Initialize Prometheus configuration
 	prometheusURL := viper.GetString(constants.EnvPrometheusURL)
-	if prometheusURL == "" {
-		prometheusURL = "http://prometheus-operated.runai:9090"
-	}
 	topology.InitPrometheusConfig(prometheusURL)
 
 	// Create exporters
