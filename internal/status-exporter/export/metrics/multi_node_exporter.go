@@ -26,8 +26,8 @@ func NewMultiNodeMetricsExporter() *MultiNodeMetricsExporter {
 	}
 }
 
-// ExportForNode exports metrics for a specific node
-func (e *MultiNodeMetricsExporter) ExportForNode(nodeName string, nodeTopology *topology.NodeTopology) error {
+// SetMetricsForNode exports metrics for a specific node
+func (e *MultiNodeMetricsExporter) SetMetricsForNode(nodeName string, nodeTopology *topology.NodeTopology) error {
 	// Update cache
 	e.mu.Lock()
 	e.nodeTopologies[nodeName] = nodeTopology
@@ -83,7 +83,6 @@ func (e *MultiNodeMetricsExporter) refreshAllMetrics() {
 	}
 	e.mu.RUnlock()
 
-	// Export metrics without holding lock (slow operation)
 	for nodeName, nodeTopology := range snapshot {
 		if err := e.exportNode(nodeName, nodeTopology); err != nil {
 			log.Printf("Failed to refresh metrics for node %s: %v\n", nodeName, err)
