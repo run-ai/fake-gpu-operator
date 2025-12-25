@@ -12,6 +12,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
@@ -80,6 +81,10 @@ func (app *KWOKStatusExporterApp) Init(stopCh chan struct{}) {
 	if err != nil {
 		log.Fatalf("Failed to create kubernetes client: %v", err)
 	}
+
+	// Initialize Prometheus configuration
+	prometheusURL := viper.GetString(constants.EnvPrometheusURL)
+	topology.InitPrometheusConfig(prometheusURL)
 
 	// Create exporters
 	app.metricsExporter = metrics.NewMultiNodeMetricsExporter()

@@ -32,6 +32,8 @@ spec:
               value: topology
             - name: TOPOLOGY_CM_NAMESPACE
               value: "{{ .Release.Namespace }}"
+            - name: PROMETHEUS_URL
+              value: "{{ .Values.prometheus.url }}"
           ports:
             - containerPort: 9400
               name: http
