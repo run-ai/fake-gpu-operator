@@ -36,6 +36,8 @@ spec:
               value: "{{ .Release.Namespace }}"
             - name: RESOURCE_RESERVATION_NAMESPACE
               value: "{{ .Values.environment.resourceReservationNamespace }}"
+            - name: PROMETHEUS_URL
+              value: "{{ .Values.prometheus.url }}"
       restartPolicy: Always
       serviceAccountName: status-updater
       imagePullSecrets:

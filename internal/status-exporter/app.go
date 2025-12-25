@@ -3,12 +3,15 @@ package status_exporter
 import (
 	"sync"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/fs"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
+	"github.com/spf13/viper"
 )
 
 type StatusExporterAppConfig struct {
@@ -16,6 +19,7 @@ type StatusExporterAppConfig struct {
 	TopologyCmName            string `mapstructure:"TOPOLOGY_CM_NAME" validator:"required"`
 	TopologyCmNamespace       string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validator:"required"`
 	TopologyMaxExportInterval string `mapstructure:"TOPOLOGY_MAX_EXPORT_INTERVAL"`
+	PrometheusURL             string `mapstructure:"PROMETHEUS_URL"`
 }
 
 type StatusExporterApp struct {
@@ -55,6 +59,13 @@ func (app *StatusExporterApp) Run() {
 }
 
 func (app *StatusExporterApp) Init(stop chan struct{}) {
+	// Initialize Prometheus configuration
+	prometheusURL := viper.GetString(constants.EnvPrometheusURL)
+	if prometheusURL == "" {
+		prometheusURL = "http://prometheus-operated.runai:9090"
+	}
+	topology.InitPrometheusConfig(prometheusURL)
+
 	if app.Kubeclient == nil {
 		app.Kubeclient = kubeclient.NewKubeClient(nil, stop)
 	}

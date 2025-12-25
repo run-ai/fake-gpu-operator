@@ -41,6 +41,8 @@ containers:
       value: "{{ .Values.statusExporter.topologyMaxExportInterval }}"
     - name: RESOURCE_RESERVATION_NAMESPACE
       value: "{{ .Values.environment.resourceReservationNamespace }}"
+    - name: PROMETHEUS_URL
+      value: "{{ .Values.prometheus.url }}"
   ports:
     - containerPort: 9400
       name: http

@@ -3,12 +3,15 @@ package status_updater
 import (
 	"sync"
 
+	"github.com/spf13/viper"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
 	nodecontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/node"
 	podcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/pod"
@@ -26,6 +29,7 @@ var DynamicClientFn = func(c *rest.Config) dynamic.Interface {
 type StatusUpdaterAppConfiguration struct {
 	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
 	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
+	PrometheusURL       string `mapstructure:"PROMETHEUS_URL"`
 }
 
 type StatusUpdaterApp struct {
@@ -49,6 +53,13 @@ func (app *StatusUpdaterApp) Run() {
 
 func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
 	app.stopCh = stopCh
+
+	// Initialize Prometheus configuration
+	prometheusURL := viper.GetString(constants.EnvPrometheusURL)
+	if prometheusURL == "" {
+		prometheusURL = "http://prometheus-operated.runai:9090"
+	}
+	topology.InitPrometheusConfig(prometheusURL)
 
 	clusterConfig := InClusterConfigFn()
 	clusterConfig.QPS = 100

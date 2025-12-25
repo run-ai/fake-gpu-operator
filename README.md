@@ -101,6 +101,60 @@ metadata:
     run.ai/simulated-gpu-utilization: "10-30"  # Simulate 10-30% GPU usage
 ```
 
+### Knative Inference Workload Integration
+
+The operator provides special handling for **Knative-based inference workloads**, where GPU utilization is dynamically calculated based on actual request traffic rather than static values.
+
+#### How It Works
+
+When a pod is identified as an inference workload (via `workloadKind: "InferenceWorkload"` label or PodGroup `priorityClassName: "inference"`), the operator:
+
+1. **Queries Prometheus** for real-time request metrics using the `revision_app_request_count` metric
+2. **Calculates utilization** based on request rate: `rate(revision_app_request_count[1m])`
+3. **Updates GPU metrics** to reflect actual inference load
+
+This provides realistic GPU utilization metrics that correlate with inference traffic patterns.
+
+#### Configuration
+
+Configure Prometheus connection in your Helm values:
+
+```yaml
+prometheus:
+  url: http://prometheus-operated.runai:9090  # Default
+```
+
+For local development with port-forwarding:
+
+```yaml
+prometheus:
+  url: http://localhost:9090
+```
+
+#### Example
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: inference-pod
+  labels:
+    workloadKind: "InferenceWorkload"  # Enables Knative utilization
+spec:
+  containers:
+  - name: model-server
+    image: my-inference-server:latest
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+```
+
+When requests flow to this inference pod, GPU utilization metrics will reflect the actual request rate from Knative.
+
+**Supported Knative Workload Types:**
+- `workloadKind: "InferenceWorkload"` - Single-node inference with Knative metrics
+- `workloadKind: "DistributedInferenceWorkload"` - Distributed inference with Knative metrics
+
 ## 🔌 Dynamic Resource Allocation (DRA)
 
 For Kubernetes 1.31+, you can use the DRA plugin instead of the legacy device plugin.

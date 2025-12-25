@@ -73,7 +73,7 @@ func calculateGpuUsageFromPodType(dynamicclient dynamic.Interface, pod *v1.Pod, 
 		return generateGpuUsageStatus(topology.Range{Min: 80, Max: 100}, gpuFraction, totalGpuMemory, false)
 	case "build", "interactive-preemptible", "interactive", "distributed":
 		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, false)
-	case "inference":
+	case "inference", "distributed-inference":
 		return generateGpuUsageStatus(topology.Range{Min: 0, Max: 0}, gpuFraction, totalGpuMemory, true)
 	default:
 		return generateGpuUsageStatus(defaultGpuUtil, gpuFraction, totalGpuMemory, false)
@@ -109,7 +109,7 @@ func getPodType(dynamicClient dynamic.Interface, pod *v1.Pod) (string, error) {
 		case "TrainingWorkload":
 			return "train", nil
 		case "DistributedWorkload":
-			return "distributed", nil
+			return "distributed-inference", nil
 		case "InferenceWorkload":
 			return "inference", nil
 		case "InteractiveWorkload":

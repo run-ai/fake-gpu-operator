@@ -191,7 +191,7 @@ var _ = Describe("StatusUpdater", func() {
 									podUID: topology.GpuUsageStatus{
 										Utilization:           getExpectedUtilization(caseDetails.workloadType, caseDetails.podPhase),
 										FbUsed:                expectedTopology.GpuMemory,
-										UseKnativeUtilization: caseDetails.workloadType == "inference" && caseDetails.podPhase == v1.PodRunning,
+										UseKnativeUtilization: (caseDetails.workloadType == "inference" || caseDetails.workloadType == "distributed-inference") && caseDetails.podPhase == v1.PodRunning,
 									},
 								}
 								expectedTopology.Gpus[i].Status.AllocatedBy.Pod = podName
@@ -674,7 +674,7 @@ func getExpectedUtilization(workloadType string, podPhase v1.PodPhase) topology.
 			Min: 80,
 			Max: 100,
 		}
-	case "build", "interactive-preemptible", "inference":
+	case "build", "interactive-preemptible", "inference", "distributed-inference":
 		return topology.Range{
 			Min: 0,
 			Max: 0,

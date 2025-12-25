@@ -3,6 +3,9 @@ environment:
   fakeCSVVersion: 25.10.0
   resourceReservationNamespace: runai-reservation
 
+prometheus:
+  url: http://prometheus-operated.runai:9090
+
 devicePlugin:
   enabled: true
   image:
