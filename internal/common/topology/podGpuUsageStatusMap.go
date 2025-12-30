@@ -11,7 +11,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var prometheusBaseURL = "http://prometheus-operated.runai:9090"
+var prometheusBaseURL string
 
 func InitPrometheusConfig(baseURL string) {
 	prometheusBaseURL = baseURL
