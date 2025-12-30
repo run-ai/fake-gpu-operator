@@ -478,7 +478,6 @@ var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
 			}
 		})
 	})
-
 })
 
 // Helper functions

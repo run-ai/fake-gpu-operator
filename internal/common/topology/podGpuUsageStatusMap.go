@@ -11,6 +11,13 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+var prometheusBaseURL string
+
+func InitPrometheusConfig(baseURL string) {
+	prometheusBaseURL = baseURL
+	log.Printf("Prometheus base URL configured: %s", prometheusBaseURL)
+}
+
 func (m *PodGpuUsageStatusMap) Utilization() int {
 	var sum int
 	for k, v := range *m {
@@ -38,7 +45,9 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 	params := url.Values{}
 	params.Set("query", query)
 
-	res, err := http.Get("http://runai-cluster-kube-prometh-prometheus.monitoring:9090/api/v1/query?" + params.Encode())
+	prometheusURL := fmt.Sprintf("%s/api/v1/query?%s", prometheusBaseURL, params.Encode())
+
+	res, err := http.Get(prometheusURL)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
 		return 0
