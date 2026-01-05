@@ -16,6 +16,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.14.0
 	github.com/tidwall/gjson v1.14.1
+	github.com/urfave/cli/v2 v2.27.7
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.46.1-0.20251013234738-63d1a5100f82
 	google.golang.org/grpc v1.77.0
@@ -25,6 +26,7 @@ require (
 	k8s.io/client-go v0.34.2
 	k8s.io/dynamic-resource-allocation v0.34.2
 	k8s.io/kubelet v0.34.2
+	k8s.io/kubernetes v1.34.0
 	sigs.k8s.io/controller-runtime v0.22.4
 	sigs.k8s.io/dra-example-driver v0.2.0
 	tags.cncf.io/container-device-interface v1.0.1
@@ -33,6 +35,7 @@ require (
 
 require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
@@ -54,6 +57,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
@@ -61,6 +65,7 @@ require (
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.6.4 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
