@@ -177,3 +177,17 @@ topology:
       gpuMemory: 11441
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: mixed
+
+computeDomainController:
+  enabled: true
+  image:
+    pullPolicy: Always
+    repository: ghcr.io/run-ai/fake-gpu-operator/compute-domain-controller
+    tag: ""
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "200Mi"
+    limits:
+      cpu: "200m"
+      memory: "400Mi"

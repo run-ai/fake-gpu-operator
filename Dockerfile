@@ -42,6 +42,11 @@ COPY ./cmd/mig-faker/ ./cmd/mig-faker/
 COPY ./internal/ ./internal/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=mig-faker
 
+FROM common-builder AS compute-domain-controller-builder
+COPY ./cmd/compute-domain-controller/ ./cmd/compute-domain-controller/
+COPY ./pkg/compute-domain/ ./pkg/compute-domain/
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=compute-domain-controller
+
 FROM common-builder AS dra-plugin-gpu-builder
 COPY ./cmd/dra-plugin-gpu/ ./cmd/dra-plugin-gpu/
 COPY ./internal/dra-plugin-gpu/ ./internal/dra-plugin-gpu/
@@ -101,3 +106,7 @@ ENTRYPOINT ["/bin/dra-plugin-gpu"]
 FROM ubuntu AS kwok-dra-plugin
 COPY --from=kwok-dra-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/kwok-dra-plugin /bin/
 ENTRYPOINT ["/bin/kwok-dra-plugin"]
+
+FROM ubuntu AS compute-domain-controller
+COPY --from=compute-domain-controller-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/compute-domain-controller /bin/
+ENTRYPOINT ["/bin/compute-domain-controller"]

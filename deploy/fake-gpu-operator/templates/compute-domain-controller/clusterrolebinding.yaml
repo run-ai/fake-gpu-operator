@@ -1,0 +1,16 @@
+{{- if .Values.computeDomainController.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: compute-domain-controller-role-binding
+  namespace: {{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: compute-domain-controller
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: compute-domain-controller-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
