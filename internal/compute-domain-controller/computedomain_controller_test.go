@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package computedomaincontroller_test
 
 import (
 	"context"
@@ -30,6 +30,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	controller "github.com/run-ai/fake-gpu-operator/internal/compute-domain-controller"
 
 	computedomainv1beta1 "github.com/NVIDIA/k8s-dra-driver-gpu/api/nvidia.com/resource/v1beta1"
 	"github.com/run-ai/fake-gpu-operator/pkg/compute-domain/consts"
@@ -68,7 +70,7 @@ func TestComputeDomainReconciler_Reconcile(t *testing.T) {
 				WithObjects(objs...).
 				Build()
 
-			reconciler := &ComputeDomainReconciler{
+			reconciler := &controller.ComputeDomainReconciler{
 				Client: fakeClient,
 				Scheme: scheme,
 			}
@@ -140,7 +142,7 @@ func TestComputeDomainReconciler_Reconcile_NotFound(t *testing.T) {
 		WithScheme(scheme).
 		Build()
 
-	reconciler := &ComputeDomainReconciler{
+	reconciler := &controller.ComputeDomainReconciler{
 		Client: fakeClient,
 		Scheme: scheme,
 	}

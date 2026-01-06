@@ -32,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	controller "github.com/run-ai/fake-gpu-operator/internal/compute-domain-controller"
+
 	computedomainv1beta1 "github.com/NVIDIA/k8s-dra-driver-gpu/api/nvidia.com/resource/v1beta1"
 )
 
@@ -87,7 +89,7 @@ func run(ctx context.Context, options *Options) error {
 		return fmt.Errorf("failed to create controller manager: %w", err)
 	}
 
-	reconciler := &ComputeDomainReconciler{
+	reconciler := &controller.ComputeDomainReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}

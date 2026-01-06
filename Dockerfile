@@ -45,6 +45,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH
 FROM common-builder AS compute-domain-controller-builder
 COPY ./cmd/compute-domain-controller/ ./cmd/compute-domain-controller/
 COPY ./pkg/compute-domain/ ./pkg/compute-domain/
+COPY ./internal/compute-domain-controller/ ./internal/compute-domain-controller/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=compute-domain-controller
 
 FROM common-builder AS dra-plugin-gpu-builder
