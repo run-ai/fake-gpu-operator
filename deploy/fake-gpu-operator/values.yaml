@@ -191,3 +191,17 @@ computeDomainController:
     limits:
       cpu: "200m"
       memory: "400Mi"
+
+computeDomainDevicePlugin:
+  enabled: true
+  image:
+    pullPolicy: Always
+    repository: ghcr.io/run-ai/fake-gpu-operator/compute-domain-device-plugin
+    tag: ""
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "100Mi"
+    limits:
+      cpu: "200m"
+      memory: "200Mi"
