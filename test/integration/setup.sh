@@ -53,7 +53,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     echo "Loading images into kind cluster..."
     DOCKER_REPO_BASE="${DOCKER_REPO_BASE:-ghcr.io/run-ai/fake-gpu-operator}"
-    for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-dra-plugin compute-domain-controller; do
+    for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-dra-plugin compute-domain-controller compute-domain-device-plugin; do
         IMAGE="${DOCKER_REPO_BASE}/${component}:${DOCKER_TAG}"
         echo "Loading ${IMAGE}..."
         kind load docker-image \
@@ -82,7 +82,8 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         --set statusExporter.image.tag="${DOCKER_TAG}" \
         --set topologyServer.image.tag="${DOCKER_TAG}" \
         --set kwokDraPlugin.image.tag="${DOCKER_TAG}" \
-        --set computeDomainController.image.tag="${DOCKER_TAG}"
+        --set computeDomainController.image.tag="${DOCKER_TAG}" \
+        --set computeDomainDevicePlugin.image.tag="${DOCKER_TAG}"
 
     echo "Waiting for status-updater pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app=status-updater -n gpu-operator --timeout=120s
@@ -98,6 +99,9 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     echo "Waiting for kwok-dra-plugin pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app=kwok-dra-plugin -n gpu-operator --timeout=120s
+
+    echo "Waiting for compute-domain-device-plugin daemonset to be ready..."
+    kubectl wait --for=condition=Ready pod -l app=compute-domain-device-plugin -n gpu-operator --timeout=120s
 
     # Install KWOK controller for simulated nodes
     echo "Installing KWOK controller..."
