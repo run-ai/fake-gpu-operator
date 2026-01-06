@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	dcgmExporterLabelKey = "nvidia.com/gpu.deploy.dcgm-exporter"
-	devicePluginLabelKey = "nvidia.com/gpu.deploy.device-plugin"
-	draPluginGpuLabelKey = "nvidia.com/gpu.deploy.dra-plugin-gpu"
+	dcgmExporterLabelKey              = "nvidia.com/gpu.deploy.dcgm-exporter"
+	devicePluginLabelKey              = "nvidia.com/gpu.deploy.device-plugin"
+	draPluginGpuLabelKey              = "nvidia.com/gpu.deploy.dra-plugin-gpu"
+	computeDomainDevicePluginLabelKey = "nvidia.com/gpu.deploy.compute-domain-device-plugin"
 )
 
 // labelNode labels the node with required labels for the fake-gpu-operator to function.
@@ -25,6 +26,7 @@ func (p *NodeHandler) labelNode(node *v1.Node) error {
 	if !isFakeNode(node) {
 		labels[devicePluginLabelKey] = "true"
 		labels[draPluginGpuLabelKey] = "true"
+		labels[computeDomainDevicePluginLabelKey] = "true"
 	}
 
 	err := p.patchNodeLabels(node, labels)
@@ -38,9 +40,10 @@ func (p *NodeHandler) labelNode(node *v1.Node) error {
 // unlabelNode removes the labels from the node that were added by the fake-gpu-operator.
 func (p *NodeHandler) unlabelNode(node *v1.Node) error {
 	err := p.patchNodeLabels(node, map[string]interface{}{
-		dcgmExporterLabelKey: nil,
-		devicePluginLabelKey: nil,
-		draPluginGpuLabelKey: nil,
+		dcgmExporterLabelKey:              nil,
+		devicePluginLabelKey:              nil,
+		draPluginGpuLabelKey:              nil,
+		computeDomainDevicePluginLabelKey: nil,
 	})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to unlabel node %s: %w", node.Name, err)
