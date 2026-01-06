@@ -38,6 +38,16 @@ const (
 	DefaultComputeDomainAllocationMode = "Single"
 )
 
+// isOwnedBy checks if the ResourceClaimTemplate is owned by the given ComputeDomain
+func isOwnedBy(template *resourceapi.ResourceClaimTemplate, domain *computedomainv1beta1.ComputeDomain) bool {
+	for _, owner := range template.OwnerReferences {
+		if owner.Name == domain.Name && owner.Kind == "ComputeDomain" {
+			return true
+		}
+	}
+	return false
+}
+
 // ComputeDomainReconciler watches ComputeDomain resources and keeps the
 // associated ResourceClaimTemplates in sync.
 type ComputeDomainReconciler struct {
@@ -135,7 +145,7 @@ func (r *ComputeDomainReconciler) ensureTemplate(
 				"resource.nvidia.com/computeDomainTarget": templateType,
 			},
 			Finalizers: []string{
-				"resource.nvidia.com/computeDomain",
+				consts.ComputeDomainFinalizer,
 			},
 		},
 		Spec: resourceapi.ResourceClaimTemplateSpec{
@@ -186,12 +196,28 @@ func (r *ComputeDomainReconciler) ensureTemplate(
 }
 
 func (r *ComputeDomainReconciler) deleteResourceClaimTemplates(ctx context.Context, domain *computedomainv1beta1.ComputeDomain) error {
-	template := &resourceapi.ResourceClaimTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      domain.Name,
-			Namespace: domain.Namespace,
-		},
+	template := &resourceapi.ResourceClaimTemplate{}
+	key := client.ObjectKey{Namespace: domain.Namespace, Name: domain.Name}
+	if err := r.Get(ctx, key, template); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
 	}
+
+	if !isOwnedBy(template, domain) {
+		return nil
+	}
+
+	// Remove our finalizer
+	if controllerutil.ContainsFinalizer(template, consts.ComputeDomainFinalizer) {
+		controllerutil.RemoveFinalizer(template, consts.ComputeDomainFinalizer)
+		if err := r.Update(ctx, template); err != nil {
+			return err
+		}
+	}
+
+	// Now delete the template
 	if err := r.Delete(ctx, template); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
