@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	nvidiaversioned "github.com/NVIDIA/k8s-dra-driver-gpu/pkg/nvidia.com/clientset/versioned"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -32,8 +33,9 @@ const (
 )
 
 var (
-	kubeClient kubernetes.Interface
-	restConfig *rest.Config
+	kubeClient   kubernetes.Interface
+	restConfig   *rest.Config
+	nvidiaClient nvidiaversioned.Interface
 )
 
 func TestIntegration(t *testing.T) {
@@ -50,6 +52,10 @@ var _ = BeforeSuite(func() {
 
 	// Create Kubernetes client
 	kubeClient, err = kubernetes.NewForConfig(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Create NVIDIA client
+	nvidiaClient, err = nvidiaversioned.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	// Verify cluster is accessible
