@@ -68,18 +68,18 @@ func (r *ComputeDomainReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if domain.DeletionTimestamp.IsZero() {
-		if err := r.ensureFinalizer(ctx, domain); err != nil {
-			return ctrl.Result{}, err
-		}
-		if err := r.ensureResourceClaimTemplates(ctx, domain); err != nil {
-			return ctrl.Result{}, err
-		}
-	} else {
+	if !domain.DeletionTimestamp.IsZero() {
 		if err := r.handleDeletion(ctx, domain); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
+	}
+
+	if err := r.ensureFinalizer(ctx, domain); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.ensureResourceClaimTemplates(ctx, domain); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	logger.V(4).Info("reconciled ComputeDomain", "namespace", domain.Namespace, "name", domain.Name)

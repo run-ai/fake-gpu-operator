@@ -4,7 +4,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: compute-domain-controller-role
-  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups: ["resource.k8s.io"]
   resources: ["resourceclaims"]

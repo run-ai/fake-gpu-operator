@@ -11,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	computedomainv1beta1 "github.com/NVIDIA/k8s-dra-driver-gpu/api/nvidia.com/resource/v1beta1"
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
@@ -85,7 +86,10 @@ func (app *ComputeDomainApp) runController(ctx context.Context) error {
 	cfg := ctrl.GetConfigOrDie()
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:                 scheme,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: app.config.MetricsBindAddress,
+		},
 		HealthProbeBindAddress: app.config.HealthProbeAddress,
 		LeaderElection:         app.config.LeaderElection,
 		LeaderElectionID:       "fake-compute-domain-controller",
