@@ -53,6 +53,10 @@ gpuOperator:
 runtimeClass:
   enabled: false
 
+computeDomainController:
+  image:
+    pullPolicy: Never
+
 # GPU topology configuration
 # Status-updater will use this to create topology ConfigMaps
 topology:

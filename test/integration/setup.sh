@@ -53,7 +53,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     echo "Loading images into kind cluster..."
     DOCKER_REPO_BASE="${DOCKER_REPO_BASE:-ghcr.io/run-ai/fake-gpu-operator}"
-    for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-dra-plugin; do
+    for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-dra-plugin compute-domain-controller; do
         IMAGE="${DOCKER_REPO_BASE}/${component}:${DOCKER_TAG}"
         echo "Loading ${IMAGE}..."
         kind load docker-image \
@@ -81,7 +81,8 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         --set statusUpdater.image.tag="${DOCKER_TAG}" \
         --set statusExporter.image.tag="${DOCKER_TAG}" \
         --set topologyServer.image.tag="${DOCKER_TAG}" \
-        --set kwokDraPlugin.image.tag="${DOCKER_TAG}"
+        --set kwokDraPlugin.image.tag="${DOCKER_TAG}" \
+        --set computeDomainController.image.tag="${DOCKER_TAG}"
 
     echo "Waiting for status-updater pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app=status-updater -n gpu-operator --timeout=120s
