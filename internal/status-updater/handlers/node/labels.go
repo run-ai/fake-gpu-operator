@@ -15,7 +15,7 @@ const (
 	dcgmExporterLabelKey              = "nvidia.com/gpu.deploy.dcgm-exporter"
 	devicePluginLabelKey              = "nvidia.com/gpu.deploy.device-plugin"
 	draPluginGpuLabelKey              = "nvidia.com/gpu.deploy.dra-plugin-gpu"
-	computeDomainDevicePluginLabelKey = "nvidia.com/gpu.deploy.compute-domain-device-plugin"
+	computeDomainDevicePluginLabelKey = "nvidia.com/gpu.deploy.compute-domain-dra-plugin"
 )
 
 // labelNode labels the node with required labels for the fake-gpu-operator to function.

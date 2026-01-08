@@ -196,7 +196,7 @@ computeDomainDevicePlugin:
   enabled: true
   image:
     pullPolicy: Always
-    repository: ghcr.io/run-ai/fake-gpu-operator/compute-domain-device-plugin
+    repository: ghcr.io/run-ai/fake-gpu-operator/compute-domain-dra-plugin
     tag: ""
   resources:
     requests:

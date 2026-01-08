@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package computedomaindraplugin
 
 import (
 	"encoding/json"
@@ -69,6 +69,3 @@ func (cp *ComputeDomainCheckpoint) VerifyChecksum() error {
 	}
 	return ck.Verify(out)
 }
-
-
-

@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: fake-compute-domain-device-plugin
+  name: fake-compute-domain-dra-plugin
 rules:
   - apiGroups:
       - ""

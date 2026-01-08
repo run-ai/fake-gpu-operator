@@ -1,30 +1,30 @@
-{{- define "fake-gpu-operator.compute-domain-device-plugin.common.metadata.labels" -}}
-app: compute-domain-device-plugin
+{{- define "fake-gpu-operator.compute-domain-dra-plugin.common.metadata.labels" -}}
+app: compute-domain-dra-plugin
 {{- end -}}
 
-{{- define "fake-gpu-operator.compute-domain-device-plugin.common.metadata.annotations" -}}
+{{- define "fake-gpu-operator.compute-domain-dra-plugin.common.metadata.annotations" -}}
 openshift.io/scc: hostmount-anyuid
 {{- end -}}
 
-{{- define "fake-gpu-operator.compute-domain-device-plugin.common.metadata.name" -}}
-compute-domain-device-plugin
+{{- define "fake-gpu-operator.compute-domain-dra-plugin.common.metadata.name" -}}
+compute-domain-dra-plugin
 {{- end -}}
 
-{{- define "fake-gpu-operator.compute-domain-device-plugin.common.podSelector" }}
+{{- define "fake-gpu-operator.compute-domain-dra-plugin.common.podSelector" }}
 matchLabels:
-  app: compute-domain-device-plugin
-  component: compute-domain-device-plugin
+  app: compute-domain-dra-plugin
+  component: compute-domain-dra-plugin
 {{- end }}
 
-{{- define "fake-gpu-operator.compute-domain-device-plugin.common.podTemplate.metadata" }}
+{{- define "fake-gpu-operator.compute-domain-dra-plugin.common.podTemplate.metadata" }}
 annotations:
   checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
 labels:
-  app: compute-domain-device-plugin
-  component: compute-domain-device-plugin
+  app: compute-domain-dra-plugin
+  component: compute-domain-dra-plugin
 {{- end }}
 
-{{- define "fake-gpu-operator.compute-domain-device-plugin.common.podTemplate.spec" }}
+{{- define "fake-gpu-operator.compute-domain-dra-plugin.common.podTemplate.spec" }}
 containers:
   - image: "{{ .Values.computeDomainDevicePlugin.image.repository }}:{{ .Values.computeDomainDevicePlugin.image.tag | default .Chart.AppVersion }}"
     imagePullPolicy: "{{ .Values.computeDomainDevicePlugin.image.pullPolicy }}"
@@ -41,7 +41,7 @@ containers:
         value: "/var/lib/kubelet/plugins_registry"
       - name: KUBELET_PLUGINS_DIRECTORY_PATH
         value: "/var/lib/kubelet/plugins"
-    name: compute-domain-device-plugin-ctr
+    name: compute-domain-dra-plugin-ctr
     securityContext:
       privileged: true
     terminationMessagePath: /dev/termination-log
@@ -59,7 +59,7 @@ containers:
         name: cdi
 dnsPolicy: ClusterFirst
 restartPolicy: Always
-serviceAccountName: compute-domain-device-plugin
+serviceAccountName: compute-domain-dra-plugin
 terminationGracePeriodSeconds: 30
 tolerations:
   - effect: NoSchedule

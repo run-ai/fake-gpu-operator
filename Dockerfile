@@ -59,10 +59,11 @@ COPY ./internal/status-updater/ ./internal/status-updater/
 COPY ./internal/kwok-dra-plugin/ ./internal/kwok-dra-plugin/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=kwok-dra-plugin
 
-FROM common-builder AS compute-domain-device-plugin-builder
-COPY ./cmd/compute-domain-device-plugin/ ./cmd/compute-domain-device-plugin/
+FROM common-builder AS compute-domain-dra-plugin-builder
+COPY ./cmd/compute-domain-dra-plugin/ ./cmd/compute-domain-dra-plugin/
+COPY ./internal/compute-domain-dra-plugin/ ./internal/compute-domain-dra-plugin/
 COPY ./pkg/compute-domain/ ./pkg/compute-domain/
-RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=compute-domain-device-plugin
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=compute-domain-dra-plugin
 
 FROM common-builder AS preloader-builder 
 COPY ./cmd/preloader/ ./cmd/preloader/
@@ -117,6 +118,6 @@ FROM ubuntu AS compute-domain-controller
 COPY --from=compute-domain-controller-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/compute-domain-controller /bin/
 ENTRYPOINT ["/bin/compute-domain-controller"]
 
-FROM ubuntu AS compute-domain-device-plugin
-COPY --from=compute-domain-device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/compute-domain-device-plugin /bin/
-ENTRYPOINT ["/bin/compute-domain-device-plugin"]
+FROM ubuntu AS compute-domain-dra-plugin
+COPY --from=compute-domain-dra-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/compute-domain-dra-plugin /bin/
+ENTRYPOINT ["/bin/compute-domain-dra-plugin"]

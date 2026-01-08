@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package computedomaindraplugin
 
 import (
 	"encoding/json"
@@ -114,7 +114,7 @@ func TestComputeDomainCheckpoint_VerifyChecksum_Invalid(t *testing.T) {
 
 func TestComputeDomainCheckpointV1_Domains(t *testing.T) {
 	checkpoint := newComputeDomainCheckpoint()
-	
+
 	domainInfo := &DomainInfo{
 		DomainID:          "test-domain-id",
 		ComputeDomainName: "test-domain",
@@ -138,4 +138,3 @@ func TestComputeDomainCheckpointV1_Domains(t *testing.T) {
 	assert.Contains(t, unmarshaled.V1.Domains, "test-domain-id")
 	assert.Equal(t, domainInfo.DomainID, unmarshaled.V1.Domains["test-domain-id"].DomainID)
 }
-
