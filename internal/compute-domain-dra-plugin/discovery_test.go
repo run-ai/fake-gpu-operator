@@ -28,7 +28,7 @@ import (
 func TestEnumerateComputeDomainDevices(t *testing.T) {
 	devices, err := enumerateComputeDomainDevices()
 	require.NoError(t, err)
-	expectedChannels := maxChannelID - minChannelID + 1
+	expectedChannels := maxChannelID
 	assert.Len(t, devices, expectedChannels)
 
 	device, exists := devices[deviceNameForChannel(0)]
@@ -48,13 +48,6 @@ func TestEnumerateComputeDomainDevices(t *testing.T) {
 	assert.Equal(t, int64(0), *idAttr.IntValue)
 }
 
-func TestEnumerateChannelIDs(t *testing.T) {
-	ids := enumerateChannelIDs()
-	assert.Equal(t, maxChannelID-minChannelID+1, len(ids))
-	assert.Equal(t, int64(minChannelID), ids[0])
-	assert.Equal(t, int64(maxChannelID), ids[len(ids)-1])
-}
-
 func TestAllocatableComputeDomainDevices(t *testing.T) {
 	devices := make(AllocatableComputeDomainDevices)
 	assert.NotNil(t, devices)
@@ -67,28 +60,4 @@ func TestAllocatableComputeDomainDevices(t *testing.T) {
 
 	assert.Len(t, devices, 1)
 	assert.Equal(t, device, devices["test-domain"])
-}
-
-func TestStringPtr(t *testing.T) {
-	tests := map[string]struct {
-		input    string
-		expected *string
-	}{
-		"empty string": {
-			input:    "",
-			expected: stringPtr(""),
-		},
-		"non-empty string": {
-			input:    "test",
-			expected: stringPtr("test"),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			result := stringPtr(test.input)
-			assert.NotNil(t, result)
-			assert.Equal(t, test.input, *result)
-		})
-	}
 }
