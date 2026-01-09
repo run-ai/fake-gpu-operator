@@ -19,6 +19,7 @@ package computedomaindraplugin
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -162,7 +163,7 @@ func (s *ComputeDomainState) Prepare(claim *resourceapi.ResourceClaim) (ComputeD
 		return nil, fmt.Errorf("unable to determine device class from claim")
 	}
 
-	computeDomainID := s.extractComputeDomainID(claim)
+	computeDomainID, isAllAllocation := s.extractComputeDomainParams(claim)
 	if computeDomainID == "" {
 		return nil, fmt.Errorf("unable to extract ComputeDomain ID from claim")
 	}
@@ -179,16 +180,32 @@ func (s *ComputeDomainState) Prepare(claim *resourceapi.ResourceClaim) (ComputeD
 		return nil, fmt.Errorf("failed to create CDI device: %w", err)
 	}
 
-	preparedDevice := &ComputeDomainPreparedDevice{
-		Device: drapbv1.Device{
-			RequestNames: []string{"channel"},
-			PoolName:     claim.Namespace,
-			DeviceName:   deviceNameForChannel(0),
-		},
-		ContainerEdits: cdiEdits,
+	var preparedDevices ComputeDomainPreparedDevices
+
+	if isAllAllocation {
+		for name := range s.allocatable {
+			preparedDevice := &ComputeDomainPreparedDevice{
+				Device: drapbv1.Device{
+					RequestNames: []string{"channel"},
+					PoolName:     claim.Namespace,
+					DeviceName:   name,
+				},
+				ContainerEdits: cdiEdits,
+			}
+			preparedDevices = append(preparedDevices, preparedDevice)
+		}
+	} else {
+		preparedDevice := &ComputeDomainPreparedDevice{
+			Device: drapbv1.Device{
+				RequestNames: []string{"channel"},
+				PoolName:     claim.Namespace,
+				DeviceName:   deviceNameForChannel(0),
+			},
+			ContainerEdits: cdiEdits,
+		}
+		preparedDevices = ComputeDomainPreparedDevices{preparedDevice}
 	}
 
-	preparedDevices := ComputeDomainPreparedDevices{preparedDevice}
 	if err := s.ensureClaimCDIArtifacts(claimUID, preparedDevices); err != nil {
 		return nil, err
 	}
@@ -257,27 +274,30 @@ func (s *ComputeDomainState) getDeviceClassName(claim *resourceapi.ResourceClaim
 	return ""
 }
 
-func (s *ComputeDomainState) extractComputeDomainID(claim *resourceapi.ResourceClaim) string {
-	// Extract domainID from device config parameters
+func (s *ComputeDomainState) extractComputeDomainParams(claim *resourceapi.ResourceClaim) (domainID string, isAllAllocation bool) {
 	for _, config := range claim.Spec.Devices.Config {
 		if config.Opaque != nil && config.Opaque.Driver == consts.ComputeDomainDriverName {
-			// Parse the JSON parameters to extract domainID
-			var params map[string]interface{}
+			var params map[string]any
 			if err := json.Unmarshal(config.Opaque.Parameters.Raw, &params); err == nil {
-				if domainID, ok := params["domainID"].(string); ok {
-					return domainID
+				if id, ok := params["domainID"].(string); ok {
+					domainID = id
 				}
+				if allocationMode, ok := params["allocationMode"].(string); ok {
+					isAllAllocation = allocationMode == "All"
+				}
+				// If we found the driver config, we don't need to check others
+				break
 			}
 		}
 	}
-	return ""
+	return domainID, isAllAllocation
 }
 
 func (s *ComputeDomainState) getOrCreateDomain(domains map[string]*DomainInfo, computeDomainID string, claim *resourceapi.ResourceClaim) string {
 	// Check if domain already exists
 	if domainInfo, exists := domains[computeDomainID]; exists {
 		domainInfo.Claims = append(domainInfo.Claims, string(claim.UID))
-		if !contains(domainInfo.Nodes, s.nodeName) {
+		if !slices.Contains(domainInfo.Nodes, s.nodeName) {
 			domainInfo.Nodes = append(domainInfo.Nodes, s.nodeName)
 		}
 		return computeDomainID
@@ -296,15 +316,6 @@ func (s *ComputeDomainState) getOrCreateDomain(domains map[string]*DomainInfo, c
 
 	domains[computeDomainID] = domainInfo
 	return computeDomainID
-}
-
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *ComputeDomainState) ensureClaimCDIArtifacts(claimUID string, devices ComputeDomainPreparedDevices) error {
