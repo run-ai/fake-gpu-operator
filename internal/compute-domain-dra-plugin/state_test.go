@@ -73,21 +73,11 @@ func TestComputeDomainPreparedDevicesGetDevices(t *testing.T) {
 
 func TestDomainInfo(t *testing.T) {
 	domainInfo := &DomainInfo{
-		DomainID:          "test-domain-id",
-		ComputeDomainName: "test-domain",
-		ComputeDomainUID:  types.UID("test-uid"),
-		Nodes:             []string{"node1", "node2"},
-		Pods: []types.NamespacedName{
-			{Name: "pod1", Namespace: "default"},
-			{Name: "pod2", Namespace: "default"},
-		},
-		Claims: []string{"claim-uid-1", "claim-uid-2"},
+		DomainID: "test-domain-id",
+		Claims:   []string{"claim-uid-1", "claim-uid-2"},
 	}
 
 	assert.Equal(t, "test-domain-id", domainInfo.DomainID)
-	assert.Equal(t, "test-domain", domainInfo.ComputeDomainName)
-	assert.Len(t, domainInfo.Nodes, 2)
-	assert.Len(t, domainInfo.Pods, 2)
 	assert.Len(t, domainInfo.Claims, 2)
 }
 

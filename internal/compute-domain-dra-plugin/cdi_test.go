@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"k8s.io/apimachinery/pkg/types"
 	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1beta1"
 
 	cdiparser "tags.cncf.io/container-device-interface/pkg/parser"
@@ -209,14 +208,8 @@ func TestComputeDomainCDIHandler_CreateDomainCDIDevice(t *testing.T) {
 	require.NoError(t, err)
 
 	domainInfo := &DomainInfo{
-		DomainID:          "test-domain-id",
-		ComputeDomainName: "test-domain",
-		ComputeDomainUID:  types.UID("test-uid"),
-		Nodes:             []string{"node1", "node2"},
-		Pods: []types.NamespacedName{
-			{Name: "pod1", Namespace: "default"},
-		},
-		Claims: []string{"claim-uid"},
+		DomainID: "test-domain-id",
+		Claims:   []string{"claim-uid"},
 	}
 
 	edits, err := handler.CreateDomainCDIDevice(domainInfo)

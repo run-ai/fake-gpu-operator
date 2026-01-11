@@ -19,12 +19,10 @@ package computedomaindraplugin
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"k8s.io/apimachinery/pkg/types"
 	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1beta1"
 	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager/checksum"
 )
@@ -116,13 +114,8 @@ func TestComputeDomainCheckpointV1_Domains(t *testing.T) {
 	checkpoint := newComputeDomainCheckpoint()
 
 	domainInfo := &DomainInfo{
-		DomainID:          "test-domain-id",
-		ComputeDomainName: "test-domain",
-		ComputeDomainUID:  types.UID("test-uid"),
-		Nodes:             []string{"node1"},
-		Pods:              []types.NamespacedName{{Name: "pod1", Namespace: "default"}},
-		Claims:            []string{"claim-uid"},
-		CreatedAt:         time.Now(),
+		DomainID: "test-domain-id",
+		Claims:   []string{"claim-uid"},
 	}
 
 	checkpoint.V1.Domains["test-domain-id"] = domainInfo

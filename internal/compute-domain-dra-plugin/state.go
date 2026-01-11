@@ -19,12 +19,10 @@ package computedomaindraplugin
 import (
 	"encoding/json"
 	"fmt"
-	"slices"
 	"sync"
 	"time"
 
 	resourceapi "k8s.io/api/resource/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1beta1"
 	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager"
@@ -51,13 +49,9 @@ func (pds ComputeDomainPreparedDevices) GetDevices() []*drapbv1.Device {
 }
 
 type DomainInfo struct {
-	DomainID          string
-	ComputeDomainName string
-	ComputeDomainUID  types.UID
-	Nodes             []string
-	Pods              []types.NamespacedName
-	Claims            []string // ResourceClaim UIDs
-	CreatedAt         time.Time
+	DomainID  string
+	Claims    []string // ResourceClaim UIDs
+	CreatedAt time.Time
 }
 
 type ComputeDomainState struct {
@@ -242,7 +236,7 @@ func (s *ComputeDomainState) Unprepare(claimUID string) error {
 		for i, claim := range domainInfo.Claims {
 			if claim == claimUID {
 				domainInfo.Claims = append(domainInfo.Claims[:i], domainInfo.Claims[i+1:]...)
-				if len(domainInfo.Claims) == 0 && len(domainInfo.Pods) == 0 {
+				if len(domainInfo.Claims) == 0 {
 					delete(domains, domainID)
 				}
 				break
@@ -297,21 +291,14 @@ func (s *ComputeDomainState) getOrCreateDomain(domains map[string]*DomainInfo, c
 	// Check if domain already exists
 	if domainInfo, exists := domains[computeDomainID]; exists {
 		domainInfo.Claims = append(domainInfo.Claims, string(claim.UID))
-		if !slices.Contains(domainInfo.Nodes, s.nodeName) {
-			domainInfo.Nodes = append(domainInfo.Nodes, s.nodeName)
-		}
 		return computeDomainID
 	}
 
 	// Create new domain
 	domainInfo := &DomainInfo{
-		DomainID:          computeDomainID,
-		ComputeDomainName: computeDomainID, // Use domainID as name
-		ComputeDomainUID:  types.UID(computeDomainID),
-		Nodes:             []string{s.nodeName},
-		Pods:              []types.NamespacedName{},
-		Claims:            []string{string(claim.UID)},
-		CreatedAt:         time.Now(),
+		DomainID:  computeDomainID,
+		Claims:    []string{string(claim.UID)},
+		CreatedAt: time.Now(),
 	}
 
 	domains[computeDomainID] = domainInfo

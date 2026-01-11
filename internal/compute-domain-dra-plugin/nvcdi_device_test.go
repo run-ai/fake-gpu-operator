@@ -7,8 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestComputeDomainNvcdiDevice(t *testing.T) {
@@ -19,9 +17,8 @@ func TestComputeDomainNvcdiDevice(t *testing.T) {
 	require.NoError(t, err)
 
 	info := &DomainInfo{
-		DomainID:          "domain-123",
-		ComputeDomainName: "demo",
-		ComputeDomainUID:  types.UID("uid-123"),
+		DomainID: "domain-123",
+		Claims:   []string{},
 	}
 
 	edits, err := device.ContainerEdits(info)
