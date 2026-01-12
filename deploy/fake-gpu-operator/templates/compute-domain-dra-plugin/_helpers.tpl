@@ -14,7 +14,7 @@ matchLabels:
 
 {{- define "fake-gpu-operator.compute-domain-dra-plugin.common.podTemplate.metadata" }}
 annotations:
-  checksum/topology: {{ include (print $.Template.BasePath "/topology-cm.yml") . | sha256sum }}
+  openshift.io/scc: hostmount-anyuid
 labels:
   app: compute-domain-dra-plugin
   component: compute-domain-dra-plugin

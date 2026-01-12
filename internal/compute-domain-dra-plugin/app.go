@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 The Kubernetes Authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package computedomaindraplugin
 
 import (
@@ -35,6 +19,10 @@ import (
 	"sigs.k8s.io/dra-example-driver/pkg/flags"
 )
 
+const (
+	DriverPluginCheckpointFile = "computedomain-checkpoint.json"
+)
+
 type Flags struct {
 	kubeClientConfig flags.KubeClientConfig
 	loggingConfig    *flags.LoggingConfig
@@ -43,6 +31,7 @@ type Flags struct {
 	cdiRoot                       string
 	kubeletRegistrarDirectoryPath string
 	kubeletPluginsDirectoryPath   string
+	healthcheckPort               int
 }
 
 type Config struct {
@@ -60,6 +49,7 @@ type AppConfig struct {
 	CDIRoot                       string `mapstructure:"CDI_ROOT"`
 	KubeletRegistrarDirectoryPath string `mapstructure:"KUBELET_REGISTRAR_DIRECTORY_PATH"`
 	KubeletPluginsDirectoryPath   string `mapstructure:"KUBELET_PLUGINS_DIRECTORY_PATH"`
+	HealthcheckPort               int    `mapstructure:"HEALTHCHECK_PORT"`
 }
 
 type ComputeDomainDRAPluginApp struct {
@@ -81,6 +71,7 @@ func (app *ComputeDomainDRAPluginApp) GetConfig() interface{} {
 			CDIRoot:                       "/etc/cdi",
 			KubeletRegistrarDirectoryPath: kubeletplugin.KubeletRegistryDir,
 			KubeletPluginsDirectoryPath:   kubeletplugin.KubeletPluginsDir,
+			HealthcheckPort:               -1,
 		}
 	}
 	return app.config
@@ -131,6 +122,7 @@ func (app *ComputeDomainDRAPluginApp) runPlugin(ctx context.Context) error {
 			cdiRoot:                       app.config.CDIRoot,
 			kubeletRegistrarDirectoryPath: app.config.KubeletRegistrarDirectoryPath,
 			kubeletPluginsDirectoryPath:   app.config.KubeletPluginsDirectoryPath,
+			healthcheckPort:               app.config.HealthcheckPort,
 		},
 		coreclient: clientSets.Core,
 	}
