@@ -48,7 +48,7 @@ func TestEnumerateComputeDomainDevices(t *testing.T) {
 }
 
 func TestAllocatableComputeDomainDevices(t *testing.T) {
-	devices := make(AllocatableComputeDomainDevices)
+	devices := make(allocatableComputeDomainDevices)
 	assert.NotNil(t, devices)
 	assert.Len(t, devices, 0)
 

@@ -35,7 +35,7 @@ import (
 type computeDomainDriver struct {
 	client      coreclientset.Interface
 	helper      *kubeletplugin.Helper
-	allocatable AllocatableComputeDomainDevices
+	allocatable allocatableComputeDomainDevices
 	cancelCtx   func(error)
 }
 

@@ -27,10 +27,10 @@ const (
 	maxChannelID = 2048
 )
 
-type AllocatableComputeDomainDevices map[string]resourceapi.Device
+type allocatableComputeDomainDevices map[string]resourceapi.Device
 
-func enumerateComputeDomainDevices() (AllocatableComputeDomainDevices, error) {
-	alldevices := make(AllocatableComputeDomainDevices)
+func enumerateComputeDomainDevices() (allocatableComputeDomainDevices, error) {
+	alldevices := make(allocatableComputeDomainDevices)
 
 	for channelID := range maxChannelID {
 		device := newChannelDevice(channelID)
