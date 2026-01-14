@@ -194,6 +194,7 @@ computeDomainController:
 
 computeDomainDraPlugin:
   enabled: false
+  healthcheckPort: 8082
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/compute-domain-dra-plugin
