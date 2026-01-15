@@ -76,7 +76,7 @@ func TestComputeDomainReconciler_Reconcile(t *testing.T) {
 						Name:      "test-domain",
 						Namespace: "default",
 						Labels: map[string]string{
-							"resource.nvidia.com/computeDomain": "test-domain",
+							consts.ComputeDomainTemplateLabel: "test-domain",
 						},
 						Finalizers: []string{consts.ComputeDomainFinalizer},
 						OwnerReferences: []metav1.OwnerReference{
@@ -104,6 +104,7 @@ func TestComputeDomainReconciler_Reconcile(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(objs...).
+				WithStatusSubresource(test.computeDomain).
 				Build()
 
 			reconciler := &controller.ComputeDomainReconciler{
@@ -143,10 +144,10 @@ func TestComputeDomainReconciler_Reconcile(t *testing.T) {
 				assert.Equal(t, int64(1), workloadTemplate.Spec.Spec.Devices.Requests[0].Exactly.Count)
 				assert.Equal(t, consts.ComputeDomainWorkloadDeviceClass, workloadTemplate.Spec.Spec.Devices.Requests[0].Exactly.DeviceClassName)
 				// Check labels
-				assert.Equal(t, test.computeDomain.GetName(), workloadTemplate.Labels["resource.nvidia.com/computeDomain"])
-				assert.Equal(t, "workload", workloadTemplate.Labels["resource.nvidia.com/computeDomainTarget"])
+				assert.Equal(t, test.computeDomain.GetName(), workloadTemplate.Labels[consts.ComputeDomainTemplateLabel])
+				assert.Equal(t, "workload", workloadTemplate.Labels[consts.ComputeDomainTemplateTargetLabel])
 				// Check labels copied into generated claims
-				assert.Equal(t, test.computeDomain.GetName(), workloadTemplate.Spec.Labels["nvidia.com/computeDomain"])
+				assert.Equal(t, test.computeDomain.GetName(), workloadTemplate.Spec.Labels[consts.ComputeDomainClaimLabel])
 				// Check finalizers
 				assert.Contains(t, workloadTemplate.Finalizers, consts.ComputeDomainFinalizer)
 			} else {
@@ -200,4 +201,244 @@ func TestComputeDomainReconciler_Reconcile_NotFound(t *testing.T) {
 	result, err := reconciler.Reconcile(context.Background(), req)
 	assert.NoError(t, err)
 	assert.Equal(t, ctrl.Result{}, result)
+}
+
+func TestComputeDomainReconciler_StatusUpdate(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = resourceapi.AddToScheme(scheme)
+	_ = computedomainv1beta1.AddToScheme(scheme)
+
+	tests := map[string]struct {
+		computeDomain  *computedomainv1beta1.ComputeDomain
+		resourceClaims []client.Object
+		expectedStatus string
+		expectedNodes  []string
+	}{
+		"status Ready when numNodes is 0 with no claims": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 0,
+				},
+			},
+			resourceClaims: nil,
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusReady,
+			expectedNodes:  []string{},
+		},
+		"status Ready when numNodes is 0 with allocated claims": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 0,
+				},
+			},
+			resourceClaims: []client.Object{
+				createAllocatedResourceClaim("claim-1", "default", "test-domain", "node-1"),
+			},
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusReady,
+			expectedNodes:  []string{"node-1"},
+		},
+		"status NotReady when numNodes not reached": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 2,
+				},
+			},
+			resourceClaims: []client.Object{
+				createAllocatedResourceClaim("claim-1", "default", "test-domain", "node-1"),
+			},
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusNotReady,
+			expectedNodes:  []string{"node-1"},
+		},
+		"status Ready when numNodes reached": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 2,
+				},
+			},
+			resourceClaims: []client.Object{
+				createAllocatedResourceClaim("claim-1", "default", "test-domain", "node-1"),
+				createAllocatedResourceClaim("claim-2", "default", "test-domain", "node-2"),
+			},
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusReady,
+			expectedNodes:  []string{"node-1", "node-2"},
+		},
+		"status Ready when numNodes exceeded": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 2,
+				},
+			},
+			resourceClaims: []client.Object{
+				createAllocatedResourceClaim("claim-1", "default", "test-domain", "node-1"),
+				createAllocatedResourceClaim("claim-2", "default", "test-domain", "node-2"),
+				createAllocatedResourceClaim("claim-3", "default", "test-domain", "node-3"),
+			},
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusReady,
+			expectedNodes:  []string{"node-1", "node-2", "node-3"},
+		},
+		"multiple claims on same node counted once": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 2,
+				},
+			},
+			resourceClaims: []client.Object{
+				createAllocatedResourceClaim("claim-1", "default", "test-domain", "node-1"),
+				createAllocatedResourceClaim("claim-2", "default", "test-domain", "node-1"),
+			},
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusNotReady,
+			expectedNodes:  []string{"node-1"},
+		},
+		"unallocated claims are ignored": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 1,
+				},
+			},
+			resourceClaims: []client.Object{
+				createUnallocatedResourceClaim("claim-1", "default", "test-domain"),
+			},
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusNotReady,
+			expectedNodes:  []string{},
+		},
+		"claims from different domain are ignored": {
+			computeDomain: &computedomainv1beta1.ComputeDomain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-domain",
+					Namespace:  "default",
+					UID:        "test-uid",
+					Finalizers: []string{consts.ComputeDomainFinalizer},
+				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					NumNodes: 1,
+				},
+			},
+			resourceClaims: []client.Object{
+				createAllocatedResourceClaim("claim-1", "default", "other-domain", "node-1"),
+			},
+			expectedStatus: computedomainv1beta1.ComputeDomainStatusNotReady,
+			expectedNodes:  []string{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			objs := []client.Object{test.computeDomain}
+			objs = append(objs, test.resourceClaims...)
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objs...).
+				WithStatusSubresource(test.computeDomain).
+				Build()
+
+			reconciler := &controller.ComputeDomainReconciler{
+				Client: fakeClient,
+				Scheme: scheme,
+			}
+
+			req := ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      test.computeDomain.GetName(),
+					Namespace: test.computeDomain.GetNamespace(),
+				},
+			}
+
+			result, err := reconciler.Reconcile(context.Background(), req)
+			require.NoError(t, err)
+			assert.Equal(t, ctrl.Result{}, result)
+
+			updatedDomain := &computedomainv1beta1.ComputeDomain{}
+			err = fakeClient.Get(context.Background(), req.NamespacedName, updatedDomain)
+			require.NoError(t, err)
+
+			assert.Equal(t, test.expectedStatus, updatedDomain.Status.Status)
+			assert.Len(t, updatedDomain.Status.Nodes, len(test.expectedNodes))
+
+			actualNodeNames := make([]string, len(updatedDomain.Status.Nodes))
+			for i, node := range updatedDomain.Status.Nodes {
+				actualNodeNames[i] = node.Name
+			}
+			assert.Equal(t, test.expectedNodes, actualNodeNames)
+		})
+	}
+}
+
+func createAllocatedResourceClaim(name, namespace, domainName, nodeName string) *resourceapi.ResourceClaim {
+	return &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				consts.ComputeDomainClaimLabel: domainName,
+			},
+		},
+		Status: resourceapi.ResourceClaimStatus{
+			Allocation: &resourceapi.AllocationResult{
+				Devices: resourceapi.DeviceAllocationResult{
+					Results: []resourceapi.DeviceRequestAllocationResult{
+						{
+							Pool:    nodeName,
+							Device:  "channel-0",
+							Request: "channel",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func createUnallocatedResourceClaim(name, namespace, domainName string) *resourceapi.ResourceClaim {
+	return &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				consts.ComputeDomainClaimLabel: domainName,
+			},
+		},
+		Status: resourceapi.ResourceClaimStatus{},
+	}
 }

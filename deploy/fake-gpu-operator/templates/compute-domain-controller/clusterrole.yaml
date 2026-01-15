@@ -7,7 +7,7 @@ metadata:
 rules:
 - apiGroups: ["resource.k8s.io"]
   resources: ["resourceclaims"]
-  verbs: ["get"]
+  verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["get"]

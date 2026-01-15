@@ -10,6 +10,7 @@ import (
 	computedomainv1beta1 "github.com/NVIDIA/k8s-dra-driver-gpu/api/nvidia.com/resource/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/run-ai/fake-gpu-operator/pkg/compute-domain/consts"
 	resourceapi "k8s.io/api/resource/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -64,8 +65,8 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Check that it has the correct labels
-			Expect(rct.Labels).To(HaveKeyWithValue("resource.nvidia.com/computeDomain", computeDomainName))
-			Expect(rct.Labels).To(HaveKeyWithValue("resource.nvidia.com/computeDomainTarget", "workload"))
+			Expect(rct.Labels).To(HaveKeyWithValue(consts.ComputeDomainTemplateLabel, computeDomainName))
+			Expect(rct.Labels).To(HaveKeyWithValue(consts.ComputeDomainTemplateTargetLabel, "workload"))
 
 			// Check ResourceClaimTemplate spec
 			Expect(rct.Spec.Spec.Devices.Requests).To(HaveLen(1))
@@ -128,6 +129,22 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 
 			// Wait for pod to be ready
 			waitForPodReady(namespace, podName, podReadyTimeout)
+
+			// Verify ComputeDomain status shows the allocated node
+			Eventually(func() error {
+				cd, err := nvidiaClient.ResourceV1beta1().ComputeDomains(namespace).Get(
+					context.Background(), computeDomainName, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				if len(cd.Status.Nodes) == 0 {
+					return fmt.Errorf("no nodes in ComputeDomain status")
+				}
+				if cd.Status.Status != "Ready" {
+					return fmt.Errorf("ComputeDomain status is %s, expected Ready", cd.Status.Status)
+				}
+				return nil
+			}).WithTimeout(30 * time.Second).Should(Succeed())
 		})
 	})
 
