@@ -37,7 +37,22 @@ containers:
         value: "/var/lib/kubelet/plugins_registry"
       - name: KUBELET_PLUGINS_DIRECTORY_PATH
         value: "/var/lib/kubelet/plugins"
+      {{- if .Values.computeDomainDraPlugin.healthcheckPort }}
+      - name: HEALTHCHECK_PORT
+        value: {{ .Values.computeDomainDraPlugin.healthcheckPort | quote }}
+      {{- end }}
     name: compute-domain-dra-plugin-ctr
+    {{- if (gt (int .Values.computeDomainDraPlugin.healthcheckPort) 0) }}
+    livenessProbe:
+      grpc:
+        port: {{ .Values.computeDomainDraPlugin.healthcheckPort }}
+        service: liveness
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
+    {{- end }}
     securityContext:
       privileged: true
     terminationMessagePath: /dev/termination-log
