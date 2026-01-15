@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: compute-domain-test-compute-domain-pod
+
+---
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: test-domain-pod
+  namespace: compute-domain-test-compute-domain-pod
+spec:
+  numNodes: 1
+  channel:
+    allocationMode: Single
+    resourceClaimTemplate:
+      name: test-domain-pod
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: compute-domain-test-compute-domain-pod
+  name: pod0
+  labels:
+    app: pod
+spec:
+  terminationGracePeriodSeconds: 0
+  containers:
+  - name: ctr0
+    image: busybox
+    command: ["sh", "-c"]
+    args: ["printenv; sleep 9999 & wait"]
+    resources:
+      claims:
+      - name: compute-domain
+  resourceClaims:
+  - name: compute-domain
+    resourceClaimTemplateName: test-domain-pod
