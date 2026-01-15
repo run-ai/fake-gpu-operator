@@ -45,6 +45,8 @@ type healthcheck struct {
 
 	regClient registerapi.RegistrationClient
 	draClient drapb.DRAPluginClient
+
+	openConnctions []*grpc.ClientConn
 }
 
 func startHealthcheck(ctx context.Context, config *Config) (*healthcheck, error) {
@@ -91,9 +93,10 @@ func startHealthcheck(ctx context.Context, config *Config) (*healthcheck, error)
 
 	server := grpc.NewServer()
 	healthcheck := &healthcheck{
-		server:    server,
-		regClient: registerapi.NewRegistrationClient(regConn),
-		draClient: drapb.NewDRAPluginClient(draConn),
+		server:         server,
+		regClient:      registerapi.NewRegistrationClient(regConn),
+		draClient:      drapb.NewDRAPluginClient(draConn),
+		openConnctions: []*grpc.ClientConn{regConn, draConn},
 	}
 	grpc_health_v1.RegisterHealthServer(server, healthcheck)
 
@@ -115,6 +118,14 @@ func (h *healthcheck) Stop(logger klog.Logger) {
 		h.server.GracefulStop()
 	}
 	h.wg.Wait()
+
+	for _, conn := range h.openConnctions {
+		if conn != nil {
+			if err := conn.Close(); err != nil {
+				logger.Info("failed to close connection", "error", err)
+			}
+		}
+	}
 }
 
 // Check implements [grpc_health_v1.HealthServer].

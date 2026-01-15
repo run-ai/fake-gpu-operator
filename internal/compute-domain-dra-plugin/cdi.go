@@ -82,7 +82,7 @@ func (cdi *ComputeDomainCDIHandler) CreateCommonSpecFile() error {
 		},
 	}
 
-	minVersion, err := cdiapi.MinimumRequiredVersion(spec)
+	minVersion, err := cdispec.MinimumRequiredVersion(spec)
 	if err != nil {
 		return fmt.Errorf("failed to get minimum required CDI spec version: %v", err)
 	}
