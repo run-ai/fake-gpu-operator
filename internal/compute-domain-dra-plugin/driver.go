@@ -35,7 +35,8 @@ import (
 type computeDomainDriver struct {
 	client      coreclientset.Interface
 	helper      *kubeletplugin.Helper
-	allocatable allocatableComputeDomainDevices
+	state       *ComputeDomainState
+	healthcheck *healthcheck
 	cancelCtx   func(error)
 }
 
@@ -45,11 +46,11 @@ func NewComputeDomainDriver(ctx context.Context, config *Config) (*computeDomain
 		cancelCtx: config.cancelMainCtx,
 	}
 
-	allocatable, err := enumerateComputeDomainDevices()
+	state, err := NewComputeDomainState(config)
 	if err != nil {
-		return nil, fmt.Errorf("error enumerating ComputeDomain devices: %v", err)
+		return nil, err
 	}
-	driver.allocatable = allocatable
+	driver.state = state
 
 	helper, err := kubeletplugin.Start(
 		ctx,
@@ -66,7 +67,7 @@ func NewComputeDomainDriver(ctx context.Context, config *Config) (*computeDomain
 	driver.helper = helper
 
 	devices := make([]resourceapi.Device, 0, 1)
-	if device, exists := allocatable[deviceNameForChannel(0)]; exists {
+	if device, exists := state.allocatable[deviceNameForChannel(0)]; exists {
 		devices = append(devices, device)
 	}
 	resources := resourceslice.DriverResources{
@@ -81,6 +82,11 @@ func NewComputeDomainDriver(ctx context.Context, config *Config) (*computeDomain
 		},
 	}
 
+	driver.healthcheck, err = startHealthcheck(ctx, config)
+	if err != nil {
+		return nil, fmt.Errorf("start healthcheck: %w", err)
+	}
+
 	if err := helper.PublishResources(ctx, resources); err != nil {
 		return nil, err
 	}
@@ -90,6 +96,9 @@ func NewComputeDomainDriver(ctx context.Context, config *Config) (*computeDomain
 }
 
 func (d *computeDomainDriver) Shutdown(logger klog.Logger) error {
+	if d.healthcheck != nil {
+		d.healthcheck.Stop(logger)
+	}
 	d.helper.Stop()
 	return nil
 }
@@ -106,11 +115,24 @@ func (d *computeDomainDriver) PrepareResourceClaims(ctx context.Context, claims 
 }
 
 func (d *computeDomainDriver) prepareResourceClaim(_ context.Context, claim *resourceapi.ResourceClaim) kubeletplugin.PrepareResult {
-	// Skeleton implementation - will be expanded in PR 2
-	klog.Infof("PrepareResourceClaim called for claim %v (skeleton - not yet implemented)", claim.UID)
-	return kubeletplugin.PrepareResult{
-		Err: fmt.Errorf("PrepareResourceClaim not yet implemented"),
+	preparedPBs, err := d.state.Prepare(claim)
+	if err != nil {
+		return kubeletplugin.PrepareResult{
+			Err: fmt.Errorf("error preparing devices for claim %v: %w", claim.UID, err),
+		}
 	}
+	var prepared []kubeletplugin.Device
+	for _, preparedPB := range preparedPBs {
+		prepared = append(prepared, kubeletplugin.Device{
+			Requests:     preparedPB.RequestNames,
+			PoolName:     preparedPB.PoolName,
+			DeviceName:   preparedPB.DeviceName,
+			CDIDeviceIDs: preparedPB.CDIDeviceIDs,
+		})
+	}
+
+	klog.Infof("Returning newly prepared devices for claim '%v': %v", claim.UID, prepared)
+	return kubeletplugin.PrepareResult{Devices: prepared}
 }
 
 func (d *computeDomainDriver) UnprepareResourceClaims(ctx context.Context, claims []kubeletplugin.NamespacedObject) (map[types.UID]error, error) {
@@ -125,8 +147,10 @@ func (d *computeDomainDriver) UnprepareResourceClaims(ctx context.Context, claim
 }
 
 func (d *computeDomainDriver) unprepareResourceClaim(_ context.Context, claim kubeletplugin.NamespacedObject) error {
-	// Skeleton implementation - will be expanded in PR 2
-	klog.Infof("UnprepareResourceClaim called for claim %v (skeleton - not yet implemented)", claim.UID)
+	if err := d.state.Unprepare(string(claim.UID)); err != nil {
+		return fmt.Errorf("error unpreparing devices for claim %v: %w", claim.UID, err)
+	}
+
 	return nil
 }
 
