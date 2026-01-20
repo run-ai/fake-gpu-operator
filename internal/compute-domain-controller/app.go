@@ -6,15 +6,19 @@ import (
 
 	"go.uber.org/zap/zapcore"
 	resourceapi "k8s.io/api/resource/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	computedomainv1beta1 "github.com/NVIDIA/k8s-dra-driver-gpu/api/nvidia.com/resource/v1beta1"
 	"github.com/run-ai/fake-gpu-operator/internal/common/app"
+	"github.com/run-ai/fake-gpu-operator/pkg/compute-domain/consts"
 )
 
 var (
@@ -85,6 +89,11 @@ func (app *ComputeDomainApp) Run() {
 func (app *ComputeDomainApp) runController(ctx context.Context) error {
 	cfg := ctrl.GetConfigOrDie()
 
+	computeDomainLabelSelector, err := labels.Parse(consts.ComputeDomainClaimLabel)
+	if err != nil {
+		return fmt.Errorf("failed to parse label selector: %w", err)
+	}
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -93,6 +102,13 @@ func (app *ComputeDomainApp) runController(ctx context.Context) error {
 		HealthProbeBindAddress: app.config.HealthProbeAddress,
 		LeaderElection:         app.config.LeaderElection,
 		LeaderElectionID:       "fake-compute-domain-controller",
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&resourceapi.ResourceClaim{}: {
+					Label: computeDomainLabelSelector,
+				},
+			},
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create controller manager: %w", err)

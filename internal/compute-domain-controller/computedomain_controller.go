@@ -19,14 +19,17 @@ package computedomaincontroller
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	resourceapi "k8s.io/api/resource/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	computedomainv1beta1 "github.com/NVIDIA/k8s-dra-driver-gpu/api/nvidia.com/resource/v1beta1"
@@ -59,6 +62,7 @@ type ComputeDomainReconciler struct {
 //+kubebuilder:rbac:groups=resource.nvidia.com,resources=computedomains/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=resource.nvidia.com,resources=computedomains/finalizers,verbs=update
 //+kubebuilder:rbac:groups=resource.k8s.io,resources=resourceclaimtemplates,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=resource.k8s.io,resources=resourceclaims,verbs=get;list;watch
 
 func (r *ComputeDomainReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -79,6 +83,9 @@ func (r *ComputeDomainReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 	if err := r.ensureResourceClaimTemplates(ctx, domain); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.updateStatus(ctx, domain); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -141,8 +148,8 @@ func (r *ComputeDomainReconciler) ensureTemplate(
 			Name:      name,
 			Namespace: domain.Namespace,
 			Labels: map[string]string{
-				"resource.nvidia.com/computeDomain":       domain.Name,
-				"resource.nvidia.com/computeDomainTarget": templateType,
+				consts.ComputeDomainTemplateLabel:       domain.Name,
+				consts.ComputeDomainTemplateTargetLabel: templateType,
 			},
 			Finalizers: []string{
 				consts.ComputeDomainFinalizer,
@@ -151,7 +158,7 @@ func (r *ComputeDomainReconciler) ensureTemplate(
 		Spec: resourceapi.ResourceClaimTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"nvidia.com/computeDomain": domain.Name,
+					consts.ComputeDomainClaimLabel: domain.Name,
 				},
 			},
 			Spec: resourceapi.ResourceClaimSpec{
@@ -229,5 +236,89 @@ func (r *ComputeDomainReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&computedomainv1beta1.ComputeDomain{}).
 		Owns(&resourceapi.ResourceClaimTemplate{}).
+		Watches(
+			&resourceapi.ResourceClaim{},
+			handler.EnqueueRequestsFromMapFunc(r.mapResourceClaimToComputeDomain),
+		).
 		Complete(r)
+}
+
+func (r *ComputeDomainReconciler) mapResourceClaimToComputeDomain(ctx context.Context, obj client.Object) []ctrl.Request {
+	claim, ok := obj.(*resourceapi.ResourceClaim)
+	if !ok {
+		return nil
+	}
+
+	domainName, exists := claim.Labels[consts.ComputeDomainClaimLabel]
+	if !exists {
+		return nil
+	}
+
+	return []ctrl.Request{{
+		NamespacedName: types.NamespacedName{
+			Name:      domainName,
+			Namespace: claim.Namespace,
+		},
+	}}
+}
+
+func (r *ComputeDomainReconciler) updateStatus(ctx context.Context, domain *computedomainv1beta1.ComputeDomain) error {
+	claimList := &resourceapi.ResourceClaimList{}
+	if err := r.List(ctx, claimList,
+		client.InNamespace(domain.Namespace),
+		client.MatchingLabels{consts.ComputeDomainClaimLabel: domain.Name},
+	); err != nil {
+		return err
+	}
+
+	nodeSet := make(map[string]struct{})
+	for _, claim := range claimList.Items {
+		if claim.Status.Allocation == nil {
+			continue
+		}
+		for _, result := range claim.Status.Allocation.Devices.Results {
+			if result.Pool != "" {
+				nodeSet[result.Pool] = struct{}{}
+			}
+		}
+	}
+
+	nodes := make([]*computedomainv1beta1.ComputeDomainNode, 0, len(nodeSet))
+	for nodeName := range nodeSet {
+		nodes = append(nodes, &computedomainv1beta1.ComputeDomainNode{
+			Name:   nodeName,
+			Status: computedomainv1beta1.ComputeDomainStatusReady,
+		})
+	}
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].Name < nodes[j].Name
+	})
+
+	status := computedomainv1beta1.ComputeDomainStatusNotReady
+	if domain.Spec.NumNodes == 0 || len(nodes) >= domain.Spec.NumNodes {
+		status = computedomainv1beta1.ComputeDomainStatusReady
+	}
+
+	if !r.statusEqual(domain.Status, nodes, status) {
+		domain.Status.Nodes = nodes
+		domain.Status.Status = status
+		return r.Status().Update(ctx, domain)
+	}
+
+	return nil
+}
+
+func (r *ComputeDomainReconciler) statusEqual(current computedomainv1beta1.ComputeDomainStatus, newNodes []*computedomainv1beta1.ComputeDomainNode, newStatus string) bool {
+	if current.Status != newStatus {
+		return false
+	}
+	if len(current.Nodes) != len(newNodes) {
+		return false
+	}
+	for i, node := range current.Nodes {
+		if node.Name != newNodes[i].Name {
+			return false
+		}
+	}
+	return true
 }

@@ -68,7 +68,7 @@ func TestComputeDomainDriver_PrepareResourceClaims(t *testing.T) {
 				Name:      "test-claim",
 				Namespace: "default",
 				Labels: map[string]string{
-					"resource.nvidia.com/computeDomain": "test-compute-domain",
+					consts.ComputeDomainTemplateLabel: "test-compute-domain",
 				},
 			},
 			Spec: resourceapi.ResourceClaimSpec{
