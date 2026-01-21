@@ -65,6 +65,12 @@ COPY ./internal/status-updater/ ./internal/status-updater/
 COPY ./internal/kwok-dra-plugin/ ./internal/kwok-dra-plugin/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=kwok-dra-plugin
 
+FROM common-builder AS kwok-compute-domain-dra-plugin-builder
+COPY ./cmd/kwok-compute-domain-dra-plugin/ ./cmd/kwok-compute-domain-dra-plugin/
+COPY ./pkg/compute-domain/ ./pkg/compute-domain/
+COPY ./internal/kwok-compute-domain-dra-plugin/ ./internal/kwok-compute-domain-dra-plugin/
+RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=kwok-compute-domain-dra-plugin
+
 FROM common-builder AS preloader-builder 
 COPY ./cmd/preloader/ ./cmd/preloader/
 RUN make build-preloader
@@ -113,6 +119,10 @@ ENTRYPOINT ["/bin/dra-plugin-gpu"]
 FROM ubuntu AS kwok-dra-plugin
 COPY --from=kwok-dra-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/kwok-dra-plugin /bin/
 ENTRYPOINT ["/bin/kwok-dra-plugin"]
+
+FROM ubuntu AS kwok-compute-domain-dra-plugin
+COPY --from=kwok-compute-domain-dra-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/kwok-compute-domain-dra-plugin /bin/
+ENTRYPOINT ["/bin/kwok-compute-domain-dra-plugin"]
 
 FROM ubuntu AS compute-domain-controller
 COPY --from=compute-domain-controller-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/compute-domain-controller /bin/
