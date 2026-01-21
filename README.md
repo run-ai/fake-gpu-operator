@@ -206,6 +206,84 @@ spec:
 
 See [test/integration/manifests/](test/integration/manifests/) for more examples.
 
+## 🔐 Compute Domain DRA (Secure Workload Isolation)
+
+The Fake GPU Operator supports simulating [NVIDIA Compute Domains](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/dra-cds.html) for secure workload isolation without requiring actual NVIDIA hardware. Compute Domains provide IMEX channel simulation for multi-node GPU workloads.
+
+### Prerequisites
+
+- Kubernetes 1.31+ with DynamicResourceAllocation feature gate enabled
+- DRA plugin enabled in the Fake GPU Operator
+
+### Enable Compute Domain in Helm chart
+
+```yaml
+# values.yaml
+computeDomainController:
+  enabled: true
+computeDomainDraPlugin:
+  enabled: true
+draPlugin:
+  enabled: true
+devicePlugin:
+  enabled: false  # Disable legacy plugin when using DRA
+```
+
+### Deploy with Compute Domain
+
+First, create a ComputeDomain resource:
+
+```yaml
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: my-compute-domain
+  namespace: default
+spec:
+  numNodes: 1
+  channel:
+    allocationMode: Single  # or "All" for all channels
+    resourceClaimTemplate:
+      name: my-compute-domain
+```
+
+The compute-domain-controller will automatically create a ResourceClaimTemplate for the ComputeDomain.
+
+Then, deploy a pod that uses the compute domain:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: compute-domain-pod
+  namespace: default
+spec:
+  containers:
+  - name: main
+    image: ubuntu:22.04
+    command: ["sleep", "infinity"]
+    resources:
+      claims:
+      - name: compute-domain
+  resourceClaims:
+  - name: compute-domain
+    resourceClaimTemplateName: my-compute-domain
+```
+
+### Verify Compute Domain Status
+
+```bash
+# Check ComputeDomain status
+kubectl get computedomain my-compute-domain -o yaml
+
+# Verify status shows Ready and allocated nodes
+# status:
+#   status: Ready
+#   nodes:
+#   - name: <node-name>
+#     status: Ready
+```
+
 ## 🎭 KWOK Integration (Simulated Nodes)
 
 [KWOK](https://kwok.sigs.k8s.io/) (Kubernetes WithOut Kubelet) is a toolkit that allows you to simulate thousands of Kubernetes nodes without running actual kubelet processes. When combined with the Fake GPU Operator, you can create large-scale GPU cluster simulations entirely without hardware - perfect for testing schedulers, autoscalers, and resource management at scale.
