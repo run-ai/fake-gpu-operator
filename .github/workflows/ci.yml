@@ -94,7 +94,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        component: [device-plugin, dra-plugin-gpu, status-updater, kwok-gpu-device-plugin, status-exporter, topology-server, mig-faker, jupyter-notebook]
+        component: [device-plugin, dra-plugin-gpu, status-updater, kwok-gpu-device-plugin, kwok-dra-plugin, status-exporter, topology-server, mig-faker, jupyter-notebook, compute-domain-controller, compute-domain-dra-plugin]
     steps:
       - uses: actions/checkout@v4
       - name: Log in to GitHub Container Registry
