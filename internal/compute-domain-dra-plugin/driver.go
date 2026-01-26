@@ -104,7 +104,9 @@ func (d *computeDomainDriver) Shutdown(logger klog.Logger) error {
 }
 
 func (d *computeDomainDriver) PrepareResourceClaims(ctx context.Context, claims []*resourceapi.ResourceClaim) (map[types.UID]kubeletplugin.PrepareResult, error) {
-	klog.Infof("PrepareResourceClaims is called: number of claims: %d", len(claims))
+	if len(claims) > 0 {
+		klog.Infof("PrepareResourceClaims is called: number of claims: %d", len(claims))
+	}
 	result := make(map[types.UID]kubeletplugin.PrepareResult)
 
 	for _, claim := range claims {
