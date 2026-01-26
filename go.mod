@@ -24,7 +24,7 @@ require (
 	k8s.io/client-go v0.34.2
 	k8s.io/dynamic-resource-allocation v0.34.2
 	k8s.io/kubelet v0.34.2
-	k8s.io/kubernetes v1.34.0
+	k8s.io/kubernetes v1.34.2
 	sigs.k8s.io/controller-runtime v0.22.4
 	sigs.k8s.io/dra-example-driver v0.2.0
 	tags.cncf.io/container-device-interface v1.0.1
