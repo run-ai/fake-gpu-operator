@@ -30,6 +30,7 @@ type StatusUpdaterAppConfiguration struct {
 	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
 	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
 	PrometheusURL       string `mapstructure:"PROMETHEUS_URL"`
+	DisableNodeLabeling bool   `mapstructure:"DISABLE_NODE_LABELING"`
 }
 
 type StatusUpdaterApp struct {
@@ -67,8 +68,10 @@ func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
 	app.kubeClient = KubeClientFn(clusterConfig)
 	dynamicClient := DynamicClientFn(clusterConfig)
 
+	disableNodeLabeling := viper.GetBool(constants.EnvDisableNodeLabeling)
+
 	app.Controllers = append(app.Controllers, podcontroller.NewPodController(app.kubeClient, dynamicClient, app.wg))
-	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(app.kubeClient, app.wg))
+	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(app.kubeClient, app.wg, disableNodeLabeling))
 }
 
 func (app *StatusUpdaterApp) Name() string {

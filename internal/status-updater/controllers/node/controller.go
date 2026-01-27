@@ -36,7 +36,7 @@ type NodeController struct {
 
 var _ controllers.Interface = &NodeController{}
 
-func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *NodeController {
+func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup, disableNodeLabeling bool) *NodeController {
 	clusterTopology, err := topology.GetClusterTopologyFromCM(kubeClient)
 	if err != nil {
 		log.Fatalf("Failed to get cluster topology: %v", err)
@@ -45,7 +45,7 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup) *Nod
 	c := &NodeController{
 		kubeClient:      kubeClient,
 		informer:        informers.NewSharedInformerFactory(kubeClient, 0).Core().V1().Nodes().Informer(),
-		handler:         nodehandler.NewNodeHandler(kubeClient, clusterTopology),
+		handler:         nodehandler.NewNodeHandler(kubeClient, clusterTopology, disableNodeLabeling),
 		clusterTopology: clusterTopology,
 	}
 

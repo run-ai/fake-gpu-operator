@@ -22,6 +22,7 @@ devicePlugin:
 
 statusUpdater:
   enabled: true
+  disableNodeLabeling: false
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-updater
