@@ -26,4 +26,5 @@ const (
 	EnvFakeGpuOperatorNs            = "FAKE_GPU_OPERATOR_NAMESPACE"
 	EnvResourceReservationNamespace = "RESOURCE_RESERVATION_NAMESPACE"
 	EnvPrometheusURL                = "PROMETHEUS_URL"
+	EnvDisableNodeLabeling          = "DISABLE_NODE_LABELING"
 )

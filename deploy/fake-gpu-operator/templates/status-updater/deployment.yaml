@@ -38,6 +38,8 @@ spec:
               value: "{{ .Values.environment.resourceReservationNamespace }}"
             - name: PROMETHEUS_URL
               value: "{{ .Values.prometheus.url }}"
+            - name: DISABLE_NODE_LABELING
+              value: "{{ .Values.statusUpdater.disableNodeLabeling }}"
       restartPolicy: Always
       serviceAccountName: status-updater
       imagePullSecrets:

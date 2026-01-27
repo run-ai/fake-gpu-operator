@@ -19,14 +19,16 @@ type NodeHandler struct {
 	kubeClient kubernetes.Interface
 
 	clusterTopology *topology.ClusterTopology
+	disableLabeling bool
 }
 
 var _ Interface = &NodeHandler{}
 
-func NewNodeHandler(kubeClient kubernetes.Interface, clusterTopology *topology.ClusterTopology) *NodeHandler {
+func NewNodeHandler(kubeClient kubernetes.Interface, clusterTopology *topology.ClusterTopology, disableLabeling bool) *NodeHandler {
 	return &NodeHandler{
 		kubeClient:      kubeClient,
 		clusterTopology: clusterTopology,
+		disableLabeling: disableLabeling,
 	}
 }
 
@@ -36,6 +38,11 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 	err := p.createNodeTopologyCM(node)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology ConfigMap: %w", err)
+	}
+
+	if p.disableLabeling {
+		log.Printf("Skipping node labeling for %s (disabled via config)\n", node.Name)
+		return nil
 	}
 
 	err = p.labelNode(node)
@@ -52,6 +59,11 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	err := topology.DeleteNodeTopologyCM(p.kubeClient, node.Name)
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete node topology: %w", err)
+	}
+
+	if p.disableLabeling {
+		log.Printf("Skipping node unlabeling for %s (disabled via config)\n", node.Name)
+		return nil
 	}
 
 	err = p.unlabelNode(node)
