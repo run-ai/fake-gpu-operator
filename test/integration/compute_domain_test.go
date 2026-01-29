@@ -42,6 +42,7 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			manifestPath := "manifests/compute-domain-basic.yaml"
 			namespace := "compute-domain-test-compute-domain-basic"
 			computeDomainName := "test-domain"
+			templateName := "test-domain-template"
 
 			setupTest(manifestPath, namespace, &testNamespaces)
 
@@ -55,13 +56,13 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			// Wait for ResourceClaimTemplate to be created by the controller
 			Eventually(func() error {
 				_, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
-					context.Background(), computeDomainName, metav1.GetOptions{})
+					context.Background(), templateName, metav1.GetOptions{})
 				return err
 			}).WithTimeout(30 * time.Second).Should(Succeed())
 
 			// Verify ResourceClaimTemplate details
 			rct, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
-				context.Background(), computeDomainName, metav1.GetOptions{})
+				context.Background(), templateName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Check that it has the correct labels
@@ -84,6 +85,7 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			namespace := "compute-domain-test-compute-domain-pod"
 			computeDomainName := "test-domain-pod"
 			podName := "pod0"
+			templateName := "test-domain-template"
 
 			setupTest(manifestPath, namespace, &testNamespaces)
 
@@ -97,7 +99,7 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			// Wait for ResourceClaimTemplate to be created by the controller
 			Eventually(func() error {
 				_, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
-					context.Background(), computeDomainName, metav1.GetOptions{})
+					context.Background(), templateName, metav1.GetOptions{})
 				return err
 			}).WithTimeout(30 * time.Second).Should(Succeed())
 
@@ -153,6 +155,7 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			manifestPath := "manifests/compute-domain-basic.yaml"
 			namespace := "compute-domain-test-compute-domain-basic"
 			computeDomainName := "test-domain"
+			templateName := "test-domain-template"
 
 			setupTest(manifestPath, namespace, &testNamespaces)
 
@@ -166,7 +169,7 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			// Wait for ResourceClaimTemplate to be created by the controller
 			Eventually(func() error {
 				_, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
-					context.Background(), computeDomainName, metav1.GetOptions{})
+					context.Background(), templateName, metav1.GetOptions{})
 				return err
 			}).WithTimeout(30 * time.Second).Should(Succeed())
 
@@ -178,7 +181,7 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			// Wait for ResourceClaimTemplate to be deleted
 			Eventually(func() error {
 				_, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
-					context.Background(), computeDomainName, metav1.GetOptions{})
+					context.Background(), templateName, metav1.GetOptions{})
 				return err
 			}).WithTimeout(30 * time.Second).ShouldNot(Succeed())
 		})
@@ -189,6 +192,7 @@ var _ = Describe("Compute Domain Controller Integration Tests", func() {
 			// Create a ComputeDomain with All allocation mode directly using API
 			namespace := "compute-domain-test-compute-domain-basic"
 			computeDomainName := "test-domain-all"
+			templateName := "test-domain-template"
 
 			// Create namespace using our helper
 			nsManifest := fmt.Sprintf(`
@@ -226,13 +230,13 @@ metadata:
 			// Wait for ResourceClaimTemplate to be created by the controller
 			Eventually(func() error {
 				_, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
-					context.Background(), computeDomainName, metav1.GetOptions{})
+					context.Background(), templateName, metav1.GetOptions{})
 				return err
 			}).WithTimeout(30 * time.Second).Should(Succeed())
 
 			// Verify ResourceClaimTemplate details
 			rct, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
-				context.Background(), computeDomainName, metav1.GetOptions{})
+				context.Background(), templateName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Check that the opaque parameters contain the correct allocation mode
