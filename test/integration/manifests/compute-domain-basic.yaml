@@ -15,4 +15,4 @@ spec:
   channel:
     allocationMode: Single
     resourceClaimTemplate:
-      name: test-domain
+      name: test-domain-template

@@ -116,7 +116,7 @@ func (r *ComputeDomainReconciler) handleDeletion(ctx context.Context, domain *co
 }
 
 func (r *ComputeDomainReconciler) ensureResourceClaimTemplates(ctx context.Context, domain *computedomainv1beta1.ComputeDomain) error {
-	return r.ensureTemplate(ctx, domain, domain.Name, consts.ComputeDomainWorkloadDeviceClass, "workload")
+	return r.ensureTemplate(ctx, domain, templateName(domain), consts.ComputeDomainWorkloadDeviceClass, "workload")
 }
 
 func (r *ComputeDomainReconciler) getAllocationMode(domain *computedomainv1beta1.ComputeDomain) string {
@@ -204,7 +204,7 @@ func (r *ComputeDomainReconciler) ensureTemplate(
 
 func (r *ComputeDomainReconciler) deleteResourceClaimTemplates(ctx context.Context, domain *computedomainv1beta1.ComputeDomain) error {
 	template := &resourceapi.ResourceClaimTemplate{}
-	key := client.ObjectKey{Namespace: domain.Namespace, Name: domain.Name}
+	key := client.ObjectKey{Namespace: domain.Namespace, Name: templateName(domain)}
 	if err := r.Get(ctx, key, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -321,4 +321,12 @@ func (r *ComputeDomainReconciler) statusEqual(current computedomainv1beta1.Compu
 		}
 	}
 	return true
+}
+
+func templateName(domain *computedomainv1beta1.ComputeDomain) string {
+	templateName := domain.Name
+	if domain.Spec.Channel != nil {
+		templateName = domain.Spec.Channel.ResourceClaimTemplate.Name
+	}
+	return templateName
 }

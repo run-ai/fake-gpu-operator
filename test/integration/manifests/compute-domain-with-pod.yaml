@@ -15,7 +15,7 @@ spec:
   channel:
     allocationMode: Single
     resourceClaimTemplate:
-      name: test-domain-pod
+      name: test-domain-template
 
 ---
 apiVersion: v1

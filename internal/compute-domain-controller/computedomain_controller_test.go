@@ -56,6 +56,13 @@ func TestComputeDomainReconciler_Reconcile(t *testing.T) {
 					Namespace: "default",
 					UID:       "test-uid",
 				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					Channel: &computedomainv1beta1.ComputeDomainChannelSpec{
+						ResourceClaimTemplate: computedomainv1beta1.ComputeDomainResourceClaimTemplate{
+							Name: "test-template-name",
+						},
+					},
+				},
 			},
 			expectedWorkloadTemplate: true,
 			expectedFinalizer:        true,
@@ -69,11 +76,18 @@ func TestComputeDomainReconciler_Reconcile(t *testing.T) {
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					Finalizers:        []string{consts.ComputeDomainFinalizer},
 				},
+				Spec: computedomainv1beta1.ComputeDomainSpec{
+					Channel: &computedomainv1beta1.ComputeDomainChannelSpec{
+						ResourceClaimTemplate: computedomainv1beta1.ComputeDomainResourceClaimTemplate{
+							Name: "test-template-name",
+						},
+					},
+				},
 			},
 			existingObjects: []client.Object{
 				&resourceapi.ResourceClaimTemplate{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-domain",
+						Name:      "test-template-name",
 						Namespace: "default",
 						Labels: map[string]string{
 							consts.ComputeDomainTemplateLabel: "test-domain",
@@ -128,7 +142,7 @@ func TestComputeDomainReconciler_Reconcile(t *testing.T) {
 
 			workloadTemplate := &resourceapi.ResourceClaimTemplate{}
 			err = fakeClient.Get(context.Background(), types.NamespacedName{
-				Name:      "test-domain",
+				Name:      test.computeDomain.Spec.Channel.ResourceClaimTemplate.Name,
 				Namespace: "default",
 			}, workloadTemplate)
 			// Check ResourceClaimTemplates
