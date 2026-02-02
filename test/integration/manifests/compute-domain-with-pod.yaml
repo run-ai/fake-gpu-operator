@@ -37,4 +37,4 @@ spec:
       - name: compute-domain
   resourceClaims:
   - name: compute-domain
-    resourceClaimTemplateName: test-domain-pod
+    resourceClaimTemplateName: test-domain-template

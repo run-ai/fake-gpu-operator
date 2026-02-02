@@ -615,7 +615,6 @@ func getResourceClaimNameFromPod(namespace, podName string) ([]string, error) {
 	claimNames := make([]string, 0)
 	seen := make(map[string]bool)
 
-	// First, check pod.Status.ResourceClaimStatuses for generated claims from templates
 	for _, status := range pod.Status.ResourceClaimStatuses {
 		if status.ResourceClaimName != nil && *status.ResourceClaimName != "" {
 			if !seen[*status.ResourceClaimName] {
@@ -625,7 +624,6 @@ func getResourceClaimNameFromPod(namespace, podName string) ([]string, error) {
 		}
 	}
 
-	// Then, check pod.Spec.ResourceClaims for direct references
 	for _, claim := range pod.Spec.ResourceClaims {
 		if claim.ResourceClaimName != nil && *claim.ResourceClaimName != "" {
 			if !seen[*claim.ResourceClaimName] {
@@ -633,8 +631,6 @@ func getResourceClaimNameFromPod(namespace, podName string) ([]string, error) {
 				seen[*claim.ResourceClaimName] = true
 			}
 		}
-		// Note: For template-based claims, the actual ResourceClaim name is already
-		// in pod.Status.ResourceClaimStatuses, so we don't need to query by label here
 	}
 
 	return claimNames, nil

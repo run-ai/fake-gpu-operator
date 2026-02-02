@@ -202,7 +202,6 @@ metadata:
   name: %s
 `, namespace)
 
-			// Apply namespace manifest
 			applyManifestFromString(nsManifest)
 			testNamespaces = append(testNamespaces, namespace)
 
@@ -217,7 +216,7 @@ metadata:
 					Channel: &computedomainv1beta1.ComputeDomainChannelSpec{
 						AllocationMode: "All",
 						ResourceClaimTemplate: computedomainv1beta1.ComputeDomainResourceClaimTemplate{
-							Name: computeDomainName,
+							Name: templateName,
 						},
 					},
 				},
