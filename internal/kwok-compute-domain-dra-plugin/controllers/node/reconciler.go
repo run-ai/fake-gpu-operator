@@ -3,7 +3,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"log"
 
 	corev1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/api/resource/v1"
@@ -11,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,14 +34,14 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 		if err := r.deleteResourceSlice(ctx, req.Name); err != nil {
-			log.Printf("Failed to delete ResourceSlice for node %s: %v", req.Name, err)
+			klog.ErrorS(err, "Failed to delete ResourceSlice for node", "node", req.Name)
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
 	if err := r.createOrUpdateResourceSlice(ctx, &node); err != nil {
-		log.Printf("Failed to create/update ResourceSlice for node %s: %v", node.Name, err)
+		klog.ErrorS(err, "Failed to create/update ResourceSlice for node", "node", node.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -77,7 +77,7 @@ func (r *NodeReconciler) createOrUpdateResourceSlice(ctx context.Context, node *
 			if err != nil {
 				return fmt.Errorf("failed to create ResourceSlice for node %s: %w", node.Name, err)
 			}
-			log.Printf("Created ResourceSlice for KWOK node %s with %d devices\n", node.Name, len(devices))
+			klog.InfoS("Created ResourceSlice for KWOK node", "node", node.Name, "deviceCount", len(devices))
 			return nil
 		}
 		return fmt.Errorf("failed to get ResourceSlice for node %s: %w", node.Name, err)
@@ -88,7 +88,7 @@ func (r *NodeReconciler) createOrUpdateResourceSlice(ctx context.Context, node *
 	if err != nil {
 		return fmt.Errorf("failed to update ResourceSlice for node %s: %w", node.Name, err)
 	}
-	log.Printf("Updated ResourceSlice for KWOK node %s with %d devices\n", node.Name, len(devices))
+	klog.InfoS("Updated ResourceSlice for KWOK node", "node", node.Name, "deviceCount", len(devices))
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (r *NodeReconciler) deleteResourceSlice(ctx context.Context, nodeName strin
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to delete ResourceSlice for node %s: %w", nodeName, err)
 	}
-	log.Printf("Deleted ResourceSlice for KWOK node %s\n", nodeName)
+	klog.InfoS("Deleted ResourceSlice for KWOK node", "node", nodeName)
 	return nil
 }
 
@@ -156,6 +156,6 @@ func SetupWithManager(mgr ctrl.Manager, kubeClient kubernetes.Interface, namespa
 		return fmt.Errorf("failed to setup Node reconciler: %w", err)
 	}
 
-	log.Println("Node reconciler setup complete for KWOK Compute Domain DRA plugin")
+	klog.InfoS("Node reconciler setup complete for KWOK Compute Domain DRA plugin")
 	return nil
 }
