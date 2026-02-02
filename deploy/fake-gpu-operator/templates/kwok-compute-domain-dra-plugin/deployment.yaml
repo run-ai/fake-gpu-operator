@@ -1,0 +1,33 @@
+{{- if .Values.kwokComputeDomainDraPlugin.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kwok-compute-domain-dra-plugin
+  labels:
+    app: kwok-compute-domain-dra-plugin
+spec:
+  selector:
+    matchLabels:
+      app: kwok-compute-domain-dra-plugin
+      component: kwok-compute-domain-dra-plugin
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kwok-compute-domain-dra-plugin
+        component: kwok-compute-domain-dra-plugin
+    spec:
+      containers:
+        - name: kwok-compute-domain-dra-plugin
+          image: "{{ .Values.kwokComputeDomainDraPlugin.image.repository }}:{{ .Values.kwokComputeDomainDraPlugin.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ .Values.kwokComputeDomainDraPlugin.image.pullPolicy }}"
+          resources:
+            {{- toYaml .Values.kwokComputeDomainDraPlugin.resources | nindent 12 }}
+          env:
+            - name: FAKE_GPU_OPERATOR_NAMESPACE
+              value: "{{ .Release.Namespace }}"
+      restartPolicy: Always
+      serviceAccountName: kwok-compute-domain-dra-plugin
+      imagePullSecrets:
+        - name: gcr-secret
+{{- end }}

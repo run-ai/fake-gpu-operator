@@ -249,6 +249,121 @@ metadata:
 	})
 })
 
+var _ = Describe("KWOK Compute Domain Integration Tests", func() {
+	var testNamespaces []string
+
+	AfterEach(func() {
+		for _, ns := range testNamespaces {
+			deleteNamespace(ns)
+		}
+
+		for _, ns := range testNamespaces {
+			Eventually(func() error {
+				_, err := kubeClient.CoreV1().Namespaces().Get(context.Background(), ns, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}).WithTimeout(60*time.Second).ShouldNot(Succeed(), "Namespace %s should be deleted", ns)
+		}
+
+		testNamespaces = nil
+	})
+
+	Describe("KWOK Compute Domain ResourceSlice", func() {
+		It("should create ResourceSlice for KWOK nodes with compute domain channels", func() {
+			kwokNodeName := "kwok-gpu-node-1"
+			resourceSliceName := fmt.Sprintf("kwok-%s-compute-domain-channel", kwokNodeName)
+
+			Eventually(func() error {
+				_, err := kubeClient.ResourceV1().ResourceSlices().Get(
+					context.Background(), resourceSliceName, metav1.GetOptions{})
+				return err
+			}).WithTimeout(60*time.Second).Should(Succeed(), "ResourceSlice should exist for KWOK node")
+
+			resourceSlice, err := kubeClient.ResourceV1().ResourceSlices().Get(
+				context.Background(), resourceSliceName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resourceSlice.Spec.Driver).To(Equal(consts.ComputeDomainDriverName))
+			Expect(resourceSlice.Spec.NodeName).NotTo(BeNil())
+			Expect(*resourceSlice.Spec.NodeName).To(Equal(kwokNodeName))
+			Expect(resourceSlice.Spec.Pool.Name).To(Equal(kwokNodeName))
+			Expect(resourceSlice.Spec.Devices).NotTo(BeEmpty())
+			Expect(resourceSlice.Spec.Devices[0].Name).To(Equal("channel-0"))
+		})
+	})
+
+	Describe("KWOK Compute Domain with Pod", func() {
+		It("should allocate ComputeDomain to pod on KWOK node and update status", func() {
+			manifestPath := "manifests/compute-domain-kwok-pod.yaml"
+			namespace := "compute-domain-test-kwok"
+			computeDomainName := "kwok-domain"
+			podName := "kwok-pod"
+
+			setupTest(manifestPath, namespace, &testNamespaces)
+
+			Eventually(func() error {
+				_, err := nvidiaClient.ResourceV1beta1().ComputeDomains(namespace).Get(
+					context.Background(), computeDomainName, metav1.GetOptions{})
+				return err
+			}).WithTimeout(30 * time.Second).Should(Succeed())
+
+			Eventually(func() error {
+				_, err := kubeClient.ResourceV1().ResourceClaimTemplates(namespace).Get(
+					context.Background(), computeDomainName, metav1.GetOptions{})
+				return err
+			}).WithTimeout(30 * time.Second).Should(Succeed())
+
+			Eventually(func() error {
+				_, err := kubeClient.CoreV1().Pods(namespace).Get(
+					context.Background(), podName, metav1.GetOptions{})
+				return err
+			}).WithTimeout(30 * time.Second).Should(Succeed())
+
+			var claimName string
+			Eventually(func() error {
+				claimNames, err := getResourceClaimNameFromPod(namespace, podName)
+				if err != nil {
+					return err
+				}
+				if len(claimNames) == 0 {
+					return fmt.Errorf("no ResourceClaims found for pod")
+				}
+				claimName = claimNames[0]
+				return nil
+			}).WithTimeout(30 * time.Second).Should(Succeed())
+
+			Eventually(func() error {
+				return waitForResourceClaimAllocated(namespace, claimName, 30*time.Second)
+			}).WithTimeout(60 * time.Second).Should(Succeed())
+
+			waitForPodReady(namespace, podName, podReadyTimeout)
+
+			Eventually(func() error {
+				cd, err := nvidiaClient.ResourceV1beta1().ComputeDomains(namespace).Get(
+					context.Background(), computeDomainName, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				if len(cd.Status.Nodes) == 0 {
+					return fmt.Errorf("no nodes in ComputeDomain status")
+				}
+				if cd.Status.Status != "Ready" {
+					return fmt.Errorf("ComputeDomain status is %s, expected Ready", cd.Status.Status)
+				}
+				return nil
+			}).WithTimeout(30 * time.Second).Should(Succeed())
+
+			cd, err := nvidiaClient.ResourceV1beta1().ComputeDomains(namespace).Get(
+				context.Background(), computeDomainName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cd.Status.Nodes).To(HaveLen(1))
+			Expect(cd.Status.Nodes[0].Name).To(HavePrefix("kwok-gpu-node-"))
+		})
+	})
+})
+
 // Helper function to apply a manifest from string
 func applyManifestFromString(manifest string) {
 	cmd := exec.Command("kubectl", "apply", "-f", "-")

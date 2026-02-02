@@ -207,3 +207,17 @@ computeDomainDraPlugin:
     limits:
       cpu: "200m"
       memory: "400Mi"
+
+kwokComputeDomainDraPlugin:
+  enabled: false
+  image:
+    pullPolicy: Always
+    repository: ghcr.io/run-ai/fake-gpu-operator/kwok-compute-domain-dra-plugin
+    tag: ""
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "200Mi"
+    limits:
+      cpu: "200m"
+      memory: "400Mi"
