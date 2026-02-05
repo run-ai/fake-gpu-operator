@@ -1,3 +1,4 @@
+{{- if .Values.computeDomainDraPlugin.enabled }}
 ---
 apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
 kind: DeviceClass
@@ -7,3 +8,4 @@ spec:
   selectors:
   - cel:
       expression: "device.driver == 'compute-domain.nvidia.com' && device.attributes['compute-domain.nvidia.com'].type == 'channel' && device.attributes['compute-domain.nvidia.com'].id == 0"
+{{- end }}

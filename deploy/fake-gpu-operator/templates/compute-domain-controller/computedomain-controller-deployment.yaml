@@ -1,4 +1,4 @@
-{{- if .Values.computeDomainController.enabled }}
+{{- if .Values.computeDomainDraPlugin.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
