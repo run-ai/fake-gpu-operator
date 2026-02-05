@@ -180,7 +180,6 @@ topology:
   migStrategy: mixed
 
 computeDomainController:
-  enabled: true
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/compute-domain-controller

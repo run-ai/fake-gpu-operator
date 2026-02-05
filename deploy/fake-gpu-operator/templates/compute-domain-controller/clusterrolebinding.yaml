@@ -1,4 +1,4 @@
-{{- if .Values.computeDomainController.enabled }}
+{{- if .Values.computeDomainDraPlugin.enabled }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
