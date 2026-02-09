@@ -1,0 +1,15 @@
+{{- if and .Values.statusUpdater.enabled (lookup "v1" "Namespace" "" .Values.environment.resourceReservationNamespace) -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fake-status-updater-pod-patch
+  namespace: "{{ .Values.environment.resourceReservationNamespace }}"
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: fake-status-updater-pod-patch
+subjects:
+  - kind: ServiceAccount
+    name: status-updater
+    namespace: "{{ .Release.Namespace }}"
+{{- end -}}

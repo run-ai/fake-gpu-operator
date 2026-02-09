@@ -1,0 +1,15 @@
+{{- if and .Values.statusUpdater.enabled (lookup "v1" "Namespace" "" .Values.environment.resourceReservationNamespace) -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fake-status-updater-pod-patch
+  namespace: "{{ .Values.environment.resourceReservationNamespace }}"
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - patch
+      - update
+{{- end -}}
