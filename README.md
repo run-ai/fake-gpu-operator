@@ -11,7 +11,7 @@
 
 > **Note:** Container images and Helm charts are now available at `ghcr.io/run-ai/fake-gpu-operator`.
 
-## 🚀 Overview
+## 🚀 Overview 
 
 The Fake GPU Operator is a lightweight tool that simulates NVIDIA GPUs in Kubernetes clusters without requiring physical hardware. It provides basic functionality for developers and testers:
 
