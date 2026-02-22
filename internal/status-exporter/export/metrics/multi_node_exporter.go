@@ -96,6 +96,12 @@ func (e *MultiNodeMetricsExporter) exportNode(nodeName string, nodeTopology *top
 		log.Printf("Exporting metrics for KWOK node %s, gpu %s\n", nodeName, gpu.ID)
 		labels := buildGpuMetricLabels(nodeName, gpuIdx, &gpu, nodeTopology)
 
+		// Override Hostname with the node name for KWOK nodes so that the
+		// metrics-exporter can match metrics to the correct virtual node.
+		// The default generateFakeHostname produces a hash that cannot be
+		// correlated back to the KWOK node name.
+		labels["Hostname"] = nodeName
+
 		utilization := gpu.Status.PodGpuUsageStatus.Utilization()
 		fbUsed := gpu.Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)
 
@@ -111,6 +117,7 @@ func (e *MultiNodeMetricsExporter) exportNode(nodeName string, nodeTopology *top
 func (e *MultiNodeMetricsExporter) deleteNodeMetrics(nodeName string, nodeTopology *topology.NodeTopology) {
 	for gpuIdx, gpu := range nodeTopology.Gpus {
 		labels := buildGpuMetricLabels(nodeName, gpuIdx, &gpu, nodeTopology)
+		labels["Hostname"] = nodeName
 
 		// Delete the metric series for this GPU
 		gpuUtilization.Delete(labels)
