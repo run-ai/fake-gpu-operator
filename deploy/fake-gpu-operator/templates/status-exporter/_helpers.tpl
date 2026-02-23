@@ -16,6 +16,7 @@ matchLabels:
 {{- define "fake-gpu-operator.status-exporter.common.podTemplate.metadata" -}}
 labels:
   app: nvidia-dcgm-exporter
+  component: status-exporter
   app.kubernetes.io/name: nvidia-container-toolkit
 annotations:
   checksum/hostpath-init-configmap: {{ include (print $.Template.BasePath "/status-exporter/hostpath-init-configmap.yaml") . | sha256sum }}

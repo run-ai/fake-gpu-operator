@@ -1,0 +1,67 @@
+{{- if and .Values.statusExporter.enabled (ne (.Values.statusExporter.kwok.prometheusRule.enabled | toString) "false") -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fake-gpu-operator-kwok-dcgm
+  namespace: {{ .Values.prometheus.namespace | default "runai" }}
+  labels:
+    app: nvidia-dcgm-exporter
+    component: status-exporter-kwok
+spec:
+  groups:
+    - name: kwok-dcgm-metrics
+      rules:
+        # For KWOK nodes the centralized exporter sets Hostname = node name.
+        # The standard RunAI dcgmMetricsRule joins on kube_pod_info to derive
+        # the node, which fails for the centralized pod.  These rules use
+        # Hostname directly as the node label instead.
+        #
+        # Regular (non-KWOK) DCGM metrics have Hostname set to a hash that
+        # does not match any real node in runai_node_nodepool_excluded, so they
+        # are naturally filtered out by the join.
+
+        - record: runai_dcgm_gpu_utilization
+          expr: |
+            label_replace(
+              label_replace(
+                label_replace(
+                  DCGM_FI_DEV_GPU_UTIL,
+                  "pod_name", "$1", "exported_pod", "(.+)"
+                ),
+                "pod_namespace", "$1", "exported_namespace", "(.+)"
+              ),
+              "node", "$1", "Hostname", "(.+)"
+            )
+            * on(node) group_left(nodepool)
+            runai_node_nodepool_excluded
+
+        - record: runai_dcgm_gpu_used_mebibytes
+          expr: |
+            label_replace(
+              label_replace(
+                label_replace(
+                  DCGM_FI_DEV_FB_USED,
+                  "pod_name", "$1", "exported_pod", "(.+)"
+                ),
+                "pod_namespace", "$1", "exported_namespace", "(.+)"
+              ),
+              "node", "$1", "Hostname", "(.+)"
+            )
+            * on(node) group_left(nodepool)
+            runai_node_nodepool_excluded
+
+        - record: runai_dcgm_gpu_total_mebibytes
+          expr: |
+            label_replace(
+              label_replace(
+                label_replace(
+                  (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE),
+                  "pod_name", "$1", "exported_pod", "(.+)"
+                ),
+                "pod_namespace", "$1", "exported_namespace", "(.+)"
+              ),
+              "node", "$1", "Hostname", "(.+)"
+            )
+            * on(node) group_left(nodepool)
+            runai_node_nodepool_excluded
+{{- end -}}

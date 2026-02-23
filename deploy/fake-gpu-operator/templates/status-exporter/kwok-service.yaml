@@ -6,7 +6,8 @@ metadata:
     prometheus.io/scrape: "true"
   labels:
     app: nvidia-dcgm-exporter
-  name: nvidia-dcgm-exporter
+    component: status-exporter-kwok
+  name: nvidia-dcgm-exporter-kwok
 spec:
   ports:
     - name: gpu-metrics
@@ -15,6 +16,6 @@ spec:
       targetPort: 9400
   selector:
     app: nvidia-dcgm-exporter
-    component: status-exporter
+    component: status-exporter-kwok
   type: ClusterIP
 {{- end -}}

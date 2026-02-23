@@ -65,6 +65,8 @@ statusExporter:
   topologyMaxExportInterval: 10s
   # If using many KWOK nodes, you may need to increase the resources for the KWOK status-exporter
   kwok:
+    prometheusRule:
+      enabled: true
     resources:
       requests:
         cpu: "50m"
