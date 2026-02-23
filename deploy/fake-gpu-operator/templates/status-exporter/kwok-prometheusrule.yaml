@@ -1,4 +1,4 @@
-{{- if and .Values.statusExporter.enabled (ne (.Values.statusExporter.kwok.prometheusRule.enabled | toString) "false") -}}
+{{- if and .Values.statusExporter.enabled (ne (.Values.statusExporter.kwok.prometheusRule.enabled | toString) "false") (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") -}}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
