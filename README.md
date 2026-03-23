@@ -85,10 +85,9 @@ Customize GPU configurations in your `values.yaml`:
 topology:
   nodePools:
     default:
-      gpus:
-        - type: "Tesla K80"
-          memory: "12GB"
-          count: 2
+      gpuProduct: Tesla-K80
+      gpuCount: 2
+      gpuMemory: 11441
 ```
 
 ### GPU Utilization
