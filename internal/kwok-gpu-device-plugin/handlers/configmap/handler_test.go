@@ -1,6 +1,7 @@
 package configmap
 
 import (
+	"context"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -9,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	"golang.org/x/net/context"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
