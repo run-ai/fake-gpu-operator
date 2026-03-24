@@ -1,6 +1,7 @@
 package deviceplugin
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
