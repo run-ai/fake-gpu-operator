@@ -1,4 +1,4 @@
-{{- if .Values.draPlugin.enabled -}}
+{{- if or .Values.draPlugin.enabled .Values.kwokDraPlugin.enabled -}}
 apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
 kind: DeviceClass
 metadata:
