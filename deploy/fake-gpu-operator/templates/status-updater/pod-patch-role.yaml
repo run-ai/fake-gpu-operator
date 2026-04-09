@@ -1,4 +1,4 @@
-{{- if and .Values.statusUpdater.enabled (lookup "v1" "Namespace" "" .Values.environment.resourceReservationNamespace) -}}
+{{- if and .Values.statusUpdater.enabled .Values.statusUpdater.podPatchRbac.enabled -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
