@@ -4,20 +4,17 @@ kind: Deployment
 metadata:
   name: nvidia-dcgm-exporter-kwok
   labels:
-    app: nvidia-dcgm-exporter
-    component: status-exporter-kwok
+    app: nvidia-dcgm-exporter-kwok
     app.kubernetes.io/name: nvidia-container-toolkit
 spec:
   selector:
     matchLabels:
-      app: nvidia-dcgm-exporter
-      component: status-exporter-kwok
+      app: nvidia-dcgm-exporter-kwok
   replicas: 1
   template:
     metadata:
       labels:
-        app: nvidia-dcgm-exporter
-        component: status-exporter-kwok
+        app: nvidia-dcgm-exporter-kwok
         app.kubernetes.io/name: nvidia-container-toolkit
     spec:
       containers:
