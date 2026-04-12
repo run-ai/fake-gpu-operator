@@ -14,6 +14,9 @@ draPlugin:
 # Enable status-updater to manage node topology
 statusUpdater:
   enabled: true
+  runaiIntegration:
+    enabled: true
+    pollingInterval: 5s
   image:
     pullPolicy: Never
 
