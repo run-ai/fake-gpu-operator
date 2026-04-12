@@ -455,13 +455,13 @@ var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
 			Expect(*deployment.Spec.Replicas).To(Equal(int32(1)), "Deployment should have 1 replica")
 
 			// Verify deployment labels match service selector
-			Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app", "nvidia-dcgm-exporter"),
+			Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue("app", "nvidia-dcgm-exporter-kwok"),
 				"KWOK deployment should have correct app label")
 		})
 
 		It("should have exactly one pod running", func() {
 			pods, err := kubeClient.CoreV1().Pods(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
-				LabelSelector: "app=nvidia-dcgm-exporter,component=status-exporter-kwok",
+				LabelSelector: "app=nvidia-dcgm-exporter-kwok",
 			})
 			Expect(err).NotTo(HaveOccurred(), "Should list KWOK exporter pods")
 			Expect(pods.Items).To(HaveLen(1), "Should have exactly 1 KWOK exporter pod")
