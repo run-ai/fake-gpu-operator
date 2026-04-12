@@ -18,6 +18,7 @@ import (
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -33,9 +34,10 @@ const (
 )
 
 var (
-	kubeClient   kubernetes.Interface
-	restConfig   *rest.Config
-	nvidiaClient nvidiaversioned.Interface
+	kubeClient    kubernetes.Interface
+	dynamicClient dynamic.Interface
+	restConfig    *rest.Config
+	nvidiaClient  nvidiaversioned.Interface
 )
 
 func TestIntegration(t *testing.T) {
@@ -52,6 +54,10 @@ var _ = BeforeSuite(func() {
 
 	// Create Kubernetes client
 	kubeClient, err = kubernetes.NewForConfig(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Create dynamic client
+	dynamicClient, err = dynamic.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	// Create NVIDIA client

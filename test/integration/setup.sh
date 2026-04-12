@@ -70,6 +70,10 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[1].metadata.name}')
     fi
     echo "Worker node: ${WORKER_NODE}"
+    # Install PrometheusRule CRD for runai integration tests
+    echo "Installing PrometheusRule CRD..."
+    kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml
+
     # Deploy fake-gpu-operator with DRA plugin, status-updater, topology-server, and status-exporter
     echo "Deploying fake-gpu-operator..."
     cd "${PROJECT_ROOT}"

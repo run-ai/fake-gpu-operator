@@ -46,4 +46,20 @@ rules:
       - get
       - list
       - watch
+  {{- if .Values.statusUpdater.runaiIntegration.enabled }}
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - prometheusrules
+    verbs:
+      - get
+      - create
+      - delete
+  {{- end }}
 {{- end -}}

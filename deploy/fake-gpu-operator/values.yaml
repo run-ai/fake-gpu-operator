@@ -25,6 +25,9 @@ statusUpdater:
   disableNodeLabeling: false
   podPatchRbac:
     enabled: true
+  runaiIntegration:
+    enabled: false
+    pollingInterval: 2m
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-updater
