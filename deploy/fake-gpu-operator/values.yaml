@@ -27,7 +27,7 @@ statusUpdater:
     enabled: true
   runaiIntegration:
     enabled: false
-    pollingInterval: 30s
+    pollingInterval: 2m
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-updater
