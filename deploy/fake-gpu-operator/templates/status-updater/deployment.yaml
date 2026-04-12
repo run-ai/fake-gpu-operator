@@ -40,6 +40,12 @@ spec:
               value: "{{ .Values.prometheus.url }}"
             - name: DISABLE_NODE_LABELING
               value: "{{ .Values.statusUpdater.disableNodeLabeling }}"
+            {{- if .Values.statusUpdater.runaiIntegration.enabled }}
+            - name: RUNAI_INTEGRATION_ENABLED
+              value: "true"
+            - name: RUNAI_INTEGRATION_POLLING_INTERVAL
+              value: "{{ .Values.statusUpdater.runaiIntegration.pollingInterval }}"
+            {{- end }}
       restartPolicy: Always
       serviceAccountName: status-updater
       imagePullSecrets:
