@@ -2,6 +2,7 @@ package status_updater
 
 import (
 	"sync"
+	"time"
 
 	"github.com/spf13/viper"
 	"k8s.io/client-go/dynamic"
@@ -15,6 +16,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
 	nodecontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/node"
 	podcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/pod"
+	runaicontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/runai"
 )
 
 var InClusterConfigFn = ctrl.GetConfigOrDie
@@ -30,7 +32,9 @@ type StatusUpdaterAppConfiguration struct {
 	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
 	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
 	PrometheusURL       string `mapstructure:"PROMETHEUS_URL"`
-	DisableNodeLabeling bool   `mapstructure:"DISABLE_NODE_LABELING"`
+	DisableNodeLabeling            bool   `mapstructure:"DISABLE_NODE_LABELING"`
+	RunaiIntegrationEnabled        bool   `mapstructure:"RUNAI_INTEGRATION_ENABLED"`
+	RunaiIntegrationPollingInterval string `mapstructure:"RUNAI_INTEGRATION_POLLING_INTERVAL"`
 }
 
 type StatusUpdaterApp struct {
@@ -72,6 +76,16 @@ func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
 
 	app.Controllers = append(app.Controllers, podcontroller.NewPodController(app.kubeClient, dynamicClient, app.wg))
 	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(app.kubeClient, app.wg, disableNodeLabeling))
+
+	if viper.GetBool(constants.EnvRunaiIntegrationEnabled) {
+		intervalStr := viper.GetString(constants.EnvRunaiIntegrationPollingInterval)
+		interval, err := time.ParseDuration(intervalStr)
+		if err != nil || interval == 0 {
+			interval = 30 * time.Second
+		}
+		app.Controllers = append(app.Controllers,
+			runaicontroller.NewRunaiController(app.kubeClient, dynamicClient, interval))
+	}
 }
 
 func (app *StatusUpdaterApp) Name() string {
