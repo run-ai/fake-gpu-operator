@@ -74,6 +74,10 @@ func getNvidiaSmiArgs() (args nvidiaSmiArgs) {
 	if err != nil {
 		panic(err)
 	}
+	// Close body using the same pattern as in internal/dra-plugin-gpu/discovery.go
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// Parse the response
 	var nodeTopology topology.NodeTopology
