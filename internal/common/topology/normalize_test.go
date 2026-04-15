@@ -184,6 +184,16 @@ func TestParseAndNormalizeInvalidYAML(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestParseAndNormalizeEmptyInput(t *testing.T) {
+	_, err := ParseAndNormalizeTopology([]byte(""))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "empty")
+
+	_, err = ParseAndNormalizeTopology([]byte("   \n  "))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "empty")
+}
+
 func TestFromClusterConfigCM_OldFormat(t *testing.T) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "topology", Namespace: "gpu-operator"},

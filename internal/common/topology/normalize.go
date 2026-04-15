@@ -1,6 +1,7 @@
 package topology
 
 import (
+	"bytes"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
@@ -63,6 +64,10 @@ func normalizeNodePool(old NodePoolTopology) NodePoolConfig {
 // returns a ClusterConfig. It auto-detects whether the data is in old (ClusterTopology)
 // or new (ClusterConfig) format.
 func ParseAndNormalizeTopology(data []byte) (*ClusterConfig, error) {
+	if len(bytes.TrimSpace(data)) == 0 {
+		return nil, fmt.Errorf("topology data is empty")
+	}
+
 	if isNewFormat(data) {
 		var config ClusterConfig
 		if err := yaml.Unmarshal(data, &config); err != nil {
@@ -115,7 +120,7 @@ func isNewFormat(data []byte) bool {
 		}
 	}
 
-	// No pools or empty pools — check for gpuOperator key (new format only)
+	// No discriminating keys found — check for gpuOperator key (new format only)
 	if _, hasOperator := raw["gpuOperator"]; hasOperator {
 		return true
 	}
