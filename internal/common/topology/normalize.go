@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
 // normalizeOldToClusterConfig converts the old ClusterTopology format into the
 // new ClusterConfig format. This enables backwards compatibility: users can keep
 // using the old topology: values.yaml format and it gets normalized at read time.
@@ -58,7 +59,6 @@ func normalizeNodePool(old NodePoolTopology) NodePoolConfig {
 
 	return poolConfig
 }
-
 
 // ParseAndNormalizeTopology takes raw YAML bytes from the topology ConfigMap and
 // returns a ClusterConfig. It auto-detects whether the data is in old (ClusterTopology)
