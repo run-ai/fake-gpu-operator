@@ -76,6 +76,29 @@ func GetClusterTopologyFromCM(kubeclient kubernetes.Interface) (*ClusterTopology
 	return cluster, nil
 }
 
+// GetClusterConfigFromCM reads the cluster topology ConfigMap and returns a
+// ClusterConfig, auto-detecting and normalizing old format if needed.
+func GetClusterConfigFromCM(kubeclient kubernetes.Interface) (*ClusterConfig, error) {
+	topologyCm, err := kubeclient.CoreV1().ConfigMaps(
+		viper.GetString(constants.EnvTopologyCmNamespace)).Get(
+		context.TODO(), viper.GetString(constants.EnvTopologyCmName), metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get topology configmap: %v", err)
+	}
+
+	return FromClusterConfigCM(topologyCm)
+}
+
+// FromClusterConfigCM parses a ConfigMap into a ClusterConfig, handling both
+// old and new formats transparently.
+func FromClusterConfigCM(cm *corev1.ConfigMap) (*ClusterConfig, error) {
+	data, ok := cm.Data[CmTopologyKey]
+	if !ok {
+		return nil, fmt.Errorf("topology configmap missing key %q", CmTopologyKey)
+	}
+	return ParseAndNormalizeTopology([]byte(data))
+}
+
 func FromClusterTopologyCM(cm *corev1.ConfigMap) (*ClusterTopology, error) {
 	var clusterTopology ClusterTopology
 	err := yaml.Unmarshal([]byte(cm.Data[CmTopologyKey]), &clusterTopology)

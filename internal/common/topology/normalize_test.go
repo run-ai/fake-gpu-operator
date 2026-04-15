@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestNormalizeOldFormatToClusterConfig(t *testing.T) {
@@ -180,4 +182,58 @@ nodePools:
 func TestParseAndNormalizeInvalidYAML(t *testing.T) {
 	_, err := ParseAndNormalizeTopology([]byte(`{{{not yaml`))
 	assert.Error(t, err)
+}
+
+func TestFromClusterConfigCM_OldFormat(t *testing.T) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "topology", Namespace: "gpu-operator"},
+		Data: map[string]string{
+			CmTopologyKey: `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+migStrategy: mixed
+nodePools:
+  default:
+    gpuProduct: Tesla-K80
+    gpuCount: 2
+    gpuMemory: 11441
+`,
+		},
+	}
+
+	config, err := FromClusterConfigCM(cm)
+	require.NoError(t, err)
+	assert.Equal(t, "mixed", config.MigStrategy)
+	assert.Equal(t, "fake", config.NodePools["default"].Gpu.Backend)
+}
+
+func TestFromClusterConfigCM_NewFormat(t *testing.T) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "topology", Namespace: "gpu-operator"},
+		Data: map[string]string{
+			CmTopologyKey: `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+migStrategy: mixed
+nodePools:
+  pool-a:
+    gpu:
+      backend: fake
+      profile: h100
+`,
+		},
+	}
+
+	config, err := FromClusterConfigCM(cm)
+	require.NoError(t, err)
+	assert.Equal(t, "h100", config.NodePools["pool-a"].Gpu.Profile)
+}
+
+func TestFromClusterConfigCM_MissingKey(t *testing.T) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "topology", Namespace: "gpu-operator"},
+		Data:       map[string]string{},
+	}
+
+	_, err := FromClusterConfigCM(cm)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing key")
 }
