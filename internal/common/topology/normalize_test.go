@@ -113,3 +113,71 @@ func TestNormalizeOldFormatNilNodePools(t *testing.T) {
 	config := normalizeOldToClusterConfig(old)
 	assert.Empty(t, config.NodePools)
 }
+
+func TestDetectFormatOld(t *testing.T) {
+	yamlData := `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+migStrategy: mixed
+nodePools:
+  default:
+    gpuProduct: Tesla-K80
+    gpuCount: 2
+    gpuMemory: 11441
+`
+	config, err := ParseAndNormalizeTopology([]byte(yamlData))
+	require.NoError(t, err)
+	assert.Equal(t, "run.ai/simulated-gpu-node-pool", config.NodePoolLabelKey)
+	assert.Equal(t, "fake", config.NodePools["default"].Gpu.Backend)
+}
+
+func TestDetectFormatNew(t *testing.T) {
+	yamlData := `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+migStrategy: mixed
+nodePools:
+  pool-a:
+    gpu:
+      backend: fake
+      profile: h100
+      overrides:
+        device_defaults:
+          name: "Custom H100"
+    resources:
+      - rdma/rdma_shared_device_a: 1
+`
+	config, err := ParseAndNormalizeTopology([]byte(yamlData))
+	require.NoError(t, err)
+	assert.Equal(t, "run.ai/simulated-gpu-node-pool", config.NodePoolLabelKey)
+
+	pool := config.NodePools["pool-a"]
+	assert.Equal(t, "fake", pool.Gpu.Backend)
+	assert.Equal(t, "h100", pool.Gpu.Profile)
+	assert.Equal(t, "Custom H100", pool.Gpu.Overrides["device_defaults"].(map[string]interface{})["name"])
+}
+
+func TestDetectFormatNewWithGpuOperator(t *testing.T) {
+	yamlData := `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+migStrategy: mixed
+gpuOperator:
+  version: v24.9.0
+  values:
+    dcgmExporter:
+      enabled: true
+nodePools:
+  pool-b:
+    gpu:
+      backend: mock
+      profile: a100
+`
+	config, err := ParseAndNormalizeTopology([]byte(yamlData))
+	require.NoError(t, err)
+	require.NotNil(t, config.GpuOperator)
+	assert.Equal(t, "v24.9.0", config.GpuOperator.Version)
+	assert.Equal(t, "mock", config.NodePools["pool-b"].Gpu.Backend)
+}
+
+func TestParseAndNormalizeInvalidYAML(t *testing.T) {
+	_, err := ParseAndNormalizeTopology([]byte(`{{{not yaml`))
+	assert.Error(t, err)
+}
