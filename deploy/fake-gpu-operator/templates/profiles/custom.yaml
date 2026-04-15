@@ -1,0 +1,12 @@
+{{- range $name, $profile := .Values.customProfiles }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-profile-{{ $name }}
+  labels:
+    run.ai/gpu-profile: "true"
+data:
+  profile.yaml: |
+{{ toYaml $profile | indent 4 }}
+{{- end }}

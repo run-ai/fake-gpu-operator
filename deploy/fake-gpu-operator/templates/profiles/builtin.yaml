@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-profile-h100
+  labels:
+    run.ai/gpu-profile: "true"
+data:
+  profile.yaml: |
+    device_defaults:
+      name: "NVIDIA H100 80GB HBM3"
+      memory:
+        total_bytes: 85899345920
+      architecture: "Hopper"
+    system:
+      driver_version: "550.163.01"
+      cuda_version: "12.4"
+    devices:
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-profile-a100
+  labels:
+    run.ai/gpu-profile: "true"
+data:
+  profile.yaml: |
+    device_defaults:
+      name: "NVIDIA A100-SXM4-40GB"
+      memory:
+        total_bytes: 42949672960
+      architecture: "Ampere"
+    system:
+      driver_version: "550.163.01"
+      cuda_version: "12.4"
+    devices:
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-profile-t4
+  labels:
+    run.ai/gpu-profile: "true"
+data:
+  profile.yaml: |
+    device_defaults:
+      name: "Tesla T4"
+      memory:
+        total_bytes: 17179869184
+      architecture: "Turing"
+    system:
+      driver_version: "550.163.01"
+      cuda_version: "12.4"
+    devices:
+      - {}
+      - {}
+      - {}
+      - {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-profile-l40s
+  labels:
+    run.ai/gpu-profile: "true"
+data:
+  profile.yaml: |
+    device_defaults:
+      name: "NVIDIA L40S"
+      memory:
+        total_bytes: 51539607552
+      architecture: "Ada Lovelace"
+    system:
+      driver_version: "550.163.01"
+      cuda_version: "12.4"
+    devices:
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-profile-b200
+  labels:
+    run.ai/gpu-profile: "true"
+data:
+  profile.yaml: |
+    device_defaults:
+      name: "NVIDIA B200"
+      memory:
+        total_bytes: 206158430208
+      architecture: "Blackwell"
+    system:
+      driver_version: "570.86.15"
+      cuda_version: "12.8"
+    devices:
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-profile-gb200
+  labels:
+    run.ai/gpu-profile: "true"
+data:
+  profile.yaml: |
+    device_defaults:
+      name: "NVIDIA GB200"
+      memory:
+        total_bytes: 206158430208
+      architecture: "Blackwell"
+    system:
+      driver_version: "570.86.15"
+      cuda_version: "12.8"
+    devices:
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
+      - {}
