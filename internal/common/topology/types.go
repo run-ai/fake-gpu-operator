@@ -18,6 +18,31 @@ type NodePoolTopology struct {
 	OtherDevices []GenericDevice `yaml:"otherDevices"`
 }
 
+// ClusterConfig is the new top-level config structure (cluster: key in topology CM).
+// Used alongside ClusterTopology during migration; callers switch in Phase 3.
+type ClusterConfig struct {
+	NodePoolLabelKey string                    `yaml:"nodePoolLabelKey"`
+	MigStrategy      string                    `yaml:"migStrategy"`
+	NodePools        map[string]NodePoolConfig  `yaml:"nodePools"`
+	GpuOperator      *GpuOperatorConfig         `yaml:"gpuOperator,omitempty"`
+}
+
+type NodePoolConfig struct {
+	Gpu       GpuConfig          `yaml:"gpu"`
+	Resources []map[string]int   `yaml:"resources,omitempty"`
+}
+
+type GpuConfig struct {
+	Backend   string                 `yaml:"backend"`
+	Profile   string                 `yaml:"profile,omitempty"`
+	Overrides map[string]interface{} `yaml:"overrides,omitempty"`
+}
+
+type GpuOperatorConfig struct {
+	Version string                 `yaml:"version,omitempty"`
+	Values  map[string]interface{} `yaml:"values,omitempty"`
+}
+
 type NodeTopology struct {
 	GpuMemory    int             `yaml:"gpuMemory"`
 	GpuProduct   string          `yaml:"gpuProduct"`
