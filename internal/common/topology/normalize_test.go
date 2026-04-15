@@ -94,6 +94,53 @@ func TestNormalizeOldFormatZeroGpuCount(t *testing.T) {
 	assert.Len(t, devices, 0)
 }
 
+func TestNormalizeOldFormatMultiplePools(t *testing.T) {
+	old := &ClusterTopology{
+		NodePoolLabelKey: "run.ai/simulated-gpu-node-pool",
+		MigStrategy:      "mixed",
+		NodePools: map[string]NodePoolTopology{
+			"a100-pool": {
+				GpuCount:   8,
+				GpuMemory:  40960,
+				GpuProduct: "NVIDIA-A100-SXM4-40GB",
+				OtherDevices: []GenericDevice{
+					{Name: "rdma/rdma_shared_device_a", Count: 1},
+				},
+			},
+			"t4-pool": {
+				GpuCount:   2,
+				GpuMemory:  16384,
+				GpuProduct: "Tesla-T4",
+			},
+			"cpu-only": {
+				GpuCount:   0,
+				GpuMemory:  0,
+				GpuProduct: "",
+			},
+		},
+	}
+
+	config := normalizeOldToClusterConfig(old)
+
+	require.Len(t, config.NodePools, 3)
+
+	a100 := config.NodePools["a100-pool"]
+	assert.Equal(t, "fake", a100.Gpu.Backend)
+	assert.Len(t, a100.Gpu.Overrides["devices"].([]interface{}), 8)
+	dd := a100.Gpu.Overrides["device_defaults"].(map[string]interface{})
+	assert.Equal(t, "NVIDIA-A100-SXM4-40GB", dd["name"])
+	assert.Equal(t, int64(40960)*1024*1024, dd["memory"].(map[string]interface{})["total_bytes"])
+	require.Len(t, a100.Resources, 1)
+	assert.Equal(t, map[string]int{"rdma/rdma_shared_device_a": 1}, a100.Resources[0])
+
+	t4 := config.NodePools["t4-pool"]
+	assert.Len(t, t4.Gpu.Overrides["devices"].([]interface{}), 2)
+	assert.Nil(t, t4.Resources)
+
+	cpuOnly := config.NodePools["cpu-only"]
+	assert.Len(t, cpuOnly.Gpu.Overrides["devices"].([]interface{}), 0)
+}
+
 func TestNormalizeOldFormatEmptyNodePools(t *testing.T) {
 	old := &ClusterTopology{
 		NodePoolLabelKey: "run.ai/simulated-gpu-node-pool",
