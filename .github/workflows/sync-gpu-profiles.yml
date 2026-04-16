@@ -1,0 +1,58 @@
+name: Sync GPU Profiles
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'NVIDIA/k8s-test-infra version (tag or commit). Leave empty for default.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run sync script
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            hack/sync-profiles.sh "${{ github.event.inputs.version }}"
+          else
+            hack/sync-profiles.sh
+          fi
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet deploy/fake-gpu-operator/templates/profiles/builtin.yaml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No profile changes detected."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine version used
+        if: steps.diff.outputs.changed == 'true'
+        id: version
+        run: |
+          ver=$(head -2 deploy/fake-gpu-operator/templates/profiles/builtin.yaml | grep '# Source:' | sed 's/.*k8s-test-infra //')
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+      - name: Create PR
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: automated/sync-gpu-profiles
+          commit-message: "chore: sync GPU profiles from NVIDIA/k8s-test-infra ${{ steps.version.outputs.version }}"
+          title: "chore: sync GPU profiles from NVIDIA/k8s-test-infra ${{ steps.version.outputs.version }}"
+          body: |
+            Automated sync of GPU profiles from [NVIDIA/k8s-test-infra](https://github.com/NVIDIA/k8s-test-infra) `${{ steps.version.outputs.version }}`.
+
+            Triggered manually via workflow dispatch.
+          labels: automated
+          delete-branch: true
