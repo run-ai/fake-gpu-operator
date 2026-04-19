@@ -35,7 +35,11 @@ const (
 )
 
 const (
-	// Expected GPU values matching test/integration/values.yaml
+	// Expected GPU values matching test/integration/values.yaml.
+	// These are hardcoded constants rather than configurable env vars because
+	// the status-updater only creates per-node topology CMs — it never updates
+	// existing ones. This makes helm-upgrade-based testing unreliable without
+	// manual CM deletion, so we test each config format in isolation instead.
 	expectedGpuProduct        = "NVIDIA-A100-SXM4-40GB"
 	expectedGpuCount          = 2
 	expectedHighendGpuProduct = "NVIDIA-H100-80GB-HBM3"
