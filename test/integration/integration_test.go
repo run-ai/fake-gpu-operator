@@ -34,18 +34,19 @@ const (
 	namespaceTimeout = 30 * time.Second
 )
 
+const (
+	// Expected GPU values matching test/integration/values.yaml
+	expectedGpuProduct        = "NVIDIA-A100-SXM4-40GB"
+	expectedGpuCount          = 2
+	expectedHighendGpuProduct = "NVIDIA-H100-80GB-HBM3"
+	expectedHighendGpuCount   = 4
+)
+
 var (
 	kubeClient    kubernetes.Interface
 	dynamicClient dynamic.Interface
 	restConfig    *rest.Config
 	nvidiaClient  nvidiaversioned.Interface
-
-	// Expected GPU values are configurable via env vars so the same tests
-	// work with both old-format (topology:) and profile-based (cluster: + profiles).
-	expectedGpuProduct         = envOrDefault("EXPECTED_GPU_PRODUCT", "NVIDIA-A100-SXM4-40GB")
-	expectedGpuCount, _        = strconv.Atoi(envOrDefault("EXPECTED_GPU_COUNT", "2"))
-	expectedHighendGpuProduct  = envOrDefault("EXPECTED_HIGHEND_GPU_PRODUCT", "NVIDIA-H100-80GB-HBM3")
-	expectedHighendGpuCount, _ = strconv.Atoi(envOrDefault("EXPECTED_HIGHEND_GPU_COUNT", "4"))
 )
 
 func TestIntegration(t *testing.T) {
@@ -1014,12 +1015,5 @@ func applyManifestWithNamespace(manifestPath, namespace string) {
 	Expect(err).NotTo(HaveOccurred(), "Should apply manifest: %s", string(output))
 }
 
-// envOrDefault returns the value of an environment variable, or a default if unset/empty.
-func envOrDefault(key, defaultVal string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return defaultVal
-}
 
 // getPrometheusMetrics fetches Prometheus metrics from the nvidia-dcgm-exporter service
