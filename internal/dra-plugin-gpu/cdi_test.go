@@ -281,4 +281,4 @@ func TestCDIHandler_GetClaimDevices(t *testing.T) {
 }
 
 // Note: CDI error scenarios require mocking the CDI library which is complex.
-// Error handling is covered by integration tests.
+// Error handling is covered by e2e tests.

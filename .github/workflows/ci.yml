@@ -48,7 +48,7 @@ jobs:
       - name: Run tests
         run: make test
 
-  integration:
+  e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,8 +61,28 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Install kind
         uses: helm/kind-action@v1.13.0
-      - name: Run integration tests
-        run: make integration
+      - name: Run e2e tests (old format)
+        run: make e2e
+        env:
+          DOCKER_TAG: 0.0.0-dev
+          DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
+          DOCKER_BUILDX_PLATFORMS: linux/amd64
+
+  e2e-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Install kind
+        uses: helm/kind-action@v1.13.0
+      - name: Run e2e tests (profile format)
+        run: make e2e-profiles
         env:
           DOCKER_TAG: 0.0.0-dev
           DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
@@ -87,7 +107,7 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars, lint, test, integration]
+    needs: [set-release-vars, lint, test, e2e, e2e-profiles]
     if: ${{ needs.set-release-vars.outputs.release_version != '' }}
     permissions:
       contents: read

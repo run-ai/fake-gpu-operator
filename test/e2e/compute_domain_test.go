@@ -1,4 +1,4 @@
-package integration_test
+package e2e_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Compute Domain Controller Integration Tests", func() {
+var _ = Describe("Compute Domain Controller Tests", func() {
 	var testNamespaces []string
 
 	AfterEach(func() {
@@ -249,7 +249,7 @@ metadata:
 	})
 })
 
-var _ = Describe("KWOK Compute Domain Integration Tests", func() {
+var _ = Describe("KWOK Compute Domain Tests", func() {
 	var testNamespaces []string
 
 	AfterEach(func() {

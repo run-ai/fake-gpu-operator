@@ -1,4 +1,4 @@
-# Integration test values - PROFILE-BASED GPU config (cluster: key)
+# E2E test values - PROFILE-BASED GPU config (cluster: key)
 # Tests the profile resolution pipeline: ClusterConfig → Load → Merge → Extract → NodeTopology
 
 environment:
@@ -30,7 +30,7 @@ topologyServer:
 topologyConfigMap:
   enabled: true
 
-# Disable components not needed for integration tests
+# Disable components not needed for e2e tests
 devicePlugin:
   enabled: false
 

@@ -38,20 +38,29 @@ test: ginkgo
 	$(GINKGO) ./internal/... ./cmd/... --procs=1 --output-dir=/tmp/artifacts/test-results/service-tests  --compilers=1 --randomize-all --randomize-suites --fail-on-pending  --keep-going --timeout=5m --race --trace  --json-report=report.json
 .PHONY: test
 
-setup-integration:
-	test/integration/setup.sh
-.PHONY: setup-integration
+setup-e2e:
+	test/e2e/setup.sh
+.PHONY: setup-e2e
 
-test-integration: ginkgo
-	cd test/integration && $(GINKGO) --procs=1 --timeout=30m --trace
-.PHONY: test-integration
+test-e2e: ginkgo
+	cd test/e2e && $(GINKGO) --procs=1 --timeout=30m --trace
+.PHONY: test-e2e
 
-teardown-integration:
-	test/integration/teardown.sh
-.PHONY: teardown-integration
+teardown-e2e:
+	test/e2e/teardown.sh
+.PHONY: teardown-e2e
 
-integration: setup-integration test-integration teardown-integration
-.PHONY: integration
+e2e: setup-e2e test-e2e teardown-e2e
+.PHONY: e2e
+
+e2e-profiles: VALUES_FILE=$(shell pwd)/test/e2e/values-profiles.yaml
+e2e-profiles: EXPECTED_GPU_PRODUCT=NVIDIA T4
+e2e-profiles: EXPECTED_GPU_COUNT=2
+e2e-profiles: EXPECTED_HIGHEND_GPU_PRODUCT=NVIDIA H100 80GB HBM3
+e2e-profiles: EXPECTED_HIGHEND_GPU_COUNT=4
+e2e-profiles: export VALUES_FILE EXPECTED_GPU_PRODUCT EXPECTED_GPU_COUNT EXPECTED_HIGHEND_GPU_PRODUCT EXPECTED_HIGHEND_GPU_COUNT
+e2e-profiles: setup-e2e test-e2e teardown-e2e
+.PHONY: e2e-profiles
 
 clean:
 	rm -rf ${BUILD_DIR}

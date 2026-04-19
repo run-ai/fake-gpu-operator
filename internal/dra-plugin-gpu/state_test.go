@@ -182,7 +182,7 @@ func createMultiDeviceClaim(uid, poolName string, deviceIDs, requestNames []stri
 }
 
 // Note: TestNewDeviceState requires a real kubeletplugin.Helper which is complex
-// to mock. This functionality is covered by integration tests.
+// to mock. This functionality is covered by e2e tests.
 
 func TestDeviceState_Prepare(t *testing.T) {
 	config, cleanup := createTestConfig(t)

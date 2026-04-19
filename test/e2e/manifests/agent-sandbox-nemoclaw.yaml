@@ -1,0 +1,100 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gpu-test-agent-sandbox
+
+---
+# OpenShell gateway configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: gpu-test-agent-sandbox
+  name: openshell-gateway-config
+data:
+  gateway.yaml: |
+    gateway:
+      endpoint: "0.0.0.0:8080"
+
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  namespace: gpu-test-agent-sandbox
+  name: sandbox-gpu
+spec:
+  spec:
+    devices:
+      requests:
+      - name: gpu
+        exactly:
+          deviceClassName: gpu.nvidia.com
+
+---
+# OpenShell gateway — runs the control plane that manages sandbox pods.
+# In production NemoClaw deploys this inside a k3s-in-Docker container;
+# here we run it as a standalone Sandbox so the fake-gpu-operator's DRA
+# plugin can allocate a simulated GPU to the sandbox workload.
+apiVersion: agents.x-k8s.io/v1alpha1
+kind: Sandbox
+metadata:
+  namespace: gpu-test-agent-sandbox
+  name: nemoclaw-sandbox
+spec:
+  podTemplate:
+    metadata:
+      labels:
+        sandbox: nemoclaw
+        app: nemoclaw-sandbox
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: openshell
+          image: ghcr.io/nvidia/openshell-community/sandboxes/base:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          command: ["bash", "-c"]
+          args: ["export; trap 'exit 0' TERM; sleep 9999 & wait"]
+          env:
+            - name: OPENSHELL_GATEWAY_ENDPOINT
+              value: "0.0.0.0:8080"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+          ports:
+            - name: gateway
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            claims:
+              - name: gpu
+          volumeMounts:
+            - mountPath: /home/sandbox
+              name: home-pvc
+            - mountPath: /etc/openshell
+              name: gateway-config
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: sandbox-gpu
+      volumes:
+        - name: gateway-config
+          configMap:
+            name: openshell-gateway-config
+  volumeClaimTemplates:
+    - metadata:
+        name: home-pvc
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi

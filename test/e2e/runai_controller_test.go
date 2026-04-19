@@ -1,4 +1,4 @@
-package integration_test
+package e2e_test
 
 import (
 	"context"
@@ -17,7 +17,7 @@ var prometheusRuleGVR = schema.GroupVersionResource{
 	Resource: "prometheusrules",
 }
 
-var _ = Describe("RunAI Controller Integration Tests", func() {
+var _ = Describe("RunAI Controller Tests", func() {
 	const (
 		runaiNamespace     = "runai"
 		prometheusRuleName = "fake-gpu-operator-kwok-dcgm"

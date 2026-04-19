@@ -1,4 +1,4 @@
-# Integration test values for fake-gpu-operator
+# E2E test values for fake-gpu-operator
 # This enables status-updater, topology-server, and DRA plugin for end-to-end testing
 
 environment:
@@ -30,7 +30,7 @@ topologyServer:
 topologyConfigMap:
   enabled: true
 
-# Disable components not needed for integration tests
+# Disable components not needed for e2e tests
 devicePlugin:
   enabled: false
 

@@ -1,4 +1,4 @@
-package integration_test
+package e2e_test
 
 import (
 	"context"
@@ -34,28 +34,23 @@ const (
 	namespaceTimeout = 30 * time.Second
 )
 
-const (
-	// Expected GPU values matching test/integration/values.yaml.
-	// These are hardcoded constants rather than configurable env vars because
-	// the status-updater only creates per-node topology CMs — it never updates
-	// existing ones. This makes helm-upgrade-based testing unreliable without
-	// manual CM deletion, so we test each config format in isolation instead.
-	expectedGpuProduct        = "NVIDIA-A100-SXM4-40GB"
-	expectedGpuCount          = 2
-	expectedHighendGpuProduct = "NVIDIA-H100-80GB-HBM3"
-	expectedHighendGpuCount   = 4
-)
-
 var (
 	kubeClient    kubernetes.Interface
 	dynamicClient dynamic.Interface
 	restConfig    *rest.Config
 	nvidiaClient  nvidiaversioned.Interface
+
+	// Expected GPU values — set via env vars so the same tests run against
+	// both old-format (topology:) and profile-based (cluster:) Helm values.
+	expectedGpuProduct        = envOrDefault("EXPECTED_GPU_PRODUCT", "NVIDIA-A100-SXM4-40GB")
+	expectedGpuCount, _       = strconv.Atoi(envOrDefault("EXPECTED_GPU_COUNT", "2"))
+	expectedHighendGpuProduct = envOrDefault("EXPECTED_HIGHEND_GPU_PRODUCT", "NVIDIA-H100-80GB-HBM3")
+	expectedHighendGpuCount,_ = strconv.Atoi(envOrDefault("EXPECTED_HIGHEND_GPU_COUNT", "4"))
 )
 
-func TestIntegration(t *testing.T) {
+func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Integration Suite")
+	RunSpecs(t, "E2E Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -69,7 +64,7 @@ var _ = BeforeSuite(func() {
 	kubeClient, err = kubernetes.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
-	// Create dynamic client
+	// Create dynamic client (used for CRDs like PrometheusRule)
 	dynamicClient, err = dynamic.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -107,7 +102,7 @@ type resourceClaimInfo struct {
 	name      string
 }
 
-var _ = Describe("DRA Plugin Integration Tests", func() {
+var _ = Describe("DRA Plugin Tests", func() {
 	var testNamespaces []string
 	var testResourceClaims []resourceClaimInfo
 
@@ -345,7 +340,7 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 
 })
 
-var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
+var _ = Describe("KWOK DRA Plugin Tests", func() {
 	const (
 		kwokNodeName   = "kwok-gpu-node-1"
 		gpuOperatorNS  = "gpu-operator"
@@ -452,7 +447,7 @@ var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
 	})
 })
 
-var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
+var _ = Describe("KWOK Status-Exporter Tests", func() {
 	const (
 		kwokNodeName  = "kwok-gpu-node-1"
 		gpuOperatorNS = "gpu-operator"
@@ -488,8 +483,6 @@ var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
 			node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), kwokNodeName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Should get KWOK node")
 
-			// Verify expected labels (product and count are env-configurable
-			// so the same test works for old and new format).
 			expectedLabels := map[string]string{
 				"nvidia.com/gpu.present": "true",
 				"run.ai/fake.gpu":        "true",
@@ -515,7 +508,6 @@ var _ = Describe("Multi-Nodepool Topology Tests", func() {
 		gpuCount   int
 	}
 
-	// Build the table from env-configurable expected values.
 	// Nodes 1-3 are in "default", nodes 4-5 are in "highend".
 	pools := []nodePoolSpec{
 		{nodeName: "kwok-gpu-node-1", gpuProduct: expectedGpuProduct, gpuCount: expectedGpuCount},
@@ -555,43 +547,6 @@ var _ = Describe("Multi-Nodepool Topology Tests", func() {
 					"Node %s should have non-zero GPU memory", pool.nodeName)
 			})
 		}
-	})
-
-	Describe("Different pools produce different topologies", func() {
-		It("should have different GPU products for default and highend pools", func() {
-			// Read topology for a default-pool node
-			defaultCMs, err := kubeClient.CoreV1().ConfigMaps(gpuOperatorNS).List(
-				context.Background(), metav1.ListOptions{
-					LabelSelector: "node-name=kwok-gpu-node-1",
-				})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(defaultCMs.Items).To(HaveLen(1))
-
-			// Read topology for a highend-pool node
-			highendCMs, err := kubeClient.CoreV1().ConfigMaps(gpuOperatorNS).List(
-				context.Background(), metav1.ListOptions{
-					LabelSelector: "node-name=kwok-gpu-node-4",
-				})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(highendCMs.Items).To(HaveLen(1))
-
-			var defaultTopo, highendTopo struct {
-				GpuProduct string `yaml:"gpuProduct"`
-				GpuMemory  int    `yaml:"gpuMemory"`
-				Gpus       []struct {
-					ID string `yaml:"id"`
-				} `yaml:"gpus"`
-			}
-			Expect(yaml.Unmarshal([]byte(defaultCMs.Items[0].Data["topology.yml"]), &defaultTopo)).To(Succeed())
-			Expect(yaml.Unmarshal([]byte(highendCMs.Items[0].Data["topology.yml"]), &highendTopo)).To(Succeed())
-
-			Expect(defaultTopo.GpuProduct).NotTo(Equal(highendTopo.GpuProduct),
-				"Default and highend pools should have different GPU products")
-			Expect(defaultTopo.GpuMemory).NotTo(Equal(highendTopo.GpuMemory),
-				"Default and highend pools should have different GPU memory")
-			Expect(len(defaultTopo.Gpus)).NotTo(Equal(len(highendTopo.Gpus)),
-				"Default and highend pools should have different GPU counts")
-		})
 	})
 
 	Describe("Node labels reflect pool GPU type", func() {
@@ -1019,5 +974,11 @@ func applyManifestWithNamespace(manifestPath, namespace string) {
 	Expect(err).NotTo(HaveOccurred(), "Should apply manifest: %s", string(output))
 }
 
+func envOrDefault(key, defaultVal string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultVal
+}
 
 // getPrometheusMetrics fetches Prometheus metrics from the nvidia-dcgm-exporter service

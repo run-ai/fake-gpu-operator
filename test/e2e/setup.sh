@@ -6,7 +6,7 @@ set -e
 SCRIPTS_DIR="$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../.." &> /dev/null && pwd)"
 
-# For integration tests, we need to load images into docker (not push to registry)
+# For e2e tests, we need to load images into docker (not push to registry)
 # --load only works with single-platform builds, so we detect the current platform
 CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')"
 # The name of the kind cluster to create
@@ -73,7 +73,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[1].metadata.name}')
     fi
     echo "Worker node: ${WORKER_NODE}"
-    # Install PrometheusRule CRD for runai integration tests
+    # Install PrometheusRule CRD for runai e2e tests
     echo "Installing PrometheusRule CRD..."
     kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml
 
