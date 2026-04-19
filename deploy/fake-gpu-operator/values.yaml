@@ -186,6 +186,11 @@ topology:
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: mixed
 
+builtinProfiles:
+  enabled: true
+
+customProfiles: {}
+
 computeDomainController:
   image:
     pullPolicy: Always
