@@ -39,7 +39,7 @@ func TestExport(t *testing.T) {
 	kubeClientMock := &kubeclient.KubeClientMock{}
 	kubeClientMock.ActualSetNodeLabels = func(labels map[string]string) {
 		assert.Equal(t, labels["nvidia.com/gpu.memory"], strconv.Itoa(myNode.GpuMemory))
-		assert.Equal(t, labels["nvidia.com/gpu.product"], myNode.GpuProduct)
+		assert.Equal(t, labels["nvidia.com/gpu.product"], "some-gpu") // spaces sanitized to dashes
 		assert.Equal(t, labels["nvidia.com/mig.strategy"], myNode.MigStrategy)
 		assert.Equal(t, labels["nvidia.com/gpu.count"], strconv.Itoa(len(myNode.Gpus)))
 		wg.Done()

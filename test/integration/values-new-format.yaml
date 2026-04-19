@@ -1,0 +1,84 @@
+# Integration test values - NEW FORMAT with profile-based GPU config
+# This tests the Phase 3 pipeline: ClusterConfig → profile resolution → NodeTopology
+
+environment:
+  openshift: false
+  resourceReservationNamespace: runai-reservation
+
+# Enable DRA plugin for GPU allocation
+draPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Enable status-updater to manage node topology
+statusUpdater:
+  enabled: true
+  runaiIntegration:
+    enabled: true
+    pollingInterval: 5s
+  image:
+    pullPolicy: Never
+
+# Enable topology server for nvidia-smi and DRA plugin to fetch topology
+topologyServer:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Enable topology ConfigMap for status-updater
+topologyConfigMap:
+  enabled: true
+
+# Disable components not needed for integration tests
+devicePlugin:
+  enabled: false
+
+statusExporter:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+kwokGpuDevicePlugin:
+  enabled: false
+
+kwokDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+migFaker:
+  enabled: false
+
+gpuOperator:
+  enabled: false
+
+runtimeClass:
+  enabled: false
+
+computeDomainController:
+  image:
+    pullPolicy: Never
+
+computeDomainDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+kwokComputeDomainDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+builtinProfiles:
+  enabled: true
+
+# NEW FORMAT: profile-based GPU topology
+cluster:
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+  migStrategy: none
+  nodePools:
+    default:
+      gpu:
+        backend: nvml-mock
+        profile: t4
