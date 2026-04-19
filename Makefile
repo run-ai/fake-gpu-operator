@@ -54,12 +54,7 @@ e2e: setup-e2e test-e2e teardown-e2e
 .PHONY: e2e
 
 e2e-profiles:
-	VALUES_FILE=$(shell pwd)/test/e2e/values-profiles.yaml \
-	EXPECTED_GPU_PRODUCT="NVIDIA T4" \
-	EXPECTED_GPU_COUNT=2 \
-	EXPECTED_HIGHEND_GPU_PRODUCT="NVIDIA H100 80GB HBM3" \
-	EXPECTED_HIGHEND_GPU_COUNT=4 \
-	$(MAKE) e2e
+	VALUES_FILE=$(shell pwd)/test/e2e/values-profiles.yaml $(MAKE) e2e
 .PHONY: e2e-profiles
 
 clean:

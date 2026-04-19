@@ -40,12 +40,12 @@ var (
 	restConfig    *rest.Config
 	nvidiaClient  nvidiaversioned.Interface
 
-	// Expected GPU values — set via env vars so the same tests run against
-	// both old-format (topology:) and profile-based (cluster:) Helm values.
-	expectedGpuProduct        = envOrDefault("EXPECTED_GPU_PRODUCT", "NVIDIA-A100-SXM4-40GB")
-	expectedGpuCount, _       = strconv.Atoi(envOrDefault("EXPECTED_GPU_COUNT", "2"))
-	expectedHighendGpuProduct = envOrDefault("EXPECTED_HIGHEND_GPU_PRODUCT", "NVIDIA-H100-80GB-HBM3")
-	expectedHighendGpuCount,_ = strconv.Atoi(envOrDefault("EXPECTED_HIGHEND_GPU_COUNT", "4"))
+	// Expected GPU values — both values files (old-format and profile-based)
+	// are aligned to produce these same product names and counts.
+	expectedGpuProduct        = "NVIDIA A100-SXM4-40GB"
+	expectedGpuCount          = 2
+	expectedHighendGpuProduct = "NVIDIA H100 80GB HBM3"
+	expectedHighendGpuCount   = 4
 )
 
 func TestE2E(t *testing.T) {
@@ -972,13 +972,6 @@ func applyManifestWithNamespace(manifestPath, namespace string) {
 	cmd.Stdin = strings.NewReader(manifest)
 	output, err = cmd.CombinedOutput()
 	Expect(err).NotTo(HaveOccurred(), "Should apply manifest: %s", string(output))
-}
-
-func envOrDefault(key, defaultVal string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return defaultVal
 }
 
 // getPrometheusMetrics fetches Prometheus metrics from the nvidia-dcgm-exporter service
