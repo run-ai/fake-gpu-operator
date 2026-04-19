@@ -42,8 +42,11 @@ setup-integration:
 	test/integration/setup.sh
 .PHONY: setup-integration
 
+# Runs integration tests for both old format and profile-based format.
+# Phase 1: tests against old-format values (deployed by setup.sh).
+# Phase 2: helm upgrade to profile-based values, then tests again.
 test-integration: ginkgo
-	cd test/integration && $(GINKGO) --procs=1 --timeout=30m --trace
+	GINKGO=$(GINKGO) test/integration/run-tests.sh
 .PHONY: test-integration
 
 teardown-integration:

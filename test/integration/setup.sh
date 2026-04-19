@@ -12,6 +12,9 @@ CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm6
 # The name of the kind cluster to create
 : ${KIND_CLUSTER_NAME:="fake-gpu-operator-cluster"}
 
+# Values file for Helm install (override to test profile-based config)
+: ${VALUES_FILE:="${SCRIPTS_DIR}/values.yaml"}
+
 # The path to kind's cluster configuration file
 : ${KIND_CLUSTER_CONFIG_PATH:="${SCRIPTS_DIR}/kind-cluster-config.yaml"}
 
@@ -80,7 +83,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     helm upgrade -i fake-gpu-operator deploy/fake-gpu-operator \
         --namespace gpu-operator \
         --create-namespace \
-        -f "${SCRIPTS_DIR}/values.yaml" \
+        -f "${VALUES_FILE}" \
         --set draPlugin.image.tag="${DOCKER_TAG}" \
         --set statusUpdater.image.tag="${DOCKER_TAG}" \
         --set statusExporter.image.tag="${DOCKER_TAG}" \
@@ -124,27 +127,37 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     kubectl apply -f "https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_VERSION}/stage-fast.yaml"
 
     # Create KWOK simulated nodes with GPU topology
+    # Nodes are split across pools: 1-3 → "default", 4-5 → "highend"
     echo "Creating KWOK simulated GPU nodes..."
-    KWOK_NODE_COUNT=5
-    KWOK_NODES=()
-    for i in $(seq 1 ${KWOK_NODE_COUNT}); do
-        KWOK_NODES+=("kwok-gpu-node-${i}")
-    done
+    KWOK_NODES=("kwok-gpu-node-1" "kwok-gpu-node-2" "kwok-gpu-node-3" "kwok-gpu-node-4" "kwok-gpu-node-5")
     KWOK_NODE_TEMPLATE="${SCRIPTS_DIR}/kwok-node-template.yaml"
-    
+
+    # Maps node name → pool name
+    declare -A KWOK_NODE_POOLS
+    KWOK_NODE_POOLS=(
+        ["kwok-gpu-node-1"]="default"
+        ["kwok-gpu-node-2"]="default"
+        ["kwok-gpu-node-3"]="default"
+        ["kwok-gpu-node-4"]="highend"
+        ["kwok-gpu-node-5"]="highend"
+    )
+
     # Function to create a KWOK node from template
     create_kwok_node() {
         local NODE_NAME=$1
-        
-        # Replace node name placeholder in template and apply
-        # KWOK stages will handle node conditions and heartbeats automatically
-        sed "s/KWOK_NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" "${KWOK_NODE_TEMPLATE}" | kubectl apply -f -
+        local NODE_POOL=$2
+
+        # Replace placeholders in template and apply
+        sed -e "s/KWOK_NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" \
+            -e "s/KWOK_NODE_POOL_PLACEHOLDER/${NODE_POOL}/g" \
+            "${KWOK_NODE_TEMPLATE}" | kubectl apply -f -
     }
 
-    # Create all KWOK nodes
+    # Create all KWOK nodes with their assigned pools
     for NODE_NAME in "${KWOK_NODES[@]}"; do
-        echo "Creating KWOK node: ${NODE_NAME}..."
-        create_kwok_node "${NODE_NAME}"
+        NODE_POOL="${KWOK_NODE_POOLS[$NODE_NAME]}"
+        echo "Creating KWOK node: ${NODE_NAME} (pool: ${NODE_POOL})..."
+        create_kwok_node "${NODE_NAME}" "${NODE_POOL}"
     done
 
     # The status-updater will automatically create a topology ConfigMap for each KWOK node

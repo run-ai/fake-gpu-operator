@@ -80,3 +80,7 @@ topology:
       gpuProduct: NVIDIA-A100-SXM4-40GB
       gpuCount: 2
       gpuMemory: 40960
+    highend:
+      gpuProduct: NVIDIA-H100-80GB-HBM3
+      gpuCount: 4
+      gpuMemory: 81920

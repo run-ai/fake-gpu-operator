@@ -1,5 +1,5 @@
-# Integration test values - NEW FORMAT with profile-based GPU config
-# This tests the Phase 3 pipeline: ClusterConfig → profile resolution → NodeTopology
+# Integration test values - PROFILE-BASED GPU config (cluster: key)
+# Tests the profile resolution pipeline: ClusterConfig → Load → Merge → Extract → NodeTopology
 
 environment:
   openshift: false
@@ -73,7 +73,10 @@ kwokComputeDomainDraPlugin:
 builtinProfiles:
   enabled: true
 
-# NEW FORMAT: profile-based GPU topology
+# Profile-based GPU topology
+# The T4 profile defaults to 1 device; we override to 2 so the multi-pod
+# DRA tests (which need 2 distinct GPUs) pass with this values file.
+# The H100 profile defaults to 8 devices; we override to 4 for the highend pool.
 cluster:
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: none
@@ -82,3 +85,23 @@ cluster:
       gpu:
         backend: nvml-mock
         profile: t4
+        overrides:
+          devices:
+            - index: 0
+              uuid: "GPU-T4-0000-0000-0000-000000000000"
+            - index: 1
+              uuid: "GPU-T4-0000-0000-0000-000000000001"
+    highend:
+      gpu:
+        backend: nvml-mock
+        profile: h100
+        overrides:
+          devices:
+            - index: 0
+              uuid: "GPU-H100-0000-0000-0000-000000000000"
+            - index: 1
+              uuid: "GPU-H100-0000-0000-0000-000000000001"
+            - index: 2
+              uuid: "GPU-H100-0000-0000-0000-000000000002"
+            - index: 3
+              uuid: "GPU-H100-0000-0000-0000-000000000003"
