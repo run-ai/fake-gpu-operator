@@ -31,22 +31,22 @@ type NodeController struct {
 	informer   cache.SharedIndexInformer
 	handler    nodehandler.Interface
 
-	clusterTopology *topology.ClusterTopology
+	clusterConfig *topology.ClusterConfig
 }
 
 var _ controllers.Interface = &NodeController{}
 
 func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup, disableNodeLabeling bool) *NodeController {
-	clusterTopology, err := topology.GetClusterTopologyFromCM(kubeClient)
+	clusterConfig, err := topology.GetClusterConfigFromCM(kubeClient)
 	if err != nil {
 		log.Fatalf("Failed to get cluster topology: %v", err)
 	}
 
 	c := &NodeController{
-		kubeClient:      kubeClient,
-		informer:        informers.NewSharedInformerFactory(kubeClient, 0).Core().V1().Nodes().Informer(),
-		handler:         nodehandler.NewNodeHandler(kubeClient, clusterTopology, disableNodeLabeling),
-		clusterTopology: clusterTopology,
+		kubeClient:    kubeClient,
+		informer:      informers.NewSharedInformerFactory(kubeClient, 0).Core().V1().Nodes().Informer(),
+		handler:       nodehandler.NewNodeHandler(kubeClient, clusterConfig, disableNodeLabeling),
+		clusterConfig: clusterConfig,
 	}
 
 	_, err = c.informer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -94,7 +94,7 @@ func (c *NodeController) Run(stopCh <-chan struct{}) {
 func (c *NodeController) pruneTopologyConfigMaps() error {
 	log.Print("Pruning topology ConfigMaps...")
 
-	gpuNodesLabelReq, err := labels.NewRequirement(c.clusterTopology.NodePoolLabelKey, selection.Exists, nil)
+	gpuNodesLabelReq, err := labels.NewRequirement(c.clusterConfig.NodePoolLabelKey, selection.Exists, nil)
 	if err != nil {
 		return fmt.Errorf("failed creating label requirement: %v", err)
 	}
@@ -165,7 +165,7 @@ func (c *NodeController) pruneTopologyConfigMap(cm *v1.ConfigMap, isValidNodeTop
 }
 
 func (c *NodeController) isFakeGpuNode(node *v1.Node) bool {
-	_, isNodeAssignedToNodePool := node.Labels[c.clusterTopology.NodePoolLabelKey]
+	_, isNodeAssignedToNodePool := node.Labels[c.clusterConfig.NodePoolLabelKey]
 	return isNodeAssignedToNodePool
 }
 

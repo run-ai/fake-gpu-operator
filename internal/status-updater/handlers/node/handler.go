@@ -18,16 +18,16 @@ type Interface interface {
 type NodeHandler struct {
 	kubeClient kubernetes.Interface
 
-	clusterTopology *topology.ClusterTopology
+	clusterConfig   *topology.ClusterConfig
 	disableLabeling bool
 }
 
 var _ Interface = &NodeHandler{}
 
-func NewNodeHandler(kubeClient kubernetes.Interface, clusterTopology *topology.ClusterTopology, disableLabeling bool) *NodeHandler {
+func NewNodeHandler(kubeClient kubernetes.Interface, clusterConfig *topology.ClusterConfig, disableLabeling bool) *NodeHandler {
 	return &NodeHandler{
 		kubeClient:      kubeClient,
-		clusterTopology: clusterTopology,
+		clusterConfig:   clusterConfig,
 		disableLabeling: disableLabeling,
 	}
 }
