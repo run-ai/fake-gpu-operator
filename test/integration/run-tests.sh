@@ -51,6 +51,16 @@ helm upgrade fake-gpu-operator deploy/fake-gpu-operator \
     --set computeDomainDraPlugin.image.tag="${DOCKER_TAG}" \
     --set kwokComputeDomainDraPlugin.image.tag="${DOCKER_TAG}"
 
+# Delete per-node topology CMs and ResourceSlices so the status-updater
+# recreates them from the new config. The status-updater only creates CMs —
+# it won't update existing ones.
+KWOK_NODES=("kwok-gpu-node-1" "kwok-gpu-node-2" "kwok-gpu-node-3" "kwok-gpu-node-4" "kwok-gpu-node-5")
+echo "Deleting existing per-node topology ConfigMaps and ResourceSlices..."
+for NODE_NAME in "${KWOK_NODES[@]}"; do
+    kubectl delete cm -n gpu-operator -l "node-name=${NODE_NAME}" --ignore-not-found=true
+    kubectl delete resourceslice "kwok-${NODE_NAME}-gpu" --ignore-not-found=true
+done
+
 echo "Waiting for status-updater to restart..."
 kubectl rollout status deployment/status-updater -n gpu-operator --timeout=120s
 
@@ -60,32 +70,42 @@ kubectl rollout status daemonset/nvidia-dcgm-exporter -n gpu-operator --timeout=
 echo "Waiting for kwok-dra-plugin to restart..."
 kubectl rollout status deployment/kwok-dra-plugin -n gpu-operator --timeout=120s
 
-# Wait for topology CMs to be updated with new profile-resolved values.
-# The status-updater reconciles on startup, but needs a few seconds.
-echo "Waiting for topology ConfigMaps to converge..."
-KWOK_NODES=("kwok-gpu-node-1" "kwok-gpu-node-2" "kwok-gpu-node-3" "kwok-gpu-node-4" "kwok-gpu-node-5")
+# Wait for topology CMs to be recreated with profile-resolved values.
+echo "Waiting for topology ConfigMaps to be recreated..."
 for NODE_NAME in "${KWOK_NODES[@]}"; do
     for i in {1..30}; do
-        if kubectl get cm -n gpu-operator -l "node-name=${NODE_NAME}" -o jsonpath='{.items[0].data.topology}' 2>/dev/null | grep -q "gpuProduct"; then
-            echo "Topology ConfigMap updated for ${NODE_NAME}"
+        if kubectl get cm -n gpu-operator -l "node-name=${NODE_NAME}" -o jsonpath='{.items[0].data.topology\.yml}' 2>/dev/null | grep -q "gpuProduct"; then
+            echo "Topology ConfigMap recreated for ${NODE_NAME}"
             break
         fi
-        echo "Waiting for topology ConfigMap update... ($i/30)"
+        if [[ $i -eq 30 ]]; then
+            echo "ERROR: Timed out waiting for topology ConfigMap for ${NODE_NAME}"
+            exit 1
+        fi
+        echo "Waiting for topology ConfigMap... ($i/30)"
         sleep 2
     done
 done
 
-# Also wait for ResourceSlices to be reconciled
+# Wait for ResourceSlices to be recreated by kwok-dra-plugin
 for NODE_NAME in "${KWOK_NODES[@]}"; do
     for i in {1..30}; do
         if kubectl get resourceslice "kwok-${NODE_NAME}-gpu" >/dev/null 2>&1; then
-            echo "ResourceSlice exists for ${NODE_NAME}"
+            echo "ResourceSlice recreated for ${NODE_NAME}"
             break
+        fi
+        if [[ $i -eq 30 ]]; then
+            echo "ERROR: Timed out waiting for ResourceSlice for ${NODE_NAME}"
+            exit 1
         fi
         echo "Waiting for ResourceSlice... ($i/30)"
         sleep 2
     done
 done
+
+# Give status-exporter time to update node labels from new topology
+echo "Waiting for node labels to converge..."
+sleep 5
 
 # ─────────────────────────────────────────────────
 # Phase 2: Profile-based format (cluster: key)
