@@ -530,8 +530,8 @@ var _ = Describe("Multi-Nodepool Topology Tests", func() {
 				Expect(cmList.Items).To(HaveLen(1), "Should have exactly one topology CM for %s", pool.nodeName)
 
 				cm := cmList.Items[0]
-				topologyYAML, ok := cm.Data["topology"]
-				Expect(ok).To(BeTrue(), "ConfigMap should have 'topology' key")
+				topologyYAML, ok := cm.Data["topology.yml"]
+				Expect(ok).To(BeTrue(), "ConfigMap should have 'topology.yml' key")
 
 				var topo struct {
 					GpuProduct string `yaml:"gpuProduct"`
@@ -577,8 +577,8 @@ var _ = Describe("Multi-Nodepool Topology Tests", func() {
 					ID string `yaml:"id"`
 				} `yaml:"gpus"`
 			}
-			Expect(yaml.Unmarshal([]byte(defaultCMs.Items[0].Data["topology"]), &defaultTopo)).To(Succeed())
-			Expect(yaml.Unmarshal([]byte(highendCMs.Items[0].Data["topology"]), &highendTopo)).To(Succeed())
+			Expect(yaml.Unmarshal([]byte(defaultCMs.Items[0].Data["topology.yml"]), &defaultTopo)).To(Succeed())
+			Expect(yaml.Unmarshal([]byte(highendCMs.Items[0].Data["topology.yml"]), &highendTopo)).To(Succeed())
 
 			Expect(defaultTopo.GpuProduct).NotTo(Equal(highendTopo.GpuProduct),
 				"Default and highend pools should have different GPU products")
