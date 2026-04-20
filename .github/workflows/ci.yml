@@ -8,6 +8,12 @@ on:
   pull_request:
     branches: [ main ]
     types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Image/Helm tag to build and push (e.g. 0.0.0-rc1)'
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -89,7 +95,7 @@ jobs:
           DOCKER_BUILDX_PLATFORMS: linux/amd64
 
   set-release-vars:
-    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '' }}
     runs-on: ubuntu-latest
     outputs:
       release_version: ${{ steps.vars.outputs.release_version }}
@@ -97,7 +103,10 @@ jobs:
       - name: Set release variables
         id: vars
         run: |
-          if [[ ${{ github.ref }} =~ ^refs/tags/ ]]; then
+          if [[ -n "${{ inputs.release_tag }}" ]]; then
+            # Manual dispatch
+            echo "release_version=${{ inputs.release_tag }}" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.ref }} =~ ^refs/tags/ ]]; then
             # Version tag
             echo "release_version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
           elif [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
