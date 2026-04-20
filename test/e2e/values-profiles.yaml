@@ -74,8 +74,6 @@ builtinProfiles:
   enabled: true
 
 # Profile-based GPU topology
-# Both profiles default to more devices than we need, so we override the device
-# list to match the old-format values (default: 2 GPUs, highend: 4 GPUs).
 cluster:
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: none
@@ -85,16 +83,10 @@ cluster:
         backend: nvml-mock
         profile: a100
         overrides:
-          devices:
-            - index: 0
-            - index: 1
+          device_count: 2
     highend:
       gpu:
         backend: nvml-mock
         profile: h100
         overrides:
-          devices:
-            - index: 0
-            - index: 1
-            - index: 2
-            - index: 3
+          device_count: 4

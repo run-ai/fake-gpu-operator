@@ -87,9 +87,7 @@ func resolveFromOverrides(pool NodePoolConfig, resolved *ResolvedPool) (*Resolve
 		}
 	}
 
-	if devices, ok := overrides["devices"].([]interface{}); ok {
-		resolved.GpuCount = len(devices)
-	}
+	resolved.GpuCount = profile.DeviceCount(overrides)
 
 	return resolved, nil
 }
