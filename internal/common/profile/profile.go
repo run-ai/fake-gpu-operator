@@ -117,26 +117,22 @@ func getMap(m map[string]interface{}, key string) (map[string]interface{}, bool)
 // It checks for an explicit "device_count" field first, then falls back to
 // counting the "devices" list.
 func DeviceCount(profile map[string]interface{}) int {
-	if n := toInt(profile["device_count"]); n > 0 {
-		return n
+	var count int
+	switch n := profile["device_count"].(type) {
+	case int:
+		count = n
+	case int64:
+		count = int(n)
+	case float64:
+		count = int(n)
+	}
+	if count > 0 {
+		return count
 	}
 	if devices, ok := profile["devices"].([]interface{}); ok {
 		return len(devices)
 	}
 	return 0
-}
-
-func toInt(v interface{}) int {
-	switch n := v.(type) {
-	case int:
-		return n
-	case int64:
-		return int(n)
-	case float64:
-		return int(n)
-	default:
-		return 0
-	}
 }
 
 // toMiB converts a bytes value (which may be int, int64, or float64 from YAML
