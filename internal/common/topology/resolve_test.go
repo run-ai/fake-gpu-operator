@@ -44,7 +44,7 @@ devices:
 
 	pool := NodePoolConfig{
 		Gpu: GpuConfig{
-			Backend: "nvml-mock",
+			Backend: "mock",
 			Profile: "h100",
 		},
 	}
