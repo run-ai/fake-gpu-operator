@@ -6,7 +6,7 @@ kind: ConfigMap
 metadata:
   name: gpu-profile-a100
   labels:
-    run.ai/gpu-profile: "true"
+    fake-gpu-operator/gpu-profile: "true"
 data:
   profile.yaml: |
     # Mock NVML Configuration: DGX A100
@@ -398,7 +398,7 @@ kind: ConfigMap
 metadata:
   name: gpu-profile-b200
   labels:
-    run.ai/gpu-profile: "true"
+    fake-gpu-operator/gpu-profile: "true"
 data:
   profile.yaml: |
     # Mock NVML Configuration: B200
@@ -795,7 +795,7 @@ kind: ConfigMap
 metadata:
   name: gpu-profile-gb200
   labels:
-    run.ai/gpu-profile: "true"
+    fake-gpu-operator/gpu-profile: "true"
 data:
   profile.yaml: |
     # Mock NVML Configuration: GB200 NVL (Grace-Blackwell Superchip)
@@ -1221,7 +1221,7 @@ kind: ConfigMap
 metadata:
   name: gpu-profile-h100
   labels:
-    run.ai/gpu-profile: "true"
+    fake-gpu-operator/gpu-profile: "true"
 data:
   profile.yaml: |
     # Mock NVML Configuration: HGX H100
@@ -1615,7 +1615,7 @@ kind: ConfigMap
 metadata:
   name: gpu-profile-l40s
   labels:
-    run.ai/gpu-profile: "true"
+    fake-gpu-operator/gpu-profile: "true"
 data:
   profile.yaml: |
     # Mock NVML Configuration: L40S
@@ -1988,7 +1988,7 @@ kind: ConfigMap
 metadata:
   name: gpu-profile-t4
   labels:
-    run.ai/gpu-profile: "true"
+    fake-gpu-operator/gpu-profile: "true"
 data:
   profile.yaml: |
     # Mock NVML Configuration: T4

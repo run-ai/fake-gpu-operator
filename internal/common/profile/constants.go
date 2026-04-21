@@ -2,7 +2,7 @@ package profile
 
 const (
 	// LabelGpuProfile is the label used to identify GPU profile ConfigMaps.
-	LabelGpuProfile = "run.ai/gpu-profile"
+	LabelGpuProfile = "fake-gpu-operator/gpu-profile"
 
 	// CmProfileKey is the data key inside profile ConfigMaps.
 	CmProfileKey = "profile.yaml"
