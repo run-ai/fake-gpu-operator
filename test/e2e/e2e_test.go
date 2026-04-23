@@ -575,21 +575,121 @@ var _ = Describe("Multi-Nodepool Topology Tests", func() {
 var _ = Describe("Component Controller Tests", func() {
 	const gpuOperatorNS = "gpu-operator"
 
-	Describe("Controller-Managed Deployments", func() {
-		It("should create per-pool kwok-gpu-device-plugin deployments", func() {
-			deps, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
-				LabelSelector: "app.kubernetes.io/managed-by=fake-gpu-operator,fake-gpu-operator/component=kwok-gpu-device-plugin",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(deps.Items)).To(BeNumerically(">=", 1), "Should have at least one controller-managed device-plugin deployment")
+	// The values-profiles.yaml defines:
+	//   "default" pool with backend: fake  → controller should create K8s resources
+	//   "highend" pool with backend: mock  → controller skips (handled by Helm)
+	// kwokDraPlugin.enabled: true → controller should also create DRA plugin deployment
+
+	managedSelector := "app.kubernetes.io/managed-by=fake-gpu-operator"
+
+	Describe("Controller-Managed Deployments for fake pools", func() {
+		It("should create kwok-gpu-device-plugin-default deployment", func() {
+			dep, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "kwok-gpu-device-plugin-default", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred(), "kwok-gpu-device-plugin-default deployment should exist")
+
+			Expect(dep.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "fake-gpu-operator"))
+			Expect(dep.Labels).To(HaveKeyWithValue("fake-gpu-operator/component", "kwok-gpu-device-plugin"))
+			Expect(dep.Labels).To(HaveKeyWithValue("fake-gpu-operator/pool", "default"))
 		})
 
-		It("should create per-pool kwok-status-exporter deployments", func() {
+		It("should create kwok-status-exporter-default deployment", func() {
+			dep, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "kwok-status-exporter-default", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred(), "kwok-status-exporter-default deployment should exist")
+
+			Expect(dep.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "fake-gpu-operator"))
+			Expect(dep.Labels).To(HaveKeyWithValue("fake-gpu-operator/component", "kwok-status-exporter"))
+			Expect(dep.Labels).To(HaveKeyWithValue("fake-gpu-operator/pool", "default"))
+		})
+
+		It("should create kwok-dra-plugin-default deployment when DRA is enabled", func() {
+			dep, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "kwok-dra-plugin-default", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred(), "kwok-dra-plugin-default deployment should exist")
+
+			Expect(dep.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "fake-gpu-operator"))
+			Expect(dep.Labels).To(HaveKeyWithValue("fake-gpu-operator/component", "kwok-dra-plugin"))
+			Expect(dep.Labels).To(HaveKeyWithValue("fake-gpu-operator/pool", "default"))
+		})
+	})
+
+	Describe("Controller-Managed Services", func() {
+		It("should create kwok-status-exporter-default service", func() {
+			svc, err := kubeClient.CoreV1().Services(gpuOperatorNS).Get(
+				context.Background(), "kwok-status-exporter-default", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred(), "kwok-status-exporter-default service should exist")
+
+			Expect(svc.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "fake-gpu-operator"))
+			Expect(svc.Labels).To(HaveKeyWithValue("fake-gpu-operator/component", "kwok-status-exporter"))
+			Expect(svc.Labels).To(HaveKeyWithValue("fake-gpu-operator/pool", "default"))
+		})
+	})
+
+	Describe("No resources for mock pools", func() {
+		It("should not create deployments for highend (mock) pool", func() {
 			deps, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
-				LabelSelector: "app.kubernetes.io/managed-by=fake-gpu-operator,fake-gpu-operator/component=kwok-status-exporter",
+				LabelSelector: managedSelector + ",fake-gpu-operator/pool=highend",
 			})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(deps.Items)).To(BeNumerically(">=", 1), "Should have at least one controller-managed status-exporter deployment")
+			Expect(deps.Items).To(BeEmpty(), "Mock pool 'highend' should have no controller-managed deployments")
+		})
+	})
+
+	Describe("Deployment images", func() {
+		It("should use correct image registry and tag for device-plugin", func() {
+			dep, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "kwok-gpu-device-plugin-default", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dep.Spec.Template.Spec.Containers).ToNot(BeEmpty())
+
+			image := dep.Spec.Template.Spec.Containers[0].Image
+			Expect(image).To(ContainSubstring("ghcr.io/run-ai/fake-gpu-operator/kwok-gpu-device-plugin"),
+				"Device plugin image should use the configured registry")
+		})
+
+		It("should use correct image registry and tag for status-exporter", func() {
+			dep, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "kwok-status-exporter-default", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dep.Spec.Template.Spec.Containers).ToNot(BeEmpty())
+
+			image := dep.Spec.Template.Spec.Containers[0].Image
+			Expect(image).To(ContainSubstring("ghcr.io/run-ai/fake-gpu-operator/status-exporter"),
+				"Status exporter image should use the configured registry")
+		})
+	})
+
+	Describe("Deployment pods are running", func() {
+		It("should have running pods for controller-managed deployments", func() {
+			deps, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: managedSelector,
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(deps.Items).ToNot(BeEmpty(), "Should have controller-managed deployments")
+
+			for _, dep := range deps.Items {
+				Expect(dep.Status.AvailableReplicas).To(BeNumerically(">=", 1),
+					"Deployment %s should have at least 1 available replica", dep.Name)
+			}
+		})
+	})
+
+	Describe("Static templates are absent", func() {
+		It("should not have static kwok-gpu-device-plugin deployment (without pool suffix)", func() {
+			// When the component controller is enabled, the static Helm template
+			// for kwok-gpu-device-plugin should be gated off
+			_, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "kwok-gpu-device-plugin", metav1.GetOptions{})
+			Expect(err).To(HaveOccurred(), "Static kwok-gpu-device-plugin deployment should not exist when controller is enabled")
+		})
+
+		It("should not have static nvidia-dcgm-exporter-kwok deployment", func() {
+			// When the component controller is enabled, the static Helm template
+			// for nvidia-dcgm-exporter-kwok should be gated off
+			_, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
+				context.Background(), "nvidia-dcgm-exporter-kwok", metav1.GetOptions{})
+			Expect(err).To(HaveOccurred(), "Static nvidia-dcgm-exporter-kwok deployment should not exist when controller is enabled")
 		})
 	})
 })

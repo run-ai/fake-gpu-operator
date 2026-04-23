@@ -56,7 +56,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     echo "Loading images into kind cluster..."
     DOCKER_REPO_BASE="${DOCKER_REPO_BASE:-ghcr.io/run-ai/fake-gpu-operator}"
-    for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-dra-plugin kwok-compute-domain-dra-plugin compute-domain-controller compute-domain-dra-plugin; do
+    for component in dra-plugin-gpu status-updater status-exporter topology-server kwok-gpu-device-plugin kwok-dra-plugin kwok-compute-domain-dra-plugin compute-domain-controller compute-domain-dra-plugin; do
         IMAGE="${DOCKER_REPO_BASE}/${component}:${DOCKER_TAG}"
         echo "Loading ${IMAGE}..."
         kind load docker-image \
@@ -91,7 +91,9 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         --set kwokDraPlugin.image.tag="${DOCKER_TAG}" \
         --set computeDomainController.image.tag="${DOCKER_TAG}" \
         --set computeDomainDraPlugin.image.tag="${DOCKER_TAG}" \
-        --set kwokComputeDomainDraPlugin.image.tag="${DOCKER_TAG}"
+        --set kwokComputeDomainDraPlugin.image.tag="${DOCKER_TAG}" \
+        --set kwokGpuDevicePlugin.image.tag="${DOCKER_TAG}" \
+        --set statusUpdater.componentController.fallbackImageTag="${DOCKER_TAG}"
 
     echo "Waiting for status-updater pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app=status-updater -n gpu-operator --timeout=120s
@@ -185,6 +187,23 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         sleep 2
         done
     done
+
+    # If component controller is enabled, wait for controller-managed deployments
+    # The controller creates per-pool deployments after the topology CM is populated
+    COMPONENT_CONTROLLER_ENABLED=$(helm get values fake-gpu-operator -n gpu-operator -o json 2>/dev/null | python3 -c "import sys,json; v=json.load(sys.stdin); print(v.get('statusUpdater',{}).get('componentController',{}).get('enabled',False))" 2>/dev/null || echo "False")
+    if [[ "${COMPONENT_CONTROLLER_ENABLED}" == "True" ]]; then
+        echo "Component controller is enabled, waiting for controller-managed deployments..."
+        for i in {1..30}; do
+            MANAGED_DEPS=$(kubectl get deployments -n gpu-operator -l "app.kubernetes.io/managed-by=fake-gpu-operator" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+            if [[ "${MANAGED_DEPS}" -ge 1 ]]; then
+                echo "Found ${MANAGED_DEPS} controller-managed deployments!"
+                kubectl wait --for=condition=Available deployment -l "app.kubernetes.io/managed-by=fake-gpu-operator" -n gpu-operator --timeout=120s
+                break
+            fi
+            echo "Waiting for controller-managed deployments... ($i/30)"
+            sleep 2
+        done
+    fi
 
     echo "Setup complete! Cluster ${KIND_CLUSTER_NAME} is ready."
     echo "Worker node: ${WORKER_NODE}"
