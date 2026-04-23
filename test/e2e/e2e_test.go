@@ -572,6 +572,28 @@ var _ = Describe("Multi-Nodepool Topology Tests", func() {
 	})
 })
 
+var _ = Describe("Component Controller Tests", func() {
+	const gpuOperatorNS = "gpu-operator"
+
+	Describe("Controller-Managed Deployments", func() {
+		It("should create per-pool kwok-gpu-device-plugin deployments", func() {
+			deps, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: "app.kubernetes.io/managed-by=fake-gpu-operator,fake-gpu-operator/component=kwok-gpu-device-plugin",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(deps.Items)).To(BeNumerically(">=", 1), "Should have at least one controller-managed device-plugin deployment")
+		})
+
+		It("should create per-pool kwok-status-exporter deployments", func() {
+			deps, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
+				LabelSelector: "app.kubernetes.io/managed-by=fake-gpu-operator,fake-gpu-operator/component=kwok-status-exporter",
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(deps.Items)).To(BeNumerically(">=", 1), "Should have at least one controller-managed status-exporter deployment")
+		})
+	})
+})
+
 // Helper functions
 
 // trackResourceClaimsForPod tracks ResourceClaims for a pod and adds them to testResourceClaims
