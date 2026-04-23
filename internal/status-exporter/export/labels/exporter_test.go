@@ -2,6 +2,7 @@ package labels_test
 
 import (
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -57,4 +58,49 @@ func TestExport(t *testing.T) {
 	fakeWatcher.topologyChan <- myNode
 	stop <- struct{}{}
 	wg.Wait()
+}
+
+func TestBuildNodeLabels_SanitizesGpuProduct(t *testing.T) {
+	tests := []struct {
+		name       string
+		gpuProduct string
+		wantLabel  string
+	}{
+		{
+			name:       "spaces replaced with dashes",
+			gpuProduct: "NVIDIA A100-SXM4-40GB",
+			wantLabel:  "NVIDIA-A100-SXM4-40GB",
+		},
+		{
+			name:       "slashes replaced",
+			gpuProduct: "NVIDIA A100/SXM4",
+			wantLabel:  "NVIDIA-A100-SXM4",
+		},
+		{
+			name:       "parentheses replaced",
+			gpuProduct: "GPU (Test Edition)",
+			wantLabel:  "GPU--Test-Edition",
+		},
+		{
+			name:       "truncated to 63 chars",
+			gpuProduct: strings.Repeat("A", 100),
+			wantLabel:  strings.Repeat("A", 63),
+		},
+		{
+			name:       "empty string",
+			gpuProduct: "",
+			wantLabel:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			topo := &topology.NodeTopology{
+				GpuProduct: tt.gpuProduct,
+				Gpus:       []topology.GpuDetails{{ID: "gpu-1"}},
+			}
+			l := labels.BuildNodeLabels(topo)
+			assert.Equal(t, tt.wantLabel, l["nvidia.com/gpu.product"])
+		})
+	}
 }

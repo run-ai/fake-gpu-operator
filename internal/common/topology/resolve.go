@@ -2,6 +2,7 @@ package topology
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/profile"
 	"k8s.io/client-go/kubernetes"
@@ -36,6 +37,11 @@ func ResolveNodePool(kubeClient kubernetes.Interface, namespace string, pool Nod
 			})
 		}
 	}
+
+	// Sort OtherDevices by name to ensure deterministic ordering across reconciles
+	sort.Slice(resolved.OtherDevices, func(i, j int) bool {
+		return resolved.OtherDevices[i].Name < resolved.OtherDevices[j].Name
+	})
 
 	if pool.Gpu.Profile != "" {
 		return resolveWithProfile(kubeClient, namespace, pool, resolved)

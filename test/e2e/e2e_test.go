@@ -34,18 +34,20 @@ const (
 	namespaceTimeout = 30 * time.Second
 )
 
-var (
-	kubeClient    kubernetes.Interface
-	dynamicClient dynamic.Interface
-	restConfig    *rest.Config
-	nvidiaClient  nvidiaversioned.Interface
-
+const (
 	// Expected GPU values — both values files (old-format and profile-based)
 	// are aligned to produce these same product names and counts.
 	expectedGpuProduct        = "NVIDIA A100-SXM4-40GB"
 	expectedGpuCount          = 2
 	expectedHighendGpuProduct = "NVIDIA H100 80GB HBM3"
 	expectedHighendGpuCount   = 4
+)
+
+var (
+	kubeClient    kubernetes.Interface
+	dynamicClient dynamic.Interface
+	restConfig    *rest.Config
+	nvidiaClient  nvidiaversioned.Interface
 )
 
 func TestE2E(t *testing.T) {

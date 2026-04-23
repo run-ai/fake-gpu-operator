@@ -115,7 +115,8 @@ func getMap(m map[string]interface{}, key string) (map[string]interface{}, bool)
 
 // DeviceCount returns the number of GPU devices in a profile.
 // It checks for an explicit "device_count" field first, then falls back to
-// counting the "devices" list.
+// counting the "devices" list. Note: device_count: 0 is treated as unset
+// (falls back to len(devices)), since zero GPUs is not a valid pool config.
 func DeviceCount(profile map[string]interface{}) int {
 	var count int
 	switch n := profile["device_count"].(type) {
