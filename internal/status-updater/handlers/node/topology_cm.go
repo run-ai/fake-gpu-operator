@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -14,25 +16,31 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 		return nil
 	}
 
-	nodePoolName, ok := node.Labels[p.clusterTopology.NodePoolLabelKey]
+	nodePoolName, ok := node.Labels[p.clusterConfig.NodePoolLabelKey]
 	if !ok {
 		return fmt.Errorf("node %s does not have a nodepool label", node.Name)
 	}
 
-	nodePoolTopology, ok := p.clusterTopology.NodePools[nodePoolName]
+	poolConfig, ok := p.clusterConfig.NodePools[nodePoolName]
 	if !ok {
 		return fmt.Errorf("nodepool %s not found in cluster topology", nodePoolName)
 	}
 
-	nodeTopology = &topology.NodeTopology{
-		GpuMemory:    nodePoolTopology.GpuMemory,
-		GpuProduct:   nodePoolTopology.GpuProduct,
-		Gpus:         generateGpuDetails(nodePoolTopology.GpuCount, node.Name),
-		MigStrategy:  p.clusterTopology.MigStrategy,
-		OtherDevices: nodePoolTopology.OtherDevices,
+	namespace := viper.GetString(constants.EnvTopologyCmNamespace)
+	resolved, err := topology.ResolveNodePool(p.kubeClient, namespace, poolConfig)
+	if err != nil {
+		return fmt.Errorf("failed to resolve nodepool %s: %w", nodePoolName, err)
 	}
 
-	err := topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node)
+	nodeTopology = &topology.NodeTopology{
+		GpuMemory:    resolved.GpuMemory,
+		GpuProduct:   resolved.GpuProduct,
+		Gpus:         generateGpuDetails(resolved.GpuCount, node.Name),
+		MigStrategy:  p.clusterConfig.MigStrategy,
+		OtherDevices: resolved.OtherDevices,
+	}
+
+	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node)
 	if err != nil {
 		return fmt.Errorf("failed to create node topology: %w", err)
 	}

@@ -1,0 +1,86 @@
+# E2E test values for fake-gpu-operator
+# This enables status-updater, topology-server, and DRA plugin for end-to-end testing
+
+environment:
+  openshift: false
+  resourceReservationNamespace: runai-reservation
+
+# Enable DRA plugin for GPU allocation
+draPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Enable status-updater to manage node topology
+statusUpdater:
+  enabled: true
+  runaiIntegration:
+    enabled: true
+    pollingInterval: 5s
+  image:
+    pullPolicy: Never
+
+# Enable topology server for nvidia-smi and DRA plugin to fetch topology
+topologyServer:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Enable topology ConfigMap for status-updater
+topologyConfigMap:
+  enabled: true
+
+# Disable components not needed for e2e tests
+devicePlugin:
+  enabled: false
+
+statusExporter:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+kwokGpuDevicePlugin:
+  enabled: false
+
+kwokDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+migFaker:
+  enabled: false
+
+gpuOperator:
+  enabled: false
+
+runtimeClass:
+  enabled: false
+
+computeDomainController:
+  image:
+    pullPolicy: Never
+
+computeDomainDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+kwokComputeDomainDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# GPU topology configuration
+# Status-updater will use this to create topology ConfigMaps
+topology:
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+  migStrategy: none
+  nodePools:
+    default:
+      gpuProduct: NVIDIA A100-SXM4-40GB
+      gpuCount: 2
+      gpuMemory: 40960
+    highend:
+      gpuProduct: NVIDIA H100 80GB HBM3
+      gpuCount: 4
+      gpuMemory: 81920

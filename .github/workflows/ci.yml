@@ -8,6 +8,12 @@ on:
   pull_request:
     branches: [ main ]
     types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Image/Helm tag to build and push (e.g. 0.0.0-rc1)'
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -48,7 +54,7 @@ jobs:
       - name: Run tests
         run: make test
 
-  integration:
+  e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,15 +67,35 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Install kind
         uses: helm/kind-action@v1.13.0
-      - name: Run integration tests
-        run: make integration
+      - name: Run e2e tests (old format)
+        run: make e2e
+        env:
+          DOCKER_TAG: 0.0.0-dev
+          DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
+          DOCKER_BUILDX_PLATFORMS: linux/amd64
+
+  e2e-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Install kind
+        uses: helm/kind-action@v1.13.0
+      - name: Run e2e tests (profile format)
+        run: make e2e-profiles
         env:
           DOCKER_TAG: 0.0.0-dev
           DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
           DOCKER_BUILDX_PLATFORMS: linux/amd64
 
   set-release-vars:
-    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '' }}
     runs-on: ubuntu-latest
     outputs:
       release_version: ${{ steps.vars.outputs.release_version }}
@@ -77,7 +103,10 @@ jobs:
       - name: Set release variables
         id: vars
         run: |
-          if [[ ${{ github.ref }} =~ ^refs/tags/ ]]; then
+          if [[ -n "${{ inputs.release_tag }}" ]]; then
+            # Manual dispatch
+            echo "release_version=${{ inputs.release_tag }}" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.ref }} =~ ^refs/tags/ ]]; then
             # Version tag
             echo "release_version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
           elif [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
@@ -87,7 +116,7 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars, lint, test, integration]
+    needs: [set-release-vars, lint, test, e2e, e2e-profiles]
     if: ${{ needs.set-release-vars.outputs.release_version != '' }}
     permissions:
       contents: read
@@ -120,7 +149,8 @@ jobs:
   release-helm:
     runs-on: ubuntu-latest
     needs: [release-docker, set-release-vars]
-    if: ${{ needs.set-release-vars.outputs.release_version != '' }}
+    # Skip helm push on manual workflow_dispatch — those are image-only builds from feature branches
+    if: ${{ needs.set-release-vars.outputs.release_version != '' && inputs.release_tag == '' }}
     permissions:
       contents: read
       packages: write

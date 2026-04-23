@@ -203,7 +203,7 @@ spec:
     resourceClaimTemplateName: gpu-claim
 ```
 
-See [test/integration/manifests/](test/integration/manifests/) for more examples.
+See [test/e2e/manifests/](test/e2e/manifests/) for more examples.
 
 ## 🔐 Compute Domain DRA (Secure Workload Isolation)
 
@@ -292,7 +292,7 @@ kubectl get computedomain my-compute-domain -o yaml
 - **Scale Testing**: Simulate hundreds of GPU nodes to test scheduler behavior
 - **Cost Efficiency**: No cloud VMs or physical hardware needed
 - **Fast Iteration**: Spin up/down simulated clusters in seconds
-- **CI/CD**: Run integration tests against realistic cluster topologies
+- **CI/CD**: Run e2e tests against realistic cluster topologies
 
 ### Prerequisites
 

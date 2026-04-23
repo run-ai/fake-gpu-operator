@@ -1,5 +1,5 @@
-# Integration test values for fake-gpu-operator
-# This enables status-updater, topology-server, and DRA plugin for end-to-end testing
+# E2E test values - PROFILE-BASED GPU config (cluster: key)
+# Tests the profile resolution pipeline: ClusterConfig → Load → Merge → Extract → NodeTopology
 
 environment:
   openshift: false
@@ -30,7 +30,7 @@ topologyServer:
 topologyConfigMap:
   enabled: true
 
-# Disable components not needed for integration tests
+# Disable components not needed for e2e tests
 devicePlugin:
   enabled: false
 
@@ -70,13 +70,23 @@ kwokComputeDomainDraPlugin:
   image:
     pullPolicy: Never
 
-# GPU topology configuration
-# Status-updater will use this to create topology ConfigMaps
-topology:
+builtinProfiles:
+  enabled: true
+
+# Profile-based GPU topology
+cluster:
   nodePoolLabelKey: run.ai/simulated-gpu-node-pool
   migStrategy: none
   nodePools:
     default:
-      gpuProduct: NVIDIA-A100-SXM4-40GB
-      gpuCount: 2
-      gpuMemory: 40960
+      gpu:
+        backend: fake
+        profile: a100
+        overrides:
+          device_count: 2
+    highend:
+      gpu:
+        backend: mock
+        profile: h100
+        overrides:
+          device_count: 4

@@ -7,7 +7,7 @@ metadata:
   labels:
     kubernetes.io/role: worker
     node.kubernetes.io/instance-type: gpu-node
-    run.ai/simulated-gpu-node-pool: default
+    run.ai/simulated-gpu-node-pool: KWOK_NODE_POOL_PLACEHOLDER
     type: kwok
   name: KWOK_NODE_NAME_PLACEHOLDER
 spec:

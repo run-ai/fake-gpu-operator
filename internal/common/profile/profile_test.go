@@ -236,6 +236,32 @@ func TestExtract_NilProfile(t *testing.T) {
 	assert.Equal(t, 0, spec.GpuCount)
 }
 
+func TestExtract_DeviceCount(t *testing.T) {
+	data := map[string]interface{}{
+		"device_defaults": map[string]interface{}{
+			"name": "GPU",
+		},
+		"device_count": 2,
+	}
+	spec := Extract(data)
+	assert.Equal(t, 2, spec.GpuCount)
+}
+
+func TestExtract_DeviceCountOverridesDevicesList(t *testing.T) {
+	data := map[string]interface{}{
+		"device_defaults": map[string]interface{}{
+			"name": "GPU",
+		},
+		"device_count": 2,
+		"devices": []interface{}{
+			map[string]interface{}{}, map[string]interface{}{},
+			map[string]interface{}{}, map[string]interface{}{},
+		},
+	}
+	spec := Extract(data)
+	assert.Equal(t, 2, spec.GpuCount, "device_count should take priority over devices list")
+}
+
 func TestExtract_MemoryAsInt(t *testing.T) {
 	data := map[string]interface{}{
 		"device_defaults": map[string]interface{}{

@@ -6,11 +6,14 @@ set -e
 SCRIPTS_DIR="$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../.." &> /dev/null && pwd)"
 
-# For integration tests, we need to load images into docker (not push to registry)
+# For e2e tests, we need to load images into docker (not push to registry)
 # --load only works with single-platform builds, so we detect the current platform
 CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')"
 # The name of the kind cluster to create
 : ${KIND_CLUSTER_NAME:="fake-gpu-operator-cluster"}
+
+# Values file for Helm install (override to test profile-based config)
+: ${VALUES_FILE:="${SCRIPTS_DIR}/values.yaml"}
 
 # The path to kind's cluster configuration file
 : ${KIND_CLUSTER_CONFIG_PATH:="${SCRIPTS_DIR}/kind-cluster-config.yaml"}
@@ -70,7 +73,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         WORKER_NODE=$(kubectl get nodes -o jsonpath='{.items[1].metadata.name}')
     fi
     echo "Worker node: ${WORKER_NODE}"
-    # Install PrometheusRule CRD for runai integration tests
+    # Install PrometheusRule CRD for runai e2e tests
     echo "Installing PrometheusRule CRD..."
     kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml
 
@@ -80,7 +83,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     helm upgrade -i fake-gpu-operator deploy/fake-gpu-operator \
         --namespace gpu-operator \
         --create-namespace \
-        -f "${SCRIPTS_DIR}/values.yaml" \
+        -f "${VALUES_FILE}" \
         --set draPlugin.image.tag="${DOCKER_TAG}" \
         --set statusUpdater.image.tag="${DOCKER_TAG}" \
         --set statusExporter.image.tag="${DOCKER_TAG}" \
@@ -124,27 +127,35 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     kubectl apply -f "https://github.com/kubernetes-sigs/kwok/releases/download/${KWOK_VERSION}/stage-fast.yaml"
 
     # Create KWOK simulated nodes with GPU topology
+    # Nodes are split across pools: 1-3 → "default", 4-5 → "highend"
     echo "Creating KWOK simulated GPU nodes..."
-    KWOK_NODE_COUNT=5
-    KWOK_NODES=()
-    for i in $(seq 1 ${KWOK_NODE_COUNT}); do
-        KWOK_NODES+=("kwok-gpu-node-${i}")
-    done
+    KWOK_NODES=("kwok-gpu-node-1" "kwok-gpu-node-2" "kwok-gpu-node-3" "kwok-gpu-node-4" "kwok-gpu-node-5")
     KWOK_NODE_TEMPLATE="${SCRIPTS_DIR}/kwok-node-template.yaml"
-    
+
+    # Returns pool name for a given node name (nodes 1-3 → default, 4-5 → highend)
+    pool_for_node() {
+        case "$1" in
+            kwok-gpu-node-[123]) echo "default" ;;
+            kwok-gpu-node-[45])  echo "highend" ;;
+        esac
+    }
+
     # Function to create a KWOK node from template
     create_kwok_node() {
         local NODE_NAME=$1
-        
-        # Replace node name placeholder in template and apply
-        # KWOK stages will handle node conditions and heartbeats automatically
-        sed "s/KWOK_NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" "${KWOK_NODE_TEMPLATE}" | kubectl apply -f -
+        local NODE_POOL=$2
+
+        # Replace placeholders in template and apply
+        sed -e "s/KWOK_NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" \
+            -e "s/KWOK_NODE_POOL_PLACEHOLDER/${NODE_POOL}/g" \
+            "${KWOK_NODE_TEMPLATE}" | kubectl apply -f -
     }
 
-    # Create all KWOK nodes
+    # Create all KWOK nodes with their assigned pools
     for NODE_NAME in "${KWOK_NODES[@]}"; do
-        echo "Creating KWOK node: ${NODE_NAME}..."
-        create_kwok_node "${NODE_NAME}"
+        NODE_POOL=$(pool_for_node "${NODE_NAME}")
+        echo "Creating KWOK node: ${NODE_NAME} (pool: ${NODE_POOL})..."
+        create_kwok_node "${NODE_NAME}" "${NODE_POOL}"
     done
 
     # The status-updater will automatically create a topology ConfigMap for each KWOK node

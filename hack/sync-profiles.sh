@@ -59,7 +59,7 @@ kind: ConfigMap
 metadata:
   name: gpu-profile-${name}
   labels:
-    run.ai/gpu-profile: "true"
+    fake-gpu-operator/gpu-profile: "true"
 data:
   profile.yaml: |
 EOF

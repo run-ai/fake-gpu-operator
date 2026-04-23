@@ -197,7 +197,7 @@ func getTestCases() map[string]testCase {
 				"nvidia.com/gpu.memory":   "20000",
 				"nvidia.com/gpu.count":    "1",
 				"nvidia.com/mig.strategy": "mixed",
-				"nvidia.com/gpu.product":  "Tesla P100",
+				"nvidia.com/gpu.product":  "Tesla-P100",
 				"run.ai/fake.gpu":         "true",
 			},
 			expectedMetrics: []*dto.MetricFamily{
@@ -322,7 +322,7 @@ func getTestCases() map[string]testCase {
 				"nvidia.com/gpu.memory":   "20000",
 				"nvidia.com/gpu.count":    "2",
 				"nvidia.com/mig.strategy": "mixed",
-				"nvidia.com/gpu.product":  "Tesla P100",
+				"nvidia.com/gpu.product":  "Tesla-P100",
 				"run.ai/fake.gpu":         "true",
 			},
 			expectedMetrics: []*dto.MetricFamily{

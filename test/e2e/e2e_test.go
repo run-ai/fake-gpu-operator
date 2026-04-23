@@ -1,4 +1,4 @@
-package integration_test
+package e2e_test
 
 import (
 	"context"
@@ -25,12 +25,22 @@ import (
 
 	nvidiaversioned "github.com/NVIDIA/k8s-dra-driver-gpu/pkg/nvidia.com/clientset/versioned"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	testTimeout      = 5 * time.Minute
 	podReadyTimeout  = 2 * time.Minute
 	namespaceTimeout = 30 * time.Second
+)
+
+const (
+	// Expected GPU values — both values files (old-format and profile-based)
+	// are aligned to produce these same product names and counts.
+	expectedGpuProduct        = "NVIDIA A100-SXM4-40GB"
+	expectedGpuCount          = 2
+	expectedHighendGpuProduct = "NVIDIA H100 80GB HBM3"
+	expectedHighendGpuCount   = 4
 )
 
 var (
@@ -40,9 +50,9 @@ var (
 	nvidiaClient  nvidiaversioned.Interface
 )
 
-func TestIntegration(t *testing.T) {
+func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Integration Suite")
+	RunSpecs(t, "E2E Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -56,7 +66,7 @@ var _ = BeforeSuite(func() {
 	kubeClient, err = kubernetes.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
-	// Create dynamic client
+	// Create dynamic client (used for CRDs like PrometheusRule)
 	dynamicClient, err = dynamic.NewForConfig(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -94,7 +104,7 @@ type resourceClaimInfo struct {
 	name      string
 }
 
-var _ = Describe("DRA Plugin Integration Tests", func() {
+var _ = Describe("DRA Plugin Tests", func() {
 	var testNamespaces []string
 	var testResourceClaims []resourceClaimInfo
 
@@ -332,12 +342,11 @@ var _ = Describe("DRA Plugin Integration Tests", func() {
 
 })
 
-var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
+var _ = Describe("KWOK DRA Plugin Tests", func() {
 	const (
-		kwokNodeName       = "kwok-gpu-node-1"
-		gpuOperatorNS      = "gpu-operator"
-		expectedDriver     = "gpu.nvidia.com"
-		expectedGpuProduct = "NVIDIA-A100-SXM4-40GB"
+		kwokNodeName   = "kwok-gpu-node-1"
+		gpuOperatorNS  = "gpu-operator"
+		expectedDriver = "gpu.nvidia.com"
 	)
 
 	Describe("ResourceSlice Creation", func() {
@@ -363,7 +372,7 @@ var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
 				context.Background(), resourceSliceName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Should get ResourceSlice")
 
-			Expect(resourceSlice.Spec.Devices).To(HaveLen(2), "ResourceSlice should have 2 GPU devices")
+			Expect(resourceSlice.Spec.Devices).To(HaveLen(expectedGpuCount), fmt.Sprintf("ResourceSlice should have %d GPU devices", expectedGpuCount))
 
 			// Verify device names are lowercase UUIDs (format: gpu-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 			for _, device := range resourceSlice.Spec.Devices {
@@ -406,7 +415,7 @@ var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
 				context.Background(), resourceSliceName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Should get ResourceSlice")
 			initialDeviceCount := len(resourceSlice.Spec.Devices)
-			Expect(initialDeviceCount).To(Equal(2), "Should have 2 devices initially")
+			Expect(initialDeviceCount).To(Equal(expectedGpuCount), fmt.Sprintf("Should have %d devices initially", expectedGpuCount))
 
 			// Find the topology ConfigMap for this KWOK node
 			cmList, err := kubeClient.CoreV1().ConfigMaps(gpuOperatorNS).List(
@@ -440,7 +449,7 @@ var _ = Describe("KWOK DRA Plugin Integration Tests", func() {
 	})
 })
 
-var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
+var _ = Describe("KWOK Status-Exporter Tests", func() {
 	const (
 		kwokNodeName  = "kwok-gpu-node-1"
 		gpuOperatorNS = "gpu-operator"
@@ -476,17 +485,88 @@ var _ = Describe("KWOK Status-Exporter Integration Tests", func() {
 			node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), kwokNodeName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Should get KWOK node")
 
-			// Verify expected labels
 			expectedLabels := map[string]string{
 				"nvidia.com/gpu.present": "true",
 				"run.ai/fake.gpu":        "true",
-				"nvidia.com/gpu.count":   "2",
-				"nvidia.com/gpu.product": "NVIDIA-A100-SXM4-40GB",
+				"nvidia.com/gpu.count":   strconv.Itoa(expectedGpuCount),
+				"nvidia.com/gpu.product": strings.ReplaceAll(expectedGpuProduct, " ", "-"),
 			}
 
 			for key, expectedValue := range expectedLabels {
 				Expect(node.Labels).To(HaveKeyWithValue(key, expectedValue),
 					"Node should have label %s=%s", key, expectedValue)
+			}
+		})
+	})
+})
+
+var _ = Describe("Multi-Nodepool Topology Tests", func() {
+	const gpuOperatorNS = "gpu-operator"
+
+	// nodePoolSpec describes the expected GPU characteristics for a pool.
+	type nodePoolSpec struct {
+		nodeName   string
+		gpuProduct string
+		gpuCount   int
+	}
+
+	// Nodes 1-3 are in "default", nodes 4-5 are in "highend".
+	pools := []nodePoolSpec{
+		{nodeName: "kwok-gpu-node-1", gpuProduct: expectedGpuProduct, gpuCount: expectedGpuCount},
+		{nodeName: "kwok-gpu-node-4", gpuProduct: expectedHighendGpuProduct, gpuCount: expectedHighendGpuCount},
+	}
+
+	Describe("Topology ConfigMap per pool", func() {
+		for _, pool := range pools {
+			pool := pool // capture range variable
+
+			It(fmt.Sprintf("should create correct topology for node %s", pool.nodeName), func() {
+				cmList, err := kubeClient.CoreV1().ConfigMaps(gpuOperatorNS).List(
+					context.Background(), metav1.ListOptions{
+						LabelSelector: fmt.Sprintf("node-name=%s", pool.nodeName),
+					})
+				Expect(err).NotTo(HaveOccurred(), "Should list ConfigMaps")
+				Expect(cmList.Items).To(HaveLen(1), "Should have exactly one topology CM for %s", pool.nodeName)
+
+				cm := cmList.Items[0]
+				topologyYAML, ok := cm.Data["topology.yml"]
+				Expect(ok).To(BeTrue(), "ConfigMap should have 'topology.yml' key")
+
+				var topo struct {
+					GpuProduct string `yaml:"gpuProduct"`
+					GpuMemory  int    `yaml:"gpuMemory"`
+					Gpus       []struct {
+						ID string `yaml:"id"`
+					} `yaml:"gpus"`
+				}
+				Expect(yaml.Unmarshal([]byte(topologyYAML), &topo)).To(Succeed())
+
+				Expect(topo.Gpus).To(HaveLen(pool.gpuCount),
+					"Node %s should have %d GPUs", pool.nodeName, pool.gpuCount)
+				Expect(topo.GpuProduct).To(Equal(pool.gpuProduct),
+					"Node %s should have GPU product %s", pool.nodeName, pool.gpuProduct)
+				Expect(topo.GpuMemory).To(BeNumerically(">", 0),
+					"Node %s should have non-zero GPU memory", pool.nodeName)
+			})
+		}
+	})
+
+	Describe("Node labels reflect pool GPU type", func() {
+		It("should label highend pool nodes with correct GPU product", func() {
+			node, err := kubeClient.CoreV1().Nodes().Get(
+				context.Background(), "kwok-gpu-node-4", metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedLabels := map[string]string{
+				"nvidia.com/gpu.present": "true",
+				"run.ai/fake.gpu":        "true",
+				"nvidia.com/gpu.count":   strconv.Itoa(expectedHighendGpuCount),
+				"nvidia.com/gpu.product": strings.ReplaceAll(expectedHighendGpuProduct, " ", "-"),
+			}
+
+			for key, val := range expectedLabels {
+				Expect(node.Labels).To(HaveKeyWithValue(key, val),
+					"Highend node should have label %s=%s", key, val)
 			}
 		})
 	})
