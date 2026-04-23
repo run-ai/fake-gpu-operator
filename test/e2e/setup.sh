@@ -132,15 +132,13 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     KWOK_NODES=("kwok-gpu-node-1" "kwok-gpu-node-2" "kwok-gpu-node-3" "kwok-gpu-node-4" "kwok-gpu-node-5")
     KWOK_NODE_TEMPLATE="${SCRIPTS_DIR}/kwok-node-template.yaml"
 
-    # Maps node name → pool name
-    declare -A KWOK_NODE_POOLS
-    KWOK_NODE_POOLS=(
-        ["kwok-gpu-node-1"]="default"
-        ["kwok-gpu-node-2"]="default"
-        ["kwok-gpu-node-3"]="default"
-        ["kwok-gpu-node-4"]="highend"
-        ["kwok-gpu-node-5"]="highend"
-    )
+    # Returns pool name for a given node name (nodes 1-3 → default, 4-5 → highend)
+    pool_for_node() {
+        case "$1" in
+            kwok-gpu-node-[123]) echo "default" ;;
+            kwok-gpu-node-[45])  echo "highend" ;;
+        esac
+    }
 
     # Function to create a KWOK node from template
     create_kwok_node() {
@@ -155,7 +153,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     # Create all KWOK nodes with their assigned pools
     for NODE_NAME in "${KWOK_NODES[@]}"; do
-        NODE_POOL="${KWOK_NODE_POOLS[$NODE_NAME]}"
+        NODE_POOL=$(pool_for_node "${NODE_NAME}")
         echo "Creating KWOK node: ${NODE_NAME} (pool: ${NODE_POOL})..."
         create_kwok_node "${NODE_NAME}" "${NODE_POOL}"
     done
