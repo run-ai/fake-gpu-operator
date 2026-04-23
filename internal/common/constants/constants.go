@@ -29,4 +29,24 @@ const (
 	EnvDisableNodeLabeling              = "DISABLE_NODE_LABELING"
 	EnvRunaiIntegrationEnabled          = "RUNAI_INTEGRATION_ENABLED"
 	EnvRunaiIntegrationPollingInterval  = "RUNAI_INTEGRATION_POLLING_INTERVAL"
+
+	EnvComponentControllerEnabled = "COMPONENT_CONTROLLER_ENABLED"
+	EnvDefaultImageRegistry       = "DEFAULT_IMAGE_REGISTRY"
+	EnvFallbackImageTag           = "FALLBACK_IMAGE_TAG"
+	EnvDraEnabled                 = "DRA_ENABLED"
+
+	// Backend types
+	BackendFake = "fake"
+	BackendMock = "mock"
+
+	// Managed resource labels
+	LabelManagedBy      = "app.kubernetes.io/managed-by"
+	LabelManagedByValue = "fake-gpu-operator"
+	LabelComponent      = "fake-gpu-operator/component"
+	LabelPool           = "fake-gpu-operator/pool"
+
+	// Component names
+	ComponentKwokDevicePlugin   = "kwok-gpu-device-plugin"
+	ComponentKwokStatusExporter = "kwok-status-exporter"
+	ComponentKwokDraPlugin      = "kwok-dra-plugin"
 )
