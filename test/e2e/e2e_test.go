@@ -44,10 +44,11 @@ const (
 )
 
 var (
-	kubeClient    kubernetes.Interface
-	dynamicClient dynamic.Interface
-	restConfig    *rest.Config
-	nvidiaClient  nvidiaversioned.Interface
+	kubeClient               kubernetes.Interface
+	dynamicClient            dynamic.Interface
+	restConfig               *rest.Config
+	nvidiaClient             nvidiaversioned.Interface
+	componentControllerMode  bool
 )
 
 func TestE2E(t *testing.T) {
@@ -96,6 +97,14 @@ var _ = BeforeSuite(func() {
 		}
 		return nil
 	}).WithTimeout(testTimeout).Should(Succeed())
+
+	// Detect component controller mode by checking for controller-managed deployments.
+	deps, err := kubeClient.AppsV1().Deployments("gpu-operator").List(context.Background(), metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/managed-by=fake-gpu-operator",
+	})
+	if err == nil && len(deps.Items) > 0 {
+		componentControllerMode = true
+	}
 })
 
 // resourceClaimInfo tracks ResourceClaim information for cleanup
@@ -457,6 +466,9 @@ var _ = Describe("KWOK Status-Exporter Tests", func() {
 
 	Describe("KWOK Deployment", func() {
 		It("should have nvidia-dcgm-exporter-kwok deployment running", func() {
+			if componentControllerMode {
+				Skip("Static kwok status-exporter deployment is replaced by controller-managed deployments")
+			}
 			deployment, err := kubeClient.AppsV1().Deployments(gpuOperatorNS).Get(
 				context.Background(), "nvidia-dcgm-exporter-kwok", metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred(), "KWOK status-exporter deployment should exist")
@@ -469,6 +481,9 @@ var _ = Describe("KWOK Status-Exporter Tests", func() {
 		})
 
 		It("should have exactly one pod running", func() {
+			if componentControllerMode {
+				Skip("Static kwok status-exporter pods are replaced by controller-managed deployments")
+			}
 			pods, err := kubeClient.CoreV1().Pods(gpuOperatorNS).List(context.Background(), metav1.ListOptions{
 				LabelSelector: "app=nvidia-dcgm-exporter-kwok",
 			})

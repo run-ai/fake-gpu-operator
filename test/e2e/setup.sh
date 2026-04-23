@@ -2,6 +2,23 @@
 
 set -e
 
+# Wait for pods matching a label selector to be Ready, retrying if none exist yet.
+wait_for_pods() {
+    local label="$1"
+    local ns="$2"
+    local desc="$3"
+    echo "Waiting for ${desc} to be ready..."
+    for i in {1..60}; do
+        if kubectl wait --for=condition=Ready pod -l "${label}" -n "${ns}" --timeout=10s 2>/dev/null; then
+            return 0
+        fi
+        echo "Waiting for ${desc}... ($i/60)"
+        sleep 2
+    done
+    echo "ERROR: ${desc} did not become ready"
+    return 1
+}
+
 # A reference to the current directory where this script is located
 SCRIPTS_DIR="$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../.." &> /dev/null && pwd)"
@@ -95,26 +112,21 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         --set kwokGpuDevicePlugin.image.tag="${DOCKER_TAG}" \
         --set statusUpdater.componentController.fallbackImageTag="${DOCKER_TAG}"
 
-    echo "Waiting for status-updater pod to be ready..."
-    kubectl wait --for=condition=Ready pod -l app=status-updater -n gpu-operator --timeout=120s
+    wait_for_pods "app=status-updater" gpu-operator "status-updater"
+    wait_for_pods "app=nvidia-dcgm-exporter" gpu-operator "status-exporter"
+    wait_for_pods "app=topology-server" gpu-operator "topology-server"
+    wait_for_pods "app.kubernetes.io/component=kubeletplugin" gpu-operator "DRA plugin"
 
-    echo "Waiting for status-exporter pod to be ready..."
-    kubectl wait --for=condition=Ready pod -l app=nvidia-dcgm-exporter -n gpu-operator --timeout=120s
+    # When component controller is enabled, static KWOK templates are gated off.
+    # The controller creates per-pool deployments later (after KWOK nodes exist).
+    if ! grep -A1 'componentController:' "${VALUES_FILE}" | grep -q 'enabled: true'; then
+        wait_for_pods "app=kwok-dra-plugin" gpu-operator "kwok-dra-plugin"
+    else
+        echo "Component controller enabled — skipping static kwok-dra-plugin wait (controller manages it)"
+    fi
 
-    echo "Waiting for topology-server pod to be ready..."
-    kubectl wait --for=condition=Ready pod -l app=topology-server -n gpu-operator --timeout=120s
-
-    echo "Waiting for DRA plugin pod to be ready..."
-    kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=kubeletplugin -n gpu-operator --timeout=120s
-
-    echo "Waiting for kwok-dra-plugin pod to be ready..."
-    kubectl wait --for=condition=Ready pod -l app=kwok-dra-plugin -n gpu-operator --timeout=120s
-
-    echo "Waiting for compute-domain-dra-plugin daemonset to be ready..."
-    kubectl wait --for=condition=Ready pod -l app=compute-domain-dra-plugin -n gpu-operator --timeout=120s
-
-    echo "Waiting for kwok-compute-domain-dra-plugin deployment to be ready..."
-    kubectl wait --for=condition=Ready pod -l app=kwok-compute-domain-dra-plugin -n gpu-operator --timeout=120s
+    wait_for_pods "app=compute-domain-dra-plugin" gpu-operator "compute-domain-dra-plugin"
+    wait_for_pods "app=kwok-compute-domain-dra-plugin" gpu-operator "kwok-compute-domain-dra-plugin"
 
     # Install KWOK controller for simulated nodes
     echo "Installing KWOK controller..."
@@ -190,8 +202,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
 
     # If component controller is enabled, wait for controller-managed deployments
     # The controller creates per-pool deployments after the topology CM is populated
-    COMPONENT_CONTROLLER_ENABLED=$(helm get values fake-gpu-operator -n gpu-operator -o json 2>/dev/null | python3 -c "import sys,json; v=json.load(sys.stdin); print(v.get('statusUpdater',{}).get('componentController',{}).get('enabled',False))" 2>/dev/null || echo "False")
-    if [[ "${COMPONENT_CONTROLLER_ENABLED}" == "True" ]]; then
+    if grep -A1 'componentController:' "${VALUES_FILE}" | grep -q 'enabled: true'; then
         echo "Component controller is enabled, waiting for controller-managed deployments..."
         for i in {1..30}; do
             MANAGED_DEPS=$(kubectl get deployments -n gpu-operator -l "app.kubernetes.io/managed-by=fake-gpu-operator" --no-headers 2>/dev/null | wc -l | tr -d ' ')

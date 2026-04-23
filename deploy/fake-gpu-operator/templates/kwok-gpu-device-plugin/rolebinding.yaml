@@ -1,4 +1,4 @@
-{{- if .Values.kwokGpuDevicePlugin.enabled -}}
+{{- if or .Values.kwokGpuDevicePlugin.enabled .Values.statusUpdater.componentController.enabled -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:

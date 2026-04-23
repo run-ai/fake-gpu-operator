@@ -46,6 +46,18 @@ spec:
             - name: RUNAI_INTEGRATION_POLLING_INTERVAL
               value: "{{ .Values.statusUpdater.runaiIntegration.pollingInterval }}"
             {{- end }}
+            {{- if .Values.statusUpdater.componentController.enabled }}
+            - name: COMPONENT_CONTROLLER_ENABLED
+              value: "true"
+            - name: DEFAULT_IMAGE_REGISTRY
+              value: "{{ .Values.statusUpdater.componentController.defaultImageRegistry }}"
+            - name: FALLBACK_IMAGE_TAG
+              value: "{{ .Values.statusUpdater.componentController.fallbackImageTag | default .Chart.AppVersion }}"
+            - name: DRA_ENABLED
+              value: "{{ .Values.kwokDraPlugin.enabled }}"
+            - name: IMAGE_PULL_POLICY
+              value: "{{ .Values.statusUpdater.componentController.imagePullPolicy | default .Values.statusUpdater.image.pullPolicy }}"
+            {{- end }}
       restartPolicy: Always
       serviceAccountName: status-updater
       imagePullSecrets:

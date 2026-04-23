@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -14,6 +15,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers"
+	componentcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/component"
 	nodecontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/node"
 	podcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/pod"
 	runaicontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/runai"
@@ -85,6 +87,23 @@ func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
 		}
 		app.Controllers = append(app.Controllers,
 			runaicontroller.NewRunaiController(app.kubeClient, dynamicClient, interval))
+	}
+
+	if viper.GetBool(constants.EnvComponentControllerEnabled) {
+		pullPolicy := corev1.PullPolicy(viper.GetString("IMAGE_PULL_POLICY"))
+		if pullPolicy == "" {
+			pullPolicy = corev1.PullAlways
+		}
+		params := componentcontroller.ReconcileParams{
+			Namespace:       viper.GetString(constants.EnvFakeGpuOperatorNs),
+			DefaultRegistry: viper.GetString(constants.EnvDefaultImageRegistry),
+			FallbackTag:     viper.GetString(constants.EnvFallbackImageTag),
+			PrometheusURL:   prometheusURL,
+			DraEnabled:      viper.GetBool(constants.EnvDraEnabled),
+			ImagePullPolicy: pullPolicy,
+		}
+		app.Controllers = append(app.Controllers,
+			componentcontroller.NewComponentController(app.kubeClient, params))
 	}
 }
 

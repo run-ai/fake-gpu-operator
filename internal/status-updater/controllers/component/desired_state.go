@@ -5,6 +5,7 @@ import (
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -18,6 +19,7 @@ type ReconcileParams struct {
 	NodePoolLabelKey        string
 	GpuOperatorChartVersion string
 	HelmManager             HelmManager
+	ImagePullPolicy         corev1.PullPolicy
 }
 
 // ComputeDesiredState produces all K8s resources that should exist for the given config.
@@ -46,16 +48,20 @@ func ComputeDesiredState(config *topology.ClusterConfig, params ReconcileParams)
 func buildFakePoolResources(poolName string, config *topology.ClusterConfig, params ReconcileParams) []runtime.Object {
 	dpImage := ResolveImage(config.Components, "devicePlugin", "kwok-gpu-device-plugin", params.DefaultRegistry, params.FallbackTag)
 	seImage := ResolveImage(config.Components, "statusExporter", "status-exporter", params.DefaultRegistry, params.FallbackTag)
+	pullPolicy := params.ImagePullPolicy
+	if pullPolicy == "" {
+		pullPolicy = corev1.PullAlways
+	}
 
 	resources := []runtime.Object{
-		buildKwokDevicePluginDeployment(poolName, params.Namespace, dpImage),
-		buildKwokStatusExporterDeployment(poolName, params.Namespace, seImage, params.PrometheusURL),
+		buildKwokDevicePluginDeployment(poolName, params.Namespace, dpImage, pullPolicy),
+		buildKwokStatusExporterDeployment(poolName, params.Namespace, seImage, params.PrometheusURL, pullPolicy),
 		buildKwokStatusExporterService(poolName, params.Namespace),
 	}
 
 	if params.DraEnabled {
 		draImage := ResolveImage(config.Components, "kwokDraPlugin", "kwok-dra-plugin", params.DefaultRegistry, params.FallbackTag)
-		resources = append(resources, buildKwokDraPluginDeployment(poolName, params.Namespace, draImage))
+		resources = append(resources, buildKwokDraPluginDeployment(poolName, params.Namespace, draImage, pullPolicy))
 	}
 
 	return resources
