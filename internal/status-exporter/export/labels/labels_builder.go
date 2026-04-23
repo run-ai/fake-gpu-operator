@@ -34,7 +34,7 @@ func sanitizeLabelValue(s string) string {
 	}
 	// Trim leading/trailing non-alphanumeric chars (K8s requirement)
 	s = strings.TrimFunc(s, func(r rune) bool {
-		return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
+		return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9')
 	})
 	return s
 }
