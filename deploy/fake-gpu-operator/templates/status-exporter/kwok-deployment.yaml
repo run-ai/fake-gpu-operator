@@ -1,4 +1,4 @@
-{{- if .Values.statusExporter.enabled }}
+{{- if and .Values.statusExporter.enabled (not .Values.statusUpdater.componentController.enabled) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

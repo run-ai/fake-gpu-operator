@@ -25,6 +25,10 @@ statusUpdater:
   disableNodeLabeling: false
   podPatchRbac:
     enabled: true
+  componentController:
+    enabled: false
+    defaultImageRegistry: ghcr.io/run-ai/fake-gpu-operator
+    fallbackImageTag: ""  # defaults to .Chart.AppVersion
   runaiIntegration:
     enabled: false
     pollingInterval: 2m
@@ -117,6 +121,7 @@ migFaker:
 
 gpuOperator:
   enabled: true
+  chartVersion: "24.9.0"
 
 runtimeClass:
   enabled: true

@@ -25,6 +25,7 @@ type ClusterConfig struct {
 	MigStrategy      string                    `yaml:"migStrategy"`
 	NodePools        map[string]NodePoolConfig  `yaml:"nodePools"`
 	GpuOperator      *GpuOperatorConfig         `yaml:"gpuOperator,omitempty"`
+	Components       *ComponentsConfig          `yaml:"components,omitempty"`
 }
 
 type NodePoolConfig struct {
@@ -41,6 +42,28 @@ type GpuConfig struct {
 type GpuOperatorConfig struct {
 	Version string                 `yaml:"version,omitempty"`
 	Values  map[string]interface{} `yaml:"values,omitempty"`
+}
+
+// ComponentsConfig controls image versions and component-specific settings
+// for controller-managed components.
+type ComponentsConfig struct {
+	ImageTag       string                      `yaml:"imageTag,omitempty"`
+	ImageRegistry  string                      `yaml:"imageRegistry,omitempty"`
+	DevicePlugin   *ComponentImageConfig       `yaml:"devicePlugin,omitempty"`
+	StatusExporter *ComponentImageConfig       `yaml:"statusExporter,omitempty"`
+	KwokDraPlugin  *ComponentImageConfig       `yaml:"kwokDraPlugin,omitempty"`
+	GpuOperator    *GpuOperatorComponentConfig `yaml:"gpuOperator,omitempty"`
+}
+
+// ComponentImageConfig holds per-component image overrides.
+type ComponentImageConfig struct {
+	Image    string `yaml:"image,omitempty"`    // Full image ref (registry/name:tag)
+	ImageTag string `yaml:"imageTag,omitempty"` // Tag-only override
+}
+
+// GpuOperatorComponentConfig holds GPU Operator-specific settings.
+type GpuOperatorComponentConfig struct {
+	ChartVersion string `yaml:"chartVersion,omitempty"`
 }
 
 type NodeTopology struct {
