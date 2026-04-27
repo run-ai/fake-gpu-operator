@@ -7,9 +7,9 @@
 
 ## Goal
 
-Support `backend: mock` node pools end-to-end: a real Linux GPU node, scoped to a mock pool, runs the upstream NVIDIA GPU Operator stack against a mocked NVML driver layer (nvml-mock). Workloads requesting `nvidia.com/gpu` schedule on those nodes and run as if the cluster had real GPUs.
+Support `backend: mock` node pools end-to-end: a real Linux GPU node, scoped to a mock pool, runs upstream NVIDIA GPU stack components against a mocked NVML driver layer (nvml-mock). Both classic device-plugin allocation (GPU Operator) and Dynamic Resource Allocation (`nvidia-dra-driver-gpu`) are supported. Workloads requesting `nvidia.com/gpu` resources or DRA `ResourceClaims` schedule on mock-pool nodes and run as if the cluster had real GPUs.
 
-This spec lands as a single PR. The three pieces below are operationally coupled — each is non-functional without the others — so splitting them across PRs would just produce dead intermediate states.
+This spec lands as a single PR. The pieces below are operationally coupled — each is non-functional without the others — so splitting them across PRs would just produce dead intermediate states.
 
 ## Architecture
 
@@ -18,21 +18,27 @@ Three layers stack per mock-pool node:
 | Layer | What it provides | Owner | Where it lives |
 |---|---|---|---|
 | **L1: nvml-mock DaemonSet + ConfigMap (per pool)** | Lays down a fake `libnvidia-ml.so`, fake `/dev/nvidia*` device files, profile config at `/var/lib/nvml-mock/driver/` | Status-updater controller (new) | `internal/status-updater/controllers/mock/` |
-| **L2: GPU Operator** | Real device-plugin / GFD / DCGM-exporter, configured to read NVML through L1's mocked driver root | Helm subchart | `deploy/fake-gpu-operator/Chart.yaml`, `values.yaml` |
-| **L3: Node labeling** | `nvidia.com/gpu.deploy.*` labels on mock-pool nodes that GPU Operator's components use as nodeSelectors | Status-updater NodeController (existing, narrowed) | `internal/status-updater/handlers/node/labels.go` |
+| **L2a: GPU Operator** | Real device-plugin / GFD / DCGM-exporter, configured to read NVML through L1's mocked driver root | Helm subchart | `deploy/fake-gpu-operator/Chart.yaml`, `values.yaml` |
+| **L2b: nvidia-dra-driver-gpu** | Real DRA driver, configured against L1's mocked driver root, exposes GPUs as DRA `ResourceClaim`s | Helm subchart | same |
+| **L3: Node labeling** | `nvidia.com/gpu.deploy.*` labels on mock-pool nodes that L2a + L2b components use as nodeSelectors | Status-updater NodeController (existing, narrowed) | `internal/status-updater/handlers/node/labels.go` |
+
+L2a and L2b are independent toggles — a user can enable either, both, or neither (in which case mock-pool support degrades to "nvml-mock runs but nothing consumes it"). Both consume L1's driver root the same way.
 
 End-to-end flow when a user enables mock support:
 
 ```
-helm install with gpuOperator.enabled=true
+helm install with gpuOperator.enabled=true and/or nvidiaDraDriver.enabled=true
         │
-        ├─ Chart renders: GPU Operator subchart (L2) installs
+        ├─ Chart renders subcharts conditionally:
+        │     L2a: GPU Operator (if gpuOperator.enabled)
+        │     L2b: nvidia-dra-driver-gpu (if nvidiaDraDriver.enabled)
         ├─ Status-updater pod starts with MOCK_CONTROLLER_ENABLED=true
+        │   (gated on either subchart toggle being on)
         │
         ▼
 Status-updater                    Topology CM (with backend: mock pools)
   ├─ NodeController (L3): real Linux nodes labeled with pool key get
-  │   nvidia.com/gpu.deploy.* labels — GPU Operator components target them
+  │   nvidia.com/gpu.deploy.* labels — L2a + L2b components target them
   │
   └─ MockController (L1): per mock pool, builds nvml-mock-{pool} DaemonSet
       + nvml-mock-{pool} ConfigMap; reconciles on topology CM changes
@@ -40,35 +46,47 @@ Status-updater                    Topology CM (with backend: mock pools)
         ▼
 On a mock-pool node:
   nvml-mock DaemonSet writes /var/lib/nvml-mock/driver/{libnvidia-ml.so, devices, config.yaml}
-  GPU Operator's device-plugin/GFD/DCGM-exporter call NVML → see mock GPUs
-  Pods requesting nvidia.com/gpu schedule and run
+  L2a (if enabled): real device-plugin/GFD/DCGM-exporter call NVML → see mock GPUs
+                    pods requesting nvidia.com/gpu schedule and run
+  L2b (if enabled): real DRA driver calls NVML → publishes ResourceSlices
+                    pods with ResourceClaims schedule and run
 ```
 
-## Piece B — GPU Operator subchart
+## Piece B — Helm subcharts (GPU Operator + DRA driver)
 
-### Chart.yaml dependency
+Two upstream charts pulled in as subcharts, each independently toggleable. Both produce real components that consume nvml-mock's driver root for synthetic GPU discovery.
+
+### Chart.yaml dependencies
 
 ```yaml
 dependencies:
   - name: gpu-operator
-    version: "26.3.1"
+    version: "26.3.1"                    # latest as of 2026-04-18
     repository: https://helm.ngc.nvidia.com/nvidia
     condition: gpuOperator.enabled
+  - name: nvidia-dra-driver-gpu
+    version: "25.12.0"                   # latest as of 2026-02-12
+    repository: https://helm.ngc.nvidia.com/nvidia
+    condition: nvidiaDraDriver.enabled
 ```
 
-Pinned to v26.3.1 (latest as of 2026-04-18), bumping from the previously-stale 24.9.0. No alias — the subchart's values key is the literal `gpu-operator:` (hyphenated). This is distinct from our existing `gpuOperator:` (camelCase) parent-chart toggle/config block.
+`gpu-operator` bumps from the previously-stale 24.9.0. No aliases — subchart values keys are the literal hyphenated chart names (`gpu-operator:`, `nvidia-dra-driver-gpu:`), distinct from our parent-chart toggle blocks (`gpuOperator:`, `nvidiaDraDriver:`, camelCase).
 
 ### values.yaml structure
 
 ```yaml
-# Parent-chart-side toggle/config — our domain
+# Parent-chart-side toggles — our domain
 gpuOperator:
   enabled: false                # NOTE: flipped from true → false (see migration)
   chartVersion: "26.3.1"        # informational; actual pin lives in Chart.yaml
 
+nvidiaDraDriver:
+  enabled: false                # net-new — no migration concerns
+  chartVersion: "25.12.0"       # informational
+
 # Subchart values block — Helm convention, keyed by subchart name.
 # Defaults here are the minimum to integrate with nvml-mock. Users add their
-# own overrides under this key; Helm merges them on top.
+# own overrides under these keys; Helm merges them on top.
 gpu-operator:
   driver:
     enabled: false              # nvml-mock provides the driver; no real install
@@ -81,18 +99,41 @@ gpu-operator:
   # schema) is finalized during implementation by reading the upstream chart's
   # values.yaml. Contract: every component that reads a driver root must point
   # at /var/lib/nvml-mock/driver.
+
+nvidia-dra-driver-gpu:
+  nvidiaDriverRoot: /var/lib/nvml-mock/driver  # per nvml-mock README's DRA recipe
+  gpuResourcesEnabledOverride: true            # opt-in to DRA-managed GPU resources
+  resources:
+    computeDomains:
+      enabled: false                            # nvml-mock doesn't simulate compute domains
 ```
 
 User override mechanism: users add keys directly under `gpu-operator:` in their own values file. Helm merges them on top of our defaults. We do **not** introduce a `gpuOperator.values:` passthrough block — that pattern is incompatible with how Helm subcharts consume values (parent values.yaml is not templated).
+
+### Placeholder polyfill (existing behavior preserved)
+
+The existing `templates/gpu-operator/deployment.yml` (placeholder Deployment with `replicas: 0` running `ubuntu:22.04 sleep infinity`) and `crds/nvidia.com_clusterpolicies.yaml` (fake `ClusterPolicy` CRD) exist as **polyfills** for upstream consumers (e.g., RunAI control plane) that detect "is GPU Operator installed?" via these resource shapes. They are not dead code — fake-only deployments depend on them for the GPU-Operator-presence signal.
+
+The semantic for Phase 5 is: the polyfill is rendered *when and only when* the real subchart is not. The gate flips from `{{- if .Values.gpuOperator.enabled -}}` to `{{- if not .Values.gpuOperator.enabled -}}` for both files.
+
+| `gpuOperator.enabled` | Real GPU Operator subchart | Placeholder Deployment + ClusterPolicy CRD |
+|---|---|---|
+| `false` *(default after Phase 5)* | not installed | rendered (polyfill) |
+| `true` | installed via subchart | suppressed (real subchart provides the actual resources) |
+
+This preserves current behavior for fake-only deployments running on chart defaults: today they get the placeholder via `enabled: true`; after Phase 5 they get the placeholder via `enabled: false` (the new default), so no values-side change is required. The flag's semantic shifts from "create the polyfill" to "use the real subchart instead of the polyfill" — same flag, redirected meaning.
+
+**Edge case explicitly accepted:** users who currently set `enabled: false` to suppress the placeholder (e.g., real GPU Operator installed via a separate Helm release out-of-band) will get the polyfill back after Phase 5. Likely zero such users today; if any surface, easy fix is to set `enabled: true` and let our subchart drive.
 
 ### Files added
 
 - `deploy/fake-gpu-operator/templates/mock/serviceaccount.yaml` — single `ServiceAccount` named `nvml-mock` in the release namespace, gated on `.Values.gpuOperator.enabled`. Every per-pool DaemonSet built by the controller references it. Lifetime tied to the chart, not to any individual pool.
 
-### Files removed
+### Files modified, not removed
 
-- `deploy/fake-gpu-operator/templates/gpu-operator/deployment.yml` — the placeholder `replicas: 0 / ubuntu:22.04 sleep infinity` Deployment. No replacement; the real subchart now occupies its role.
-- `deploy/fake-gpu-operator/templates/gpu-operator/ocp/clusterserviceversion.yaml` is **kept** — gated independently on `environment.openshift`, serves a different purpose.
+- `deploy/fake-gpu-operator/templates/gpu-operator/deployment.yml` — gate flips from `{{- if .Values.gpuOperator.enabled -}}` to `{{- if not .Values.gpuOperator.enabled -}}`. No body change.
+- `deploy/fake-gpu-operator/crds/nvidia.com_clusterpolicies.yaml` — same gate flip, if it's currently gated; otherwise add the negative gate at the top.
+- `deploy/fake-gpu-operator/templates/gpu-operator/ocp/clusterserviceversion.yaml` is **untouched** — gated independently on `environment.openshift`, serves a different purpose.
 
 ## Piece C — Mock-pool node labeling
 
@@ -285,7 +326,7 @@ if viper.GetBool(constants.EnvMockControllerEnabled) {
 }
 ```
 
-The Helm template plumbs `MOCK_CONTROLLER_ENABLED` from `.Values.gpuOperator.enabled`. One toggle lights up both the subchart and the controller.
+The Helm template plumbs `MOCK_CONTROLLER_ENABLED` from `or .Values.gpuOperator.enabled .Values.nvidiaDraDriver.enabled`. The controller is needed whenever *either* subchart is consuming nvml-mock's driver root, since both depend on L1.
 
 ### RBAC
 
@@ -319,18 +360,32 @@ A full pros/cons comparison was performed during brainstorming. Summary:
 ### Helm chart-render tests (no real cluster)
 
 `helm template` assertions:
-- `gpuOperator.enabled=false` → no GPU Operator resources, no placeholder Deployment
-- `gpuOperator.enabled=true` → expected subchart resources rendered with our mandatory overrides applied
-- `gpuOperator.enabled=true` + user override under `gpu-operator:` → user values win where they should, our mandatory overrides preserved
-- `environment.openshift=true` path still produces the OCP `ClusterServiceVersion` independently
+- `gpuOperator.enabled=false`, `nvidiaDraDriver.enabled=false` → polyfill rendered (placeholder Deployment + ClusterPolicy CRD); no subchart resources
+- `gpuOperator.enabled=true`, `nvidiaDraDriver.enabled=false` → GPU Operator subchart rendered with our mandatory overrides; polyfill suppressed; nvidia-dra-driver-gpu absent
+- `gpuOperator.enabled=false`, `nvidiaDraDriver.enabled=true` → nvidia-dra-driver-gpu subchart rendered with our mandatory overrides (driver root, gpuResourcesEnabledOverride, computeDomains disabled); polyfill **still** rendered (real GPU Operator isn't installed); GPU Operator absent
+- `gpuOperator.enabled=true`, `nvidiaDraDriver.enabled=true` → both subcharts rendered; polyfill suppressed
+- Both toggles `true` + user overrides under each subchart values key → user values win where they should, mandatory overrides preserved
+- `environment.openshift=true` path still produces the OCP `ClusterServiceVersion` independently of either toggle
 
 ### End-to-end (real Linux GPU cluster — outside CI)
 
+Two scenarios run on the same provisioned cluster:
+
+**Device-plugin path:**
 1. Provision a real Linux node, label with the pool key
-2. `helm install` with `gpuOperator.enabled=true` and a mock pool defined in `topology`
+2. `helm install` with `gpuOperator.enabled=true`, `nvidiaDraDriver.enabled=false`, and a mock pool defined in `topology`
 3. Verify nvml-mock DaemonSet runs, lays down `/var/lib/nvml-mock/driver/`
 4. Verify GPU Operator components reach Running, real device-plugin reports `nvidia.com/gpu` allocatable
 5. Schedule a pod requesting `nvidia.com/gpu`; verify it lands on the mock node and `nvidia-smi` inside the container talks to nvml-mock
+
+**DRA path (cluster needs Kubernetes 1.32+ with `DynamicResourceAllocation` feature gate):**
+1. Same provisioning
+2. `helm install` with `gpuOperator.enabled=false`, `nvidiaDraDriver.enabled=true`, and a mock pool defined in `topology`
+3. Verify nvml-mock DaemonSet runs (same as above)
+4. Verify nvidia-dra-driver-gpu pods reach Running, publishing `ResourceSlice`s with mock GPU devices
+5. Schedule a pod with a `ResourceClaim` requesting GPUs; verify it lands on the mock node and `nvidia-smi` inside the container talks to nvml-mock
+
+A combined run (both toggles `true`) is also validated to confirm the two subcharts coexist on the same nodes.
 
 These tests are documented in a runbook for human validation. The PR description records the user's most recent run.
 
@@ -338,18 +393,17 @@ These tests are documented in a runbook for human validation. The PR description
 
 - nvml-mock binary itself (upstream's responsibility)
 - GPU Operator components (NVIDIA's responsibility)
-- Backward-compat for the placeholder Deployment removal — there's no use case to preserve
 
 ## Migration impact
 
 | Change | Who's affected | Migration path |
 |---|---|---|
-| `gpuOperator.enabled` default flips `true → false` | Anyone whose CD inherits the chart's default | None — the new default removes the (useless) placeholder. Net positive |
-| `gpuOperator.enabled=true` now installs real GPU Operator | Anyone explicitly setting `true` for the placeholder semantic | Set `false` to opt out, or accept the new behavior (requires real Linux GPU nodes + mock pools configured in `topology`) |
-| `templates/gpu-operator/deployment.yml` deleted | Anyone matching that exact placeholder shape (`replicas: 0`, `ubuntu:22.04`) | Update the check to look for GPU Operator's actual components |
+| `gpuOperator.enabled` default flips `true → false` | Anyone whose CD inherits the chart's default | **No behavior change.** The new default activates the placeholder polyfill (matches what `enabled: true` did before). Fake-only deployments running on defaults are unaffected. |
+| `gpuOperator.enabled=true` now installs real GPU Operator instead of the placeholder | Anyone explicitly setting `true` for the placeholder semantic | Set `false` to keep the placeholder, or accept the new behavior (requires real Linux GPU nodes + mock pools configured in `topology`) |
+| `gpuOperator.enabled=false` now activates the placeholder polyfill (was: nothing rendered) | Anyone explicitly setting `false` to suppress both placeholder and real install (e.g., real GPU Operator installed out-of-band) | Set `enabled: true` and let our subchart drive, or open an issue for an explicit polyfill toggle. Likely zero such users. |
 | `nvidia.com/gpu.deploy.*` labels narrowed to mock-pool nodes | Real-Linux-in-fake-pool deployments | Move those nodes into a `backend: mock` pool, or accept that they no longer get GPU-Operator-targeting labels (which they shouldn't have had) |
 
-PR description gets a bullet list of the four rows above.
+PR description gets a bullet list of the four rows above. Compared to the original draft, the polyfill semantic means *most* users see no change at all on upgrade — only those who explicitly toggled `enabled` away from the default need to act.
 
 ## Risks
 
@@ -359,6 +413,8 @@ PR description gets a bullet list of the four rows above.
 
 **GPU Operator chart breaking changes.** Pinning to v26.3.1 buys consistency, but we now own version-bump validation. The exact subchart value key for driver root in v26.3.1 is finalized during implementation — verify by reading the upstream chart's `values.yaml`.
 
+**`draPlugin` and `nvidiaDraDriver` mutual exclusion.** Our existing `draPlugin` (real-node DRA plugin in `templates/dra-device-plugin/`, defaults `enabled: false`) uses `nvidia.com/gpu.deploy.dra-plugin-gpu: "true"` as its kubeletPlugin nodeSelector — the same label `nvidia-dra-driver-gpu` uses. If a user sets both `draPlugin.enabled: true` and `nvidiaDraDriver.enabled: true`, kubelet plugin registration conflicts on overlapping nodes (only one DRA plugin can register `nvidia.com/gpu` per node). Mitigation: documented incompatibility; consider deprecating `draPlugin` in favor of `nvidiaDraDriver` as a follow-up. Phase 5 does not refactor `draPlugin` — it just adds the new path.
+
 **Day-2 pool reshuffles silently no-op.** Per the Q5 (a) decision, NodeController doesn't watch the topology CM and has no `UpdateFunc`. Status-updater rollout required for backend-flip changes to take effect. Mitigation: documented limitation; revisit when real workflow demands it.
 
 ## Out of scope (deferred)
@@ -367,14 +423,17 @@ PR description gets a bullet list of the four rows above.
 - Dynamic NodeController updates (`UpdateFunc`, topology-CM watch)
 - Multi-cluster / federated mock pools
 - Per-pool image overrides for nvml-mock beyond the chain `ResolveImage` already supports
-- Bumping the GPU Operator default chart version above v26.3.1
+- Bumping the GPU Operator default chart version above v26.3.1, or nvidia-dra-driver-gpu above v25.12.0
+- Refactoring or deprecating the existing `draPlugin` to avoid the conflict with `nvidiaDraDriver` (a follow-up cleanup)
 
 ## Success criteria
 
 Spec ships when all of these hold:
 
-1. `helm template` chart-render tests pass for both `gpuOperator.enabled` states
+1. `helm template` chart-render tests pass for the matrix of `gpuOperator.enabled` × `nvidiaDraDriver.enabled` states (4 combinations)
 2. Go unit tests pass for all five `_test.go` files in `internal/status-updater/controllers/mock/`
 3. `labels_test.go` matrix passes (the four rows in piece C)
-4. On a real Linux GPU node provisioned by the user: `helm install` with one mock pool brings up nvml-mock + GPU Operator + a workload requesting `nvidia.com/gpu` runs successfully
-5. `gpuOperator.enabled=false` deploy is byte-identical to today's deploy minus the placeholder Deployment (no other regressions)
+4. On a real Linux GPU node provisioned by the user, both e2e scenarios pass:
+   - `helm install` with `gpuOperator.enabled=true` + a mock pool → `nvidia.com/gpu` workload runs
+   - `helm install` with `nvidiaDraDriver.enabled=true` + a mock pool (Kubernetes 1.32+ with DRA feature gate) → DRA `ResourceClaim` workload runs
+5. `gpuOperator.enabled=false` + `nvidiaDraDriver.enabled=false` deploy is byte-identical to today's `gpuOperator.enabled=true` deploy (polyfill activates on the new default; no values change required for fake-only deployments)
