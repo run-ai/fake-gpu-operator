@@ -184,9 +184,11 @@ func TestLabelNode_Matrix(t *testing.T) {
 		wantComputeDomain bool
 	}{
 		{
+			// KWOK annotation must be exactly "fake" — that's what
+			// `isFakeNode` (in handlers/node/common.go) checks.
 			name:        "KWOK + fake pool: dcgm only",
 			nodeLabels:  map[string]string{poolKey: "fake-pool"},
-			annotations: map[string]string{constants.AnnotationKwokNode: "true"},
+			annotations: map[string]string{constants.AnnotationKwokNode: "fake"},
 		},
 		{
 			name:              "Real Linux + mock pool: all four",
