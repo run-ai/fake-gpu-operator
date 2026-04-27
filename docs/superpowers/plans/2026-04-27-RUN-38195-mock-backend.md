@@ -125,45 +125,15 @@ ComponentNvmlMock = "nvml-mock"
 
 ---
 
-## Task 3: Add `NvmlMock` field to `ComponentsConfig`
+## Task 3: ~~Add `NvmlMock` field to `ComponentsConfig`~~ — **DELETED**
 
-**Files:**
-- Modify: `internal/common/topology/types.go`
+`ComponentsConfig` and the `ResolveImage` chain were Phase-4-only additions that don't exist on this branch. Adding them back just to flow one image string through is overkill — every mock pool runs the same upstream nvml-mock binary, so per-pool image overrides have no real use case.
 
-The image source for nvml-mock is resolved via the existing `ResolveImage` chain by adding it as a recognized component key.
+**Replacement design:** the chart plumbs a single `NVML_MOCK_IMAGE` env var (e.g. `ghcr.io/nvidia/nvml-mock:v0.1.0`) on the status-updater Deployment, sourced from `nvmlMock.image.repository` + `nvmlMock.image.tag` in values.yaml. The mock controller reads this env once at startup and stamps it onto every per-pool DaemonSet it builds. See Tasks 7, 10, 15, 17, 20 for the affected places.
 
-- [ ] **Step 1: Extend `ComponentsConfig`**
+Skip directly to Task 4.
 
-Open `internal/common/topology/types.go`. Find the `ComponentsConfig` struct and add the `NvmlMock` field:
-
-```go
-type ComponentsConfig struct {
-	ImageTag       string                      `yaml:"imageTag,omitempty"`
-	ImageRegistry  string                      `yaml:"imageRegistry,omitempty"`
-	DevicePlugin   *ComponentImageConfig       `yaml:"devicePlugin,omitempty"`
-	StatusExporter *ComponentImageConfig       `yaml:"statusExporter,omitempty"`
-	KwokDraPlugin  *ComponentImageConfig       `yaml:"kwokDraPlugin,omitempty"`
-	NvmlMock       *ComponentImageConfig       `yaml:"nvmlMock,omitempty"`
-	GpuOperator    *GpuOperatorComponentConfig `yaml:"gpuOperator,omitempty"`
-}
-```
-
-- [ ] **Step 2: Build + run topology tests to verify nothing broke**
-
-Run:
-```bash
-go build ./internal/common/topology/...
-go test ./internal/common/topology/... -count=1
-```
-
-Expected: clean build, all tests pass.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add internal/common/topology/types.go
-git commit -m "feat: add NvmlMock field to ComponentsConfig (RUN-38195)"
-```
+---
 
 ---
 
@@ -580,9 +550,45 @@ git commit -m "feat(chart): invert polyfill gate so it activates when subchart i
 
 ---
 
-## Task 10: ~~plumb `MOCK_CONTROLLER_ENABLED` env~~ — **DELETED**
+## Task 10: Piece B — plumb `NVML_MOCK_IMAGE` env
 
-This task is no longer needed. The mock controller runs unconditionally inside status-updater (see Task 2 design note). No env plumbing required. Skip directly to Task 11.
+**Files:**
+- Modify: `deploy/fake-gpu-operator/templates/status-updater/deployment.yaml`
+
+The mock controller reads the nvml-mock image as a single env var. The chart constructs `repository:tag` from `nvmlMock.image.*` (set in Task 7) and plumbs it as `NVML_MOCK_IMAGE`.
+
+- [ ] **Step 1: Find the status-updater container's env block**
+
+Open `deploy/fake-gpu-operator/templates/status-updater/deployment.yaml`. Locate the `env:` list under the status-updater container.
+
+- [ ] **Step 2: Append the new env entry**
+
+Add (preserve indentation matching adjacent entries):
+
+```yaml
+            - name: NVML_MOCK_IMAGE
+              value: "{{ .Values.nvmlMock.image.repository }}:{{ .Values.nvmlMock.image.tag }}"
+```
+
+- [ ] **Step 3: Verify rendering**
+
+Run:
+```bash
+helm template fgo deploy/fake-gpu-operator | grep -A 1 "NVML_MOCK_IMAGE"
+```
+
+Expected output:
+```
+- name: NVML_MOCK_IMAGE
+  value: "ghcr.io/nvidia/nvml-mock:v0.1.0"
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add deploy/fake-gpu-operator/templates/status-updater/deployment.yaml
+git commit -m "feat(chart): plumb NVML_MOCK_IMAGE env from nvmlMock.image values (RUN-38195)"
+```
 
 ---
 
@@ -1615,10 +1621,9 @@ func TestComputeDesiredState_OnlyMockPools(t *testing.T) {
 		},
 	}
 	params := ReconcileParams{
-		Namespace:        "ns",
-		DefaultRegistry:  "ghcr.io/nvidia",
-		FallbackTag:      "v0.1.0",
-		ImagePullPolicy:  corev1.PullIfNotPresent,
+		Namespace:       "ns",
+		Image:           "ghcr.io/nvidia/nvml-mock:v0.1.0",
+		ImagePullPolicy: corev1.PullIfNotPresent,
 	}
 
 	objs, err := ComputeDesiredState(kube, cfg, params)
@@ -1653,7 +1658,7 @@ func TestComputeDesiredState_DeterministicOrder(t *testing.T) {
 			"mmm": {Gpu: topology.GpuConfig{Backend: "mock", Profile: "a100"}},
 		},
 	}
-	params := ReconcileParams{Namespace: "ns", DefaultRegistry: "r", FallbackTag: "t"}
+	params := ReconcileParams{Namespace: "ns", Image: "img:t"}
 
 	objs, err := ComputeDesiredState(kube, cfg, params)
 	require.NoError(t, err)
@@ -1703,7 +1708,6 @@ import (
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	"github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/component"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -1712,8 +1716,12 @@ import (
 // ReconcileParams holds the controller's runtime configuration.
 type ReconcileParams struct {
 	Namespace       string
-	DefaultRegistry string
-	FallbackTag     string
+	// Image is the full nvml-mock image reference (e.g.
+	// "ghcr.io/nvidia/nvml-mock:v0.1.0"), supplied via the NVML_MOCK_IMAGE
+	// env var the chart plumbs from values.yaml's nvmlMock.image.repository
+	// + tag. Every per-pool DaemonSet gets the same image — there's no
+	// per-pool image override mechanism by design.
+	Image           string
 	ImagePullPolicy corev1.PullPolicy
 }
 
@@ -1734,6 +1742,11 @@ func ComputeDesiredState(
 	}
 	sort.Strings(poolNames)
 
+	pullPolicy := params.ImagePullPolicy
+	if pullPolicy == "" {
+		pullPolicy = corev1.PullAlways
+	}
+
 	var resources []runtime.Object
 	for _, name := range poolNames {
 		pool := cfg.NodePools[name]
@@ -1746,24 +1759,12 @@ func ComputeDesiredState(
 			return nil, fmt.Errorf("rendering config for pool %q: %w", name, err)
 		}
 
-		image := component.ResolveImage(
-			cfg.Components,
-			"nvmlMock",
-			"nvml-mock",
-			params.DefaultRegistry,
-			params.FallbackTag,
-		)
-		pullPolicy := params.ImagePullPolicy
-		if pullPolicy == "" {
-			pullPolicy = corev1.PullAlways
-		}
-
 		cm := BuildConfigMap(params.Namespace, name, configYAML)
 		ds := BuildDaemonSet(BuildDaemonSetParams{
 			Namespace:        params.Namespace,
 			Pool:             name,
 			NodePoolLabelKey: cfg.NodePoolLabelKey,
-			Image:            image,
+			Image:            params.Image,
 			ImagePullPolicy:  pullPolicy,
 			ConfigHash:       configHash(configYAML),
 		})
@@ -1782,35 +1783,12 @@ func configHash(body []byte) string {
 }
 ```
 
-**Note:** `component.ResolveImage` is the existing function in `internal/status-updater/controllers/component/images.go`. We reuse it to keep image-resolution semantics consistent — this is *not* importing controller logic, just a pure helper function. The component's `getComponentConfig` does NOT yet recognize `"nvmlMock"`, so the next step adds a key handler.
+- [ ] **Step 4: Run tests to verify they pass**
 
-- [ ] **Step 4: Extend `component.getComponentConfig` to recognize `"nvmlMock"`**
+Run: `go test ./internal/status-updater/controllers/mock/... -run ComputeDesiredState -v`
+Expected: all `ComputeDesiredState_*` cases pass.
 
-Open `internal/status-updater/controllers/component/images.go`. Find the `getComponentConfig` function and add the new case:
-
-```go
-func getComponentConfig(c *topology.ComponentsConfig, key string) *topology.ComponentImageConfig {
-	switch key {
-	case "devicePlugin":
-		return c.DevicePlugin
-	case "statusExporter":
-		return c.StatusExporter
-	case "kwokDraPlugin":
-		return c.KwokDraPlugin
-	case "nvmlMock":
-		return c.NvmlMock
-	default:
-		return nil
-	}
-}
-```
-
-- [ ] **Step 5: Run tests to verify they pass**
-
-Run: `go test ./internal/status-updater/controllers/mock/... -run ComputeDesiredState -v && go test ./internal/status-updater/controllers/component/... -count=1`
-Expected: mock tests pass; component tests still pass (no regression).
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add internal/status-updater/controllers/mock/desired_state.go \
@@ -1894,7 +1872,7 @@ func TestReconcile_PoolAdded_CreatesResources(t *testing.T) {
 		makeProfileCM("gpu-profile-a100", "ns"),
 	)
 	r := NewReconciler(kube, ReconcileParams{
-		Namespace: "ns", DefaultRegistry: "ghcr.io/nvidia", FallbackTag: "v0.1.0",
+		Namespace: "ns", Image: "ghcr.io/nvidia/nvml-mock:v0.1.0",
 	})
 	require.NoError(t, r.Reconcile(context.Background()))
 
@@ -1945,7 +1923,7 @@ func TestReconcile_OverrideChange_UpdatesConfigMapAndStampsDaemonSet(t *testing.
 		makeProfileCM("gpu-profile-a100", "ns"),
 	)
 	r := NewReconciler(kube, ReconcileParams{
-		Namespace: "ns", DefaultRegistry: "r", FallbackTag: "t",
+		Namespace: "ns", Image: "img:t",
 	})
 	require.NoError(t, r.Reconcile(context.Background()))
 
@@ -2206,7 +2184,7 @@ func TestController_ReconcilesOnTopologyChange(t *testing.T) {
 	)
 
 	c := NewMockController(kube, ReconcileParams{
-		Namespace: "ns", DefaultRegistry: "r", FallbackTag: "t",
+		Namespace: "ns", Image: "img:t",
 	})
 
 	stopCh := make(chan struct{})
@@ -2347,7 +2325,17 @@ Open `internal/status-updater/app.go`. In the import block, alongside other `con
 mockcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/mock"
 ```
 
-- [ ] **Step 2: Wire the controller unconditionally**
+- [ ] **Step 2: Add the `EnvNvmlMockImage` constant**
+
+Open `internal/common/constants/constants.go` and add:
+
+```go
+EnvNvmlMockImage = "NVML_MOCK_IMAGE"
+```
+
+Place it near the other `Env*` constants for grouping.
+
+- [ ] **Step 3: Wire the controller unconditionally**
 
 Find where other controllers are appended (around `app.Controllers = append(...)` lines for podcontroller, nodecontroller). Append after them, **before** any conditional controllers:
 
@@ -2359,22 +2347,14 @@ if pullPolicy == "" {
 app.Controllers = append(app.Controllers,
     mockcontroller.NewMockController(app.kubeClient, mockcontroller.ReconcileParams{
         Namespace:       viper.GetString(constants.EnvFakeGpuOperatorNs),
-        DefaultRegistry: viper.GetString(constants.EnvDefaultImageRegistry),
-        FallbackTag:     viper.GetString(constants.EnvFallbackImageTag),
+        Image:           viper.GetString(constants.EnvNvmlMockImage),
         ImagePullPolicy: pullPolicy,
     }))
 ```
 
-**Note on `EnvDefaultImageRegistry` / `EnvFallbackImageTag`:** these env constants don't exist in `constants.go` on `main` — they were Phase-4-only additions that are not present on this branch. The controller still needs default registry + fallback tag to resolve images. Two options:
-
-1. Add the two constants to `constants.go` (alongside the existing env constants) as part of this task — values `"DEFAULT_IMAGE_REGISTRY"` and `"FALLBACK_IMAGE_TAG"` — and plumb them through the chart's status-updater `deployment.yaml` env list (Task 7 already added `nvmlMock.image.repository` and `tag` to values.yaml; the deployment.yaml env list should set `DEFAULT_IMAGE_REGISTRY` from `.Values.nvmlMock.image.repository` and `FALLBACK_IMAGE_TAG` from `.Values.nvmlMock.image.tag` — or from a new top-level `componentRegistry` block, whichever is cleaner).
-2. Source the registry + tag from `nvmlMock.image.*` directly in chart values (no env round-trip), passing them as ReconcileParams. This requires a smaller change to the chart but means the controller's `ResolveImage` chain has a fixed default registry per chart install rather than configurable at runtime.
-
-If unclear at implementation time, ask before choosing.
-
 If `corev1` isn't already imported in this file, add `corev1 "k8s.io/api/core/v1"` to the imports.
 
-- [ ] **Step 3: Build and run all status-updater tests**
+- [ ] **Step 4: Build and run all status-updater tests**
 
 Run:
 ```bash
@@ -2385,11 +2365,11 @@ go test ./internal/status-updater/... -count=1
 
 Expected: clean vet, clean build, all tests pass.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add internal/status-updater/app.go internal/common/constants/constants.go deploy/fake-gpu-operator/templates/status-updater/deployment.yaml
-git commit -m "feat: wire MockController unconditionally (RUN-38195)"
+git add internal/status-updater/app.go internal/common/constants/constants.go
+git commit -m "feat: wire MockController unconditionally with NVML_MOCK_IMAGE env (RUN-38195)"
 ```
 
 ---
