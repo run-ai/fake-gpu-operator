@@ -94,26 +94,18 @@ git commit -m "docs: add Phase 5 mock backend implementation plan (RUN-38195)"
 
 ---
 
-## Task 2: Add `MOCK_CONTROLLER_ENABLED` env constant
+## Task 2: Add `ComponentNvmlMock` label-value constant
 
 **Files:**
 - Modify: `internal/common/constants/constants.go`
 
-The mock controller is gated by an env var the chart plumbs from `or .Values.gpuOperator.enabled .Values.nvidiaDraDriver.enabled`. We need the constant first so later tasks can reference it.
+We need a stable `fake-gpu-operator/component` label value for per-pool DaemonSets and ConfigMaps the mock controller manages, so listings can be filtered by it.
 
-- [ ] **Step 1: Add the constant**
+**Design note (changed from earlier draft of this plan):** the controller is *not* gated by a `MOCK_CONTROLLER_ENABLED` env var. It runs unconditionally inside status-updater — when no `backend: mock` pools exist in the topology CM it produces an empty desired set and does no work. So no env constant or env plumbing is needed; this task is just one label-value constant. Tasks 10 and 20 are also affected (see notes there).
 
-Open `internal/common/constants/constants.go`. Find the block with `EnvComponentControllerEnabled = "COMPONENT_CONTROLLER_ENABLED"` and add a sibling line:
+- [ ] **Step 1: Add the label-value constant**
 
-```go
-EnvMockControllerEnabled      = "MOCK_CONTROLLER_ENABLED"
-```
-
-Place it adjacent to the other `EnvComponentControllerEnabled` / `EnvDefaultImageRegistry` etc. constants for grouping.
-
-- [ ] **Step 2: Add a managed-resource component label value for nvml-mock**
-
-In the same file, near `LabelManagedByValue` etc., add:
+Open `internal/common/constants/constants.go`. Find the existing label constants near `LabelManagedByValue` and add:
 
 ```go
 ComponentNvmlMock = "nvml-mock"
@@ -121,16 +113,16 @@ ComponentNvmlMock = "nvml-mock"
 
 This becomes the value of the `fake-gpu-operator/component` label on per-pool DaemonSets and ConfigMaps the controller manages.
 
-- [ ] **Step 3: Build to verify**
+- [ ] **Step 2: Build to verify**
 
 Run: `go build ./internal/common/constants/...`
 Expected: clean build, no output.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add internal/common/constants/constants.go
-git commit -m "feat: add MOCK_CONTROLLER_ENABLED env + ComponentNvmlMock label constants (RUN-38195)"
+git commit -m "feat: add ComponentNvmlMock label-value constant (RUN-38195)"
 ```
 
 ---
@@ -590,41 +582,9 @@ git commit -m "feat(chart): invert polyfill gate so it activates when subchart i
 
 ---
 
-## Task 10: Piece B — plumb `MOCK_CONTROLLER_ENABLED` env
+## Task 10: ~~plumb `MOCK_CONTROLLER_ENABLED` env~~ — **DELETED**
 
-**Files:**
-- Modify: `deploy/fake-gpu-operator/templates/status-updater/deployment.yaml`
-
-- [ ] **Step 1: Find the status-updater container's env block**
-
-Open `deploy/fake-gpu-operator/templates/status-updater/deployment.yaml`. Locate the `env:` list under the status-updater container (the one referencing `EnvFakeGpuOperatorNs`, `TOPOLOGY_CM_NAME`, etc.).
-
-- [ ] **Step 2: Append the new env entry**
-
-Add (preserve indentation matching adjacent entries):
-
-```yaml
-            - name: MOCK_CONTROLLER_ENABLED
-              value: "{{ or .Values.gpuOperator.enabled .Values.nvidiaDraDriver.enabled }}"
-```
-
-- [ ] **Step 3: Verify rendering**
-
-Run:
-```bash
-helm template fgo deploy/fake-gpu-operator --set gpuOperator.enabled=true | grep -A 1 "MOCK_CONTROLLER_ENABLED"
-helm template fgo deploy/fake-gpu-operator --set nvidiaDraDriver.enabled=true | grep -A 1 "MOCK_CONTROLLER_ENABLED"
-helm template fgo deploy/fake-gpu-operator | grep -A 1 "MOCK_CONTROLLER_ENABLED"
-```
-
-Expected: first two render `value: "true"`; third renders `value: "false"`.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add deploy/fake-gpu-operator/templates/status-updater/deployment.yaml
-git commit -m "feat(chart): plumb MOCK_CONTROLLER_ENABLED env from subchart toggles (RUN-38195)"
-```
+This task is no longer needed. The mock controller runs unconditionally inside status-updater (see Task 2 design note). No env plumbing required. Skip directly to Task 11.
 
 ---
 
@@ -2374,10 +2334,12 @@ git commit -m "feat(mock): MockController — informer + handler (RUN-38195)"
 
 ---
 
-## Task 20: Wire `MockController` in `app.go`
+## Task 20: Wire `MockController` in `app.go` (unconditional)
 
 **Files:**
 - Modify: `internal/status-updater/app.go`
+
+The controller runs every time status-updater starts — when no `backend: mock` pools exist in the topology CM, it produces an empty desired set and does no work. No env-flag gate.
 
 - [ ] **Step 1: Add the import**
 
@@ -2387,25 +2349,30 @@ Open `internal/status-updater/app.go`. In the import block, alongside other `con
 mockcontroller "github.com/run-ai/fake-gpu-operator/internal/status-updater/controllers/mock"
 ```
 
-- [ ] **Step 2: Wire the controller behind the env flag**
+- [ ] **Step 2: Wire the controller unconditionally**
 
-Find where other controllers are appended (around `app.Controllers = append(...)` lines for podcontroller, nodecontroller, runaicontroller). Append a new conditional block:
+Find where other controllers are appended (around `app.Controllers = append(...)` lines for podcontroller, nodecontroller). Append after them, **before** any conditional controllers:
 
 ```go
-if viper.GetBool(constants.EnvMockControllerEnabled) {
-    pullPolicy := corev1.PullPolicy(viper.GetString("IMAGE_PULL_POLICY"))
-    if pullPolicy == "" {
-        pullPolicy = corev1.PullAlways
-    }
-    app.Controllers = append(app.Controllers,
-        mockcontroller.NewMockController(app.kubeClient, mockcontroller.ReconcileParams{
-            Namespace:       viper.GetString(constants.EnvFakeGpuOperatorNs),
-            DefaultRegistry: viper.GetString(constants.EnvDefaultImageRegistry),
-            FallbackTag:     viper.GetString(constants.EnvFallbackImageTag),
-            ImagePullPolicy: pullPolicy,
-        }))
+pullPolicy := corev1.PullPolicy(viper.GetString("IMAGE_PULL_POLICY"))
+if pullPolicy == "" {
+    pullPolicy = corev1.PullAlways
 }
+app.Controllers = append(app.Controllers,
+    mockcontroller.NewMockController(app.kubeClient, mockcontroller.ReconcileParams{
+        Namespace:       viper.GetString(constants.EnvFakeGpuOperatorNs),
+        DefaultRegistry: viper.GetString(constants.EnvDefaultImageRegistry),
+        FallbackTag:     viper.GetString(constants.EnvFallbackImageTag),
+        ImagePullPolicy: pullPolicy,
+    }))
 ```
+
+**Note on `EnvDefaultImageRegistry` / `EnvFallbackImageTag`:** these env constants don't exist in `constants.go` on `main` — they were Phase-4-only additions that are not present on this branch. The controller still needs default registry + fallback tag to resolve images. Two options:
+
+1. Add the two constants to `constants.go` (alongside the existing env constants) as part of this task — values `"DEFAULT_IMAGE_REGISTRY"` and `"FALLBACK_IMAGE_TAG"` — and plumb them through the chart's status-updater `deployment.yaml` env list (Task 7 already added `nvmlMock.image.repository` and `tag` to values.yaml; the deployment.yaml env list should set `DEFAULT_IMAGE_REGISTRY` from `.Values.nvmlMock.image.repository` and `FALLBACK_IMAGE_TAG` from `.Values.nvmlMock.image.tag` — or from a new top-level `componentRegistry` block, whichever is cleaner).
+2. Source the registry + tag from `nvmlMock.image.*` directly in chart values (no env round-trip), passing them as ReconcileParams. This requires a smaller change to the chart but means the controller's `ResolveImage` chain has a fixed default registry per chart install rather than configurable at runtime.
+
+If unclear at implementation time, ask before choosing.
 
 If `corev1` isn't already imported in this file, add `corev1 "k8s.io/api/core/v1"` to the imports.
 
@@ -2423,8 +2390,8 @@ Expected: clean vet, clean build, all tests pass.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add internal/status-updater/app.go
-git commit -m "feat: wire MockController behind MOCK_CONTROLLER_ENABLED (RUN-38195)"
+git add internal/status-updater/app.go internal/common/constants/constants.go deploy/fake-gpu-operator/templates/status-updater/deployment.yaml
+git commit -m "feat: wire MockController unconditionally (RUN-38195)"
 ```
 
 ---
@@ -2572,7 +2539,7 @@ Capture the URL printed by `gh pr create` for reference.
 | Architecture L2b (DRA driver subchart) | Tasks 6, 7, 12 |
 | Architecture L3 (node labeling) | Tasks 4, 5 |
 | Polyfill semantic | Tasks 7, 9, 12 |
-| `MOCK_CONTROLLER_ENABLED` plumbing | Tasks 2, 10, 20 |
+| Mock controller wiring (unconditional) | Task 20 |
 | nvml-mock SA | Task 8 |
 | ClusterRole RBAC for daemonsets | Task 11 |
 | `NvmlMock` in `ComponentsConfig` | Task 3 |
