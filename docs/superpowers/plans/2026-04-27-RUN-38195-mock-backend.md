@@ -137,190 +137,19 @@ Skip directly to Task 4.
 
 ---
 
-## Task 4: Piece C — labels.go behavior matrix test (failing)
+## Task 4: ~~Piece C — labels.go behavior matrix test~~ — **DELETED**
 
-**Files:**
-- Create: `internal/status-updater/handlers/node/labels_test.go`
+Piece C is unnecessary. NVIDIA's canonical config for nvml-mock + GPU Operator integration (`tests/e2e/gpu-operator-values.yaml` in `NVIDIA/k8s-test-infra`) leaves NFD enabled. NFD chains `nvidia.com/gpu.present=true` (applied by nvml-mock) into the `nvidia.com/gpu.deploy.*` labels GPU Operator's reconciler uses for component placement. Manual labeling via NodeController is redundant.
 
-TDD step 1: write the failing test before changing the predicate.
+The `BackendFake`/`BackendMock` constants added during the original Task 4 implementation are kept (mock controller still needs them); only the labels_test.go was reverted (`553cf2d`). Skip directly to Task 6.
 
-- [ ] **Step 1: Write the failing test**
-
-Create `internal/status-updater/handlers/node/labels_test.go` with this content:
-
-```go
-package node
-
-import (
-	"context"
-	"testing"
-
-	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-)
-
-func TestLabelNode_Matrix(t *testing.T) {
-	const poolKey = "run.ai/simulated-gpu-node-pool"
-
-	clusterConfig := &topology.ClusterConfig{
-		NodePoolLabelKey: poolKey,
-		NodePools: map[string]topology.NodePoolConfig{
-			"fake-pool": {Gpu: topology.GpuConfig{Backend: constants.BackendFake}},
-			"mock-pool": {Gpu: topology.GpuConfig{Backend: constants.BackendMock}},
-		},
-	}
-
-	cases := []struct {
-		name              string
-		nodeLabels        map[string]string
-		annotations       map[string]string
-		wantDevicePlugin  bool
-		wantDraPlugin     bool
-		wantComputeDomain bool
-	}{
-		{
-			// KWOK annotation must be exactly "fake" — that's what
-			// `isFakeNode` (in handlers/node/common.go) checks.
-			name:        "KWOK + fake pool: dcgm only",
-			nodeLabels:  map[string]string{poolKey: "fake-pool"},
-			annotations: map[string]string{constants.AnnotationKwokNode: "fake"},
-		},
-		{
-			name:              "Real Linux + mock pool: all four",
-			nodeLabels:        map[string]string{poolKey: "mock-pool"},
-			wantDevicePlugin:  true,
-			wantDraPlugin:     true,
-			wantComputeDomain: true,
-		},
-		{
-			name:       "Real Linux + fake pool: dcgm only",
-			nodeLabels: map[string]string{poolKey: "fake-pool"},
-		},
-		{
-			name:       "Real Linux + no pool match in CM: dcgm only",
-			nodeLabels: map[string]string{poolKey: "unknown-pool"},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			node := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "n1",
-					Labels:      tc.nodeLabels,
-					Annotations: tc.annotations,
-				},
-			}
-			kubeClient := fake.NewSimpleClientset(node)
-			h := NewNodeHandler(kubeClient, clusterConfig, false)
-
-			require.NoError(t, h.labelNode(node))
-
-			got, err := kubeClient.CoreV1().Nodes().Get(context.TODO(), "n1", metav1.GetOptions{})
-			require.NoError(t, err)
-
-			// dcgm-exporter is always applied
-			assert.Equal(t, "true", got.Labels[dcgmExporterLabelKey],
-				"dcgm-exporter label always applied")
-
-			assertLabel(t, got.Labels, devicePluginLabelKey, tc.wantDevicePlugin)
-			assertLabel(t, got.Labels, draPluginGpuLabelKey, tc.wantDraPlugin)
-			assertLabel(t, got.Labels, computeDomainDevicePluginLabelKey, tc.wantComputeDomain)
-		})
-	}
-}
-
-func assertLabel(t *testing.T, labels map[string]string, key string, want bool) {
-	t.Helper()
-	if want {
-		assert.Equal(t, "true", labels[key], "expected label %q=true", key)
-	} else {
-		assert.NotContains(t, labels, key, "expected label %q absent", key)
-	}
-}
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `go test ./internal/status-updater/handlers/node/... -run TestLabelNode_Matrix -v`
-
-Expected: the "Real Linux + fake pool" and "Real Linux + no pool match" cases FAIL — current `labelNode` applies all four labels to any non-fake (non-KWOK) node regardless of pool backend.
-
-- [ ] **Step 3: Commit the failing test**
-
-```bash
-git add internal/status-updater/handlers/node/labels_test.go
-git commit -m "test: add labelNode behavior matrix for mock pool support (RUN-38195)"
-```
+(See updated Task 7 subchart values block — it now follows NVIDIA's canonical config with NFD enabled and CDI mode.)
 
 ---
 
-## Task 5: Piece C — make labels_test.go pass
+## Task 5: ~~Piece C — make labels_test.go pass~~ — **DELETED**
 
-**Files:**
-- Modify: `internal/status-updater/handlers/node/labels.go:22-38`
-
-- [ ] **Step 1: Replace the predicate**
-
-Open `internal/status-updater/handlers/node/labels.go`. Replace the body of `labelNode` (the function from line 22):
-
-```go
-// labelNode labels the node with required labels for the fake-gpu-operator to function.
-// dcgm-exporter is applied to every node (the kwok-status-exporter consumes it).
-// The three GPU-Operator-targeting labels apply only to nodes in mock-backend pools —
-// they're nodeSelectors for upstream device-plugin / DRA driver components.
-func (p *NodeHandler) labelNode(node *v1.Node) error {
-	labels := map[string]interface{}{
-		dcgmExporterLabelKey: "true",
-	}
-
-	poolName := node.Labels[p.clusterConfig.NodePoolLabelKey]
-	pool, ok := p.clusterConfig.NodePools[poolName]
-	if ok && pool.Gpu.Backend == constants.BackendMock {
-		labels[devicePluginLabelKey] = "true"
-		labels[draPluginGpuLabelKey] = "true"
-		labels[computeDomainDevicePluginLabelKey] = "true"
-	}
-
-	err := p.patchNodeLabels(node, labels)
-	if err != nil {
-		return fmt.Errorf("failed to label node %s: %w", node.Name, err)
-	}
-
-	return nil
-}
-```
-
-You will also need to add the `constants` import:
-
-```go
-import (
-    // ...existing imports...
-    "github.com/run-ai/fake-gpu-operator/internal/common/constants"
-)
-```
-
-- [ ] **Step 2: Run test to verify it passes**
-
-Run: `go test ./internal/status-updater/handlers/node/... -run TestLabelNode_Matrix -v`
-Expected: all four cases PASS.
-
-- [ ] **Step 3: Run full status-updater tests to confirm no regression**
-
-Run: `go test ./internal/status-updater/... -count=1`
-Expected: all tests pass.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add internal/status-updater/handlers/node/labels.go
-git commit -m "feat: scope nvidia.com/gpu.deploy.* labels to mock-pool nodes only (RUN-38195)"
-```
+See Task 4 deletion note. labels.go is unchanged in this PR.
 
 ---
 
@@ -412,25 +241,91 @@ nvmlMock:
 
 - [ ] **Step 3: Add subchart values blocks**
 
-Add two top-level blocks at the end of `values.yaml` (each keyed by hyphenated subchart name per Helm convention):
+Add two top-level blocks at the end of `values.yaml` (each keyed by hyphenated subchart name per Helm convention).
+
+The `gpu-operator:` block adopts NVIDIA's canonical config from
+`tests/e2e/gpu-operator-values.yaml` in `NVIDIA/k8s-test-infra` — the recipe NVIDIA themselves use for nvml-mock + GPU Operator integration. Users can override anything by adding keys under `gpu-operator:` in their own values file; Helm merges on top.
 
 ```yaml
 # Subchart values block for upstream gpu-operator chart.
-# Defaults below are the minimum required to integrate with nvml-mock.
-# Users add their own overrides under this same key; Helm merges on top.
-#
-# IMPORTANT: the exact subchart value key for the driver root is finalized
-# during implementation by reading `charts/gpu-operator/values.yaml`. The
-# common candidates for v26.3.1 are `driver.driverRoot` or
-# `validator.driver.env[NVIDIA_DRIVER_ROOT]` — verify before merging this PR.
+# Adopts NVIDIA's canonical nvml-mock + GPU Operator config:
+#   https://github.com/NVIDIA/k8s-test-infra/blob/main/tests/e2e/gpu-operator-values.yaml
 gpu-operator:
+  # nvml-mock provides the driver root and mock libs directly; no real
+  # kernel module or container toolkit needed.
   driver:
     enabled: false
   toolkit:
     enabled: false
-  nfd:
+
+  # DCGM and dependents — mock NVML doesn't support DCGM (requires full
+  # driver stack), so these are off.
+  dcgm:
     enabled: false
-  # driver.driverRoot: /var/lib/nvml-mock/driver  # uncomment after verifying key
+  dcgmExporter:
+    enabled: false
+  nodeStatusExporter:
+    enabled: false
+
+  # MIG — mock NVML returns NOT_FOUND for MIG queries; strategy must be
+  # "none" or the device-plugin treats the responses as fatal.
+  mig:
+    strategy: none
+  migManager:
+    enabled: false
+
+  # CDI mode — toolkit reads /var/run/cdi/nvidia.yaml emitted by nvml-mock.
+  cdi:
+    enabled: true
+    default: true
+
+  # NFD STAYS ENABLED. NFD detects nvml-mock's nvidia.com/gpu.present=true
+  # label and chains the nvidia.com/gpu.deploy.* labels GPU Operator's
+  # reconciler uses for component placement. We do NOT manually apply
+  # those labels via NodeController.
+
+  # Device plugin discovers GPUs via mock NVML.
+  devicePlugin:
+    enabled: true
+    config:
+      name: ""
+    env:
+      - name: NVIDIA_DRIVER_ROOT
+        value: /var/lib/nvml-mock/driver
+
+  # GFD reads GPU attributes via mock NVML and labels the node.
+  gfd:
+    enabled: true
+    env:
+      - name: NVIDIA_DRIVER_ROOT
+        value: /var/lib/nvml-mock/driver
+
+  # Validator checks the GPU stack is functional, with mock-aware env vars:
+  #   driver-validation: hostPath /run/nvidia/driver → our mock (via symlink)
+  #   toolkit-validation: CDI injection makes nvidia-smi available
+  #   cuda-validation: WITH_WORKLOAD=false skips kernel launch (no-op on mock)
+  #   plugin-validation: checks nvidia.com/gpu in node allocatable
+  validator:
+    driver:
+      env:
+        - name: DRIVER_INSTALL_DIR
+          value: /run/nvidia/driver
+        - name: LD_LIBRARY_PATH
+          value: /run/nvidia/driver/usr/lib64
+        - name: DISABLE_DEV_CHAR_SYMLINK_CREATION
+          value: "true"
+    toolkit:
+      env:
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: all
+    cuda:
+      env:
+        - name: WITH_WORKLOAD
+          value: "false"
+    plugin:
+      env:
+        - name: LD_LIBRARY_PATH
+          value: /run/nvidia/driver/usr/lib64
 
 # Subchart values block for nvidia-dra-driver-gpu.
 # Defaults follow the nvml-mock README's DRA recipe.
@@ -2517,7 +2412,7 @@ Capture the URL printed by `gh pr create` for reference.
 | Architecture L1 (per-pool nvml-mock resources) | Tasks 13–20 |
 | Architecture L2a (GPU Operator subchart) | Tasks 6, 7, 9, 12 |
 | Architecture L2b (DRA driver subchart) | Tasks 6, 7, 12 |
-| Architecture L3 (node labeling) | Tasks 4, 5 |
+| Architecture L3 (node labeling) | Handled by NFD chain (nvml-mock → gpu.present → gpu.deploy.*); see Tasks 4/5 deletion notes |
 | Polyfill semantic | Tasks 7, 9, 12 |
 | Mock controller wiring (unconditional) | Task 20 |
 | nvml-mock SA | Task 8 |
