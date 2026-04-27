@@ -15,6 +15,14 @@ const (
 	LabelTopologyCMNodeTopology     = "node-topology"
 	LabelTopologyCMNodeName         = "node-name"
 
+	// Managed-resource labels — applied to all per-pool resources the
+	// status-updater controller manages, so listings can filter by them.
+	LabelManagedBy      = "app.kubernetes.io/managed-by"
+	LabelManagedByValue = "fake-gpu-operator"
+	LabelComponent      = "fake-gpu-operator/component"
+	LabelPool           = "fake-gpu-operator/pool"
+
+	// Component identifier values for LabelComponent.
 	ComponentNvmlMock = "nvml-mock"
 
 	ReservationNs = "runai-reservation"
