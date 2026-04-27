@@ -165,10 +165,16 @@ Open `deploy/fake-gpu-operator/Chart.yaml`. Append at the end of the file:
 ```yaml
 dependencies:
   - name: gpu-operator
-    version: "26.3.1"
+    # NGC publishes this chart with internal version "v26.3.1" (with v prefix).
+    # The pin must match the chart's actual version field exactly or
+    # `helm template` rejects the chart as missing. Quick check:
+    #   tar -xzOf deploy/fake-gpu-operator/charts/gpu-operator-*.tgz \
+    #     gpu-operator/Chart.yaml | grep ^version
+    version: "v26.3.1"
     repository: https://helm.ngc.nvidia.com/nvidia
     condition: gpuOperator.enabled
   - name: nvidia-dra-driver-gpu
+    # This chart's internal version is plain "25.12.0", no v prefix.
     version: "25.12.0"
     repository: https://helm.ngc.nvidia.com/nvidia
     condition: nvidiaDraDriver.enabled
@@ -179,23 +185,33 @@ dependencies:
 Run: `helm dependency update deploy/fake-gpu-operator`
 Expected: both charts download into `deploy/fake-gpu-operator/charts/`. Output mentions both `gpu-operator-26.3.1.tgz` and `nvidia-dra-driver-gpu-25.12.0.tgz`.
 
-- [ ] **Step 3: Add `charts/` to `.helmignore` if not already there**
+- [ ] **Step 3: Confirm git ignores the downloaded `.tgz`s — DO NOT add `charts/` to `.helmignore`**
 
-The downloaded `.tgz` chart artifacts should be ignored by Helm packaging *and* by git.
-
-- **For Helm packaging:** add `charts/` to `deploy/fake-gpu-operator/.helmignore` (so the parent chart's `.tgz` doesn't include the dependency tarballs).
-- **For git:** the repo's root `.gitignore` already has a `*.tgz` rule that covers all the cached tarballs — no changes needed there.
-
-Verify by running `git check-ignore deploy/fake-gpu-operator/charts/gpu-operator-*.tgz`. It should print the path (meaning git ignores it).
-
-- [ ] **Step 4: Commit Chart.yaml + Chart.lock + .helmignore changes**
-
-`helm dependency update` auto-generates `Chart.lock` — it locks the resolved chart digests for reproducible installs across machines and CI. **Commit it** alongside the other changes (standard Helm practice, analogous to `package-lock.json` / `go.sum`).
+The repo's root `.gitignore` already has `*.tgz` which keeps the cached tarballs out of git. Verify:
 
 ```bash
-git add deploy/fake-gpu-operator/Chart.yaml deploy/fake-gpu-operator/Chart.lock deploy/fake-gpu-operator/.helmignore
+git check-ignore deploy/fake-gpu-operator/charts/gpu-operator-*.tgz
+```
+It should print the path (meaning git ignores it).
+
+**Important: do NOT add `charts/` to `deploy/fake-gpu-operator/.helmignore`.** That entry is overloaded — it's intended to control `helm package` exclusions, but it ALSO prevents Helm from loading the directory at template time, which breaks `helm template` entirely. Keep `.helmignore` unchanged.
+
+- [ ] **Step 4: Commit Chart.yaml + Chart.lock**
+
+`helm dependency update` auto-generates `Chart.lock` — it locks the resolved chart digests for reproducible installs across machines and CI. **Commit it** alongside Chart.yaml (standard Helm practice, analogous to `package-lock.json` / `go.sum`).
+
+```bash
+git add deploy/fake-gpu-operator/Chart.yaml deploy/fake-gpu-operator/Chart.lock
 git commit -m "feat(chart): add gpu-operator + nvidia-dra-driver-gpu subchart deps (RUN-38195)"
 ```
+
+- [ ] **Step 5: Verify `helm template` succeeds**
+
+```bash
+helm template fgo deploy/fake-gpu-operator > /dev/null
+```
+
+Expected: exit 0. If it fails with "missing in charts/ directory", the version pin in Chart.yaml doesn't match the chart's internal version — re-check Step 1.
 
 ---
 
