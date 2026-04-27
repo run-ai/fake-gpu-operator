@@ -1,4 +1,4 @@
-{{- if .Values.kwokGpuDevicePlugin.enabled -}}
+{{- if and .Values.kwokGpuDevicePlugin.enabled (not .Values.statusUpdater.componentController.enabled) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
