@@ -15,6 +15,8 @@ const (
 	LabelTopologyCMNodeTopology     = "node-topology"
 	LabelTopologyCMNodeName         = "node-name"
 
+	ComponentNvmlMock = "nvml-mock"
+
 	ReservationNs = "runai-reservation"
 
 	GpuResourceName = "nvidia.com/gpu"
