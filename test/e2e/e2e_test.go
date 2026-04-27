@@ -795,9 +795,17 @@ func applyManifest(manifestPath string) {
 	testDir := filepath.Dir(filename)
 	manifestFile := filepath.Join(testDir, manifestPath)
 
-	cmd := exec.Command("kubectl", "apply", "-f", manifestFile)
-	output, err := cmd.CombinedOutput()
-	Expect(err).NotTo(HaveOccurred(), "Failed to apply manifest %s: %s", manifestPath, string(output))
+	// Retry to handle the race where a namespace is created in the same
+	// manifest as pods — the default ServiceAccount may not exist yet.
+	Eventually(func() error {
+		cmd := exec.Command("kubectl", "apply", "-f", manifestFile)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to apply manifest %s: %s", manifestPath, string(output))
+		}
+		return nil
+	}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed(),
+		"Failed to apply manifest %s", manifestPath)
 }
 
 func deleteResourceClaim(namespace, claimName string) {

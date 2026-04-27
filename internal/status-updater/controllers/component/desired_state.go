@@ -11,15 +11,12 @@ import (
 
 // ReconcileParams holds configuration needed for resource generation.
 type ReconcileParams struct {
-	Namespace               string
-	DefaultRegistry         string
-	FallbackTag             string
-	PrometheusURL           string
-	DraEnabled              bool
-	NodePoolLabelKey        string
-	GpuOperatorChartVersion string
-	HelmManager             HelmManager
-	ImagePullPolicy         corev1.PullPolicy
+	Namespace       string
+	DefaultRegistry string
+	FallbackTag     string
+	PrometheusURL   string
+	DraEnabled      bool
+	ImagePullPolicy corev1.PullPolicy
 }
 
 // ComputeDesiredState produces all K8s resources that should exist for the given config.
@@ -67,14 +64,3 @@ func buildFakePoolResources(poolName string, config *topology.ClusterConfig, par
 	return resources
 }
 
-// CollectMockPools returns the list of pool names with backend "mock".
-func CollectMockPools(config *topology.ClusterConfig) []string {
-	var pools []string
-	for name, pool := range config.NodePools {
-		if pool.Gpu.Backend == constants.BackendMock {
-			pools = append(pools, name)
-		}
-	}
-	sort.Strings(pools)
-	return pools
-}

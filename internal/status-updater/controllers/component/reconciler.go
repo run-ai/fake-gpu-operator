@@ -42,18 +42,6 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 		return fmt.Errorf("reconciling services: %w", err)
 	}
 
-	// Reconcile mock pools via Helm
-	if r.params.HelmManager != nil {
-		mockPools := CollectMockPools(config)
-		chartVersion := r.params.GpuOperatorChartVersion
-		if config.Components != nil && config.Components.GpuOperator != nil && config.Components.GpuOperator.ChartVersion != "" {
-			chartVersion = config.Components.GpuOperator.ChartVersion
-		}
-		if err := r.params.HelmManager.Sync(ctx, mockPools, config.NodePoolLabelKey, chartVersion); err != nil {
-			return fmt.Errorf("reconciling GPU Operator Helm release: %w", err)
-		}
-	}
-
 	return nil
 }
 

@@ -96,20 +96,6 @@ var _ = Describe("ComputeDesiredState", func() {
 	})
 })
 
-var _ = Describe("CollectMockPools", func() {
-	It("should return only mock pools sorted", func() {
-		config := &topology.ClusterConfig{
-			NodePools: map[string]topology.NodePoolConfig{
-				"default":  {Gpu: topology.GpuConfig{Backend: "fake"}},
-				"training": {Gpu: topology.GpuConfig{Backend: "mock"}},
-				"alpha":    {Gpu: topology.GpuConfig{Backend: "mock"}},
-			},
-		}
-		pools := CollectMockPools(config)
-		Expect(pools).To(Equal([]string{"alpha", "training"}))
-	})
-})
-
 func resourceNames(objs []runtime.Object) []string {
 	var names []string
 	for _, obj := range objs {

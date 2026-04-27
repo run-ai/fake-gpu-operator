@@ -136,35 +136,6 @@ var _ = Describe("Reconciler", func() {
 		Expect(deps.Items).To(BeEmpty())
 	})
 
-	It("should invoke HelmManager.Sync for mock pools", func() {
-		config := &topology.ClusterConfig{
-			NodePoolLabelKey: "run.ai/simulated-gpu-node-pool",
-			NodePools: map[string]topology.NodePoolConfig{
-				"default":  {Gpu: topology.GpuConfig{Backend: "fake"}},
-				"training": {Gpu: topology.GpuConfig{Backend: "mock"}},
-			},
-		}
-		cm := createTopologyCM(config)
-		client := kfake.NewSimpleClientset(cm)
-		helm := &mockHelmManager{}
-		reconciler = NewReconciler(client, ReconcileParams{
-			Namespace:               namespace,
-			DefaultRegistry:         "ghcr.io/run-ai/fake-gpu-operator",
-			FallbackTag:             "0.5.0",
-			PrometheusURL:           "http://prometheus:9090",
-			NodePoolLabelKey:        "run.ai/simulated-gpu-node-pool",
-			GpuOperatorChartVersion: "24.9.0",
-			HelmManager:             helm,
-		})
-
-		err := reconciler.Reconcile(context.Background())
-		Expect(err).ToNot(HaveOccurred())
-		Expect(helm.syncCalled).To(BeTrue())
-		Expect(helm.lastPools).To(Equal([]string{"training"}))
-		Expect(helm.lastLabelKey).To(Equal("run.ai/simulated-gpu-node-pool"))
-		Expect(helm.lastVersion).To(Equal("24.9.0"))
-	})
-
 	It("should update deployment when image changes", func() {
 		config := &topology.ClusterConfig{
 			NodePoolLabelKey: "run.ai/simulated-gpu-node-pool",
@@ -212,18 +183,3 @@ var _ = Describe("Reconciler", func() {
 		Expect(dep.Spec.Template.Spec.Containers[0].Image).To(Equal("custom/dp:2.0.0"))
 	})
 })
-
-type mockHelmManager struct {
-	syncCalled   bool
-	lastPools    []string
-	lastLabelKey string
-	lastVersion  string
-}
-
-func (m *mockHelmManager) Sync(_ context.Context, pools []string, labelKey string, version string) error {
-	m.syncCalled = true
-	m.lastPools = pools
-	m.lastLabelKey = labelKey
-	m.lastVersion = version
-	return nil
-}
