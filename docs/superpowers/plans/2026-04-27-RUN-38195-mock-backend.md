@@ -94,36 +94,34 @@ git commit -m "docs: add Phase 5 mock backend implementation plan (RUN-38195)"
 
 ---
 
-## Task 2: Add `ComponentNvmlMock` label-value constant
+## Task 2: Add managed-resource label constants + `ComponentNvmlMock` ✓ DONE
 
 **Files:**
 - Modify: `internal/common/constants/constants.go`
 
-We need a stable `fake-gpu-operator/component` label value for per-pool DaemonSets and ConfigMaps the mock controller manages, so listings can be filtered by it.
+We need stable label key/value constants the mock controller can stamp onto per-pool DaemonSets and ConfigMaps so listings can be filtered by them. The plan's original anchor (`LabelManagedByValue`) didn't actually exist on this branch — those constants were Phase-4-only — so they're added in this task.
 
-**Design note (changed from earlier draft of this plan):** the controller is *not* gated by a `MOCK_CONTROLLER_ENABLED` env var. It runs unconditionally inside status-updater — when no `backend: mock` pools exist in the topology CM it produces an empty desired set and does no work. So no env constant or env plumbing is needed; this task is just one label-value constant. Tasks 10 and 20 are also affected (see notes there).
+**Design note:** the controller is *not* gated by a `MOCK_CONTROLLER_ENABLED` env var. It runs unconditionally inside status-updater — when no `backend: mock` pools exist in the topology CM it produces an empty desired set and does no work. Tasks 10 and 20 are also affected (see notes there).
 
-- [ ] **Step 1: Add the label-value constant**
+- [x] **Step 1: Add the four managed-resource label constants + the component identifier**
 
-Open `internal/common/constants/constants.go`. Find the existing label constants near `LabelManagedByValue` and add:
+Added to `internal/common/constants/constants.go`:
 
 ```go
+// Managed-resource labels — applied to all per-pool resources the
+// status-updater controller manages, so listings can filter by them.
+LabelManagedBy      = "app.kubernetes.io/managed-by"
+LabelManagedByValue = "fake-gpu-operator"
+LabelComponent      = "fake-gpu-operator/component"
+LabelPool           = "fake-gpu-operator/pool"
+
+// Component identifier values for LabelComponent.
 ComponentNvmlMock = "nvml-mock"
 ```
 
-This becomes the value of the `fake-gpu-operator/component` label on per-pool DaemonSets and ConfigMaps the controller manages.
+- [x] **Step 2: Build to verify** — `go build ./...` clean
 
-- [ ] **Step 2: Build to verify**
-
-Run: `go build ./internal/common/constants/...`
-Expected: clean build, no output.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add internal/common/constants/constants.go
-git commit -m "feat: add ComponentNvmlMock label-value constant (RUN-38195)"
-```
+- [x] **Step 3: Commit** — landed as two commits: `7b07842` (ComponentNvmlMock) + `8aad018` (the four Label* constants alongside)
 
 ---
 
