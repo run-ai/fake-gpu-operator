@@ -25,6 +25,10 @@ const (
 	// Component identifier values for LabelComponent.
 	ComponentNvmlMock = "nvml-mock"
 
+	// GPU backend types (backend field in GpuConfig).
+	BackendFake = "fake"
+	BackendMock = "mock"
+
 	ReservationNs = "runai-reservation"
 
 	GpuResourceName = "nvidia.com/gpu"
