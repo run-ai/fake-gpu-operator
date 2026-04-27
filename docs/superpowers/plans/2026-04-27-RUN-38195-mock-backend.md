@@ -181,18 +181,19 @@ Expected: both charts download into `deploy/fake-gpu-operator/charts/`. Output m
 
 - [ ] **Step 3: Add `charts/` to `.helmignore` if not already there**
 
-Check `deploy/fake-gpu-operator/.helmignore` (or repo `.gitignore`) — chart `tgz`s should not be committed:
+The downloaded `.tgz` chart artifacts should be ignored by Helm packaging *and* by git.
+
+- **For Helm packaging:** add `charts/` to `deploy/fake-gpu-operator/.helmignore` (so the parent chart's `.tgz` doesn't include the dependency tarballs).
+- **For git:** the repo's root `.gitignore` already has a `*.tgz` rule that covers all the cached tarballs — no changes needed there.
+
+Verify by running `git check-ignore deploy/fake-gpu-operator/charts/gpu-operator-*.tgz`. It should print the path (meaning git ignores it).
+
+- [ ] **Step 4: Commit Chart.yaml + Chart.lock + .helmignore changes**
+
+`helm dependency update` auto-generates `Chart.lock` — it locks the resolved chart digests for reproducible installs across machines and CI. **Commit it** alongside the other changes (standard Helm practice, analogous to `package-lock.json` / `go.sum`).
 
 ```bash
-grep -E "^charts/?$" deploy/fake-gpu-operator/.helmignore .gitignore 2>&1 || echo "MISSING"
-```
-
-If MISSING in both, add `charts/` to `deploy/fake-gpu-operator/.helmignore`.
-
-- [ ] **Step 4: Commit Chart.yaml + .helmignore changes**
-
-```bash
-git add deploy/fake-gpu-operator/Chart.yaml deploy/fake-gpu-operator/.helmignore
+git add deploy/fake-gpu-operator/Chart.yaml deploy/fake-gpu-operator/Chart.lock deploy/fake-gpu-operator/.helmignore
 git commit -m "feat(chart): add gpu-operator + nvidia-dra-driver-gpu subchart deps (RUN-38195)"
 ```
 
