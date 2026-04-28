@@ -389,6 +389,15 @@ A combined run (both toggles `true`) is also validated to confirm the two subcha
 
 These tests are documented in a runbook for human validation. The PR description records the user's most recent run.
 
+### Real-cluster validation log
+
+| Date | Cluster | Toggles | Outcome | Notes |
+|---|---|---|---|---|
+| YYYY-MM-DD | <user-provided cluster> | gpuOperator=true | PASS/FAIL | <link to logs> |
+| YYYY-MM-DD | <user-provided cluster> | nvidiaDraDriver=true | PASS/FAIL | <link to logs> |
+
+The first rows are filled in by the implementer's manual real-cluster test before the PR merges. Future bumps (nvml-mock version, GPU Operator version, etc.) populate additional rows. The table records what was actually validated against real hardware versus what was unit-tested in CI.
+
 ### Out of test scope
 
 - nvml-mock binary itself (upstream's responsibility)
