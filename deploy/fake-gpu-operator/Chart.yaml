@@ -22,3 +22,15 @@ version: 0.0.1 # Replaced during CD
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
 appVersion: 0.0.1 # Replaced during CD
+
+dependencies:
+  - name: gpu-operator
+    # NGC publishes this chart with internal version "v26.3.1" (with v prefix).
+    # The pin must match exactly or `helm template` rejects the chart as missing.
+    version: "v26.3.1"
+    repository: https://helm.ngc.nvidia.com/nvidia
+    condition: gpuOperator.enabled
+  - name: nvidia-dra-driver-gpu
+    version: "25.12.0"
+    repository: https://helm.ngc.nvidia.com/nvidia
+    condition: nvidiaDraDriver.enabled

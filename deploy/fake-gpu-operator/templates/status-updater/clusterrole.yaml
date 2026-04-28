@@ -46,6 +46,18 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
   {{- if .Values.statusUpdater.runaiIntegration.enabled }}
   - apiGroups:
       - ""
