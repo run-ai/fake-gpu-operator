@@ -1,0 +1,43 @@
+name: Bug Report
+description: Tell us about a problem you are experiencing with the Fake GPU Operator
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: |
+        Please provide as much info as possible. Not doing so may result in your bug not being
+        addressed in a timely manner.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: false
+  - type: textarea
+    id: repro
+    attributes:
+      label: How can we reproduce it (as minimally and precisely as possible)?
+      description: |
+        Manifests, Helm values overrides, exact `kubectl` commands — paste enough that someone
+        can copy-paste and reach the same broken state.
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      value: |
+        - Fake GPU Operator version (Helm chart / image tag):
+        - Kubernetes version (`kubectl version`):
+        - Kubernetes distribution (kind, EKS, GKE, OpenShift, …):
+        - Plugin mode (legacy device plugin / DRA / KWOK):
+        - Anything else relevant (CNI, OS, kernel, …):
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: Impacted by this bug? Give it a 👍 below.

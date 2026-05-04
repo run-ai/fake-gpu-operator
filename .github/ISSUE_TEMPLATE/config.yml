@@ -1,0 +1,10 @@
+# GitHub info on config.yml:
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
+
+# Set to false if you only want the structured templates to be used.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Ask a Question
+    url: https://github.com/run-ai/fake-gpu-operator/issues/new?labels=question
+    about: Open a question issue with the `question` label.
