@@ -1,0 +1,23 @@
+changelog:
+  exclude:
+    labels:
+      - release-note/none
+      - dependencies
+  categories:
+    - title: Breaking changes
+      labels:
+        - release-note/breaking
+    - title: Features
+      labels:
+        - release-note/feature
+        - enhancement
+    - title: Bug fixes
+      labels:
+        - release-note/bug
+        - bug
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Other changes
+      labels:
+        - "*"
