@@ -1,31 +1,31 @@
-<!--
-Thanks for sending a pull request! Please fill in the sections below.
-For external contributors: see CONTRIBUTING.md for the dev setup.
+<!--  Thanks for sending a pull request!  Here are some tips for you:
+
+1. If this is your first time, please read our [Contributor Guide](https://github.com/run-ai/fake-gpu-operator/blob/main/CONTRIBUTING.md)
+2. If this PR is unfinished, please mark it as a draft
+
 -->
 
-## What does this PR do?
+## Description
 
-<!-- A short summary of the change. -->
+<!-- What does this PR do and why? -->
 
-## Why?
+## Related Issues
 
-<!-- Motivation, related issue, or use case. Link the Jira ticket (RUN-XXXXX) if applicable. -->
-
-## How was this tested?
-
-<!-- Tick what applies and describe any manual steps. -->
-
-- [ ] Unit tests (`make test`)
-- [ ] e2e tests (`make e2e`)
-- [ ] Manual testing in a kind cluster — describe steps:
-
-## Related
-
-<!-- Closes #..., or links to RUN-XXXXX. -->
+Fixes #
 
 ## Checklist
 
-- [ ] PR title uses a [Conventional Commits](https://www.conventionalcommits.org/) prefix (`feat:`, `fix:`, `docs:`, `chore:`, etc.)
-- [ ] `README.md` updated if user-facing behavior changed
-- [ ] Helm chart values / templates updated if a new component or flag was added
-- [ ] One of `release-note/feature`, `release-note/bug`, `release-note/breaking`, or `release-note/none` label applied
+> **Note:** Ensure your PR title follows the [Conventional Commits format](https://github.com/run-ai/fake-gpu-operator/blob/main/CONTRIBUTING.md#pr-title-guidelines) (e.g., `feat(dra-plugin): add new feature`)
+
+- [ ] Self-reviewed
+- [ ] Added/updated tests (if needed)
+- [ ] Updated documentation (if needed)
+- [ ] Updated `CHANGELOG.md` under `## [Unreleased]` (or applied `skip-changelog` label)
+
+## Breaking Changes
+
+<!-- If yes, describe what changes and how to migrate -->
+
+## Additional Notes
+
+<!-- Screenshots, performance/security considerations, reviewer guidance, etc. -->
