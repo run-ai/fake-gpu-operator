@@ -40,6 +40,8 @@ spec:
               value: "{{ .Values.prometheus.url }}"
             - name: DISABLE_NODE_LABELING
               value: "{{ .Values.statusUpdater.disableNodeLabeling }}"
+            - name: NVML_MOCK_IMAGE
+              value: "{{ .Values.nvmlMock.image.repository }}:{{ .Values.nvmlMock.image.tag }}"
             {{- if .Values.statusUpdater.runaiIntegration.enabled }}
             - name: RUNAI_INTEGRATION_ENABLED
               value: "true"

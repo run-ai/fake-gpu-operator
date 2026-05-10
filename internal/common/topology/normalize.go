@@ -86,6 +86,13 @@ func ParseAndNormalizeTopology(data []byte) (*ClusterConfig, error) {
 // isNewFormat checks if the YAML contains new-format markers.
 // New format has nodePools with nested gpu.backend fields.
 // Old format has nodePools with flat gpuProduct/gpuCount/gpuMemory fields.
+//
+// A topology may legitimately mix formats (e.g. a chart-default legacy pool
+// alongside user-supplied new-format pools). New format is a superset, so the
+// rule is: if ANY pool uses the new-format `gpu:` block, treat the whole CM
+// as new-format. We must iterate every pool — early-returning on the first
+// pool seen is unsafe because Go map iteration is randomised, which would
+// flip the result across calls and cause controller flapping.
 func isNewFormat(data []byte) bool {
 	var raw map[string]interface{}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
@@ -102,25 +109,28 @@ func isNewFormat(data []byte) bool {
 		return false
 	}
 
+	hasLegacyMarker := false
 	for _, pool := range poolsMap {
 		poolMap, ok := pool.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		// If any pool has a "gpu" key, it's new format
 		if _, hasGpu := poolMap["gpu"]; hasGpu {
 			return true
 		}
-		// If any pool has "gpuProduct" or "gpuCount", it's old format
 		if _, hasProduct := poolMap["gpuProduct"]; hasProduct {
-			return false
+			hasLegacyMarker = true
 		}
 		if _, hasCount := poolMap["gpuCount"]; hasCount {
-			return false
+			hasLegacyMarker = true
 		}
 	}
 
-	// No discriminating keys found — check for gpuOperator key (new format only)
+	if hasLegacyMarker {
+		return false
+	}
+
+	// No discriminating pool-level keys — check for gpuOperator key (new format only)
 	if _, hasOperator := raw["gpuOperator"]; hasOperator {
 		return true
 	}
