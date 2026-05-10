@@ -162,6 +162,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve subchart dependencies
+        # The chart pulls gpu-operator + nvidia-dra-driver-gpu as conditional
+        # subcharts. helm package requires charts/ populated even when the
+        # conditions render false at install time.
+        run: helm dependency update deploy/fake-gpu-operator
       - name: Build
         run: |
           helm package deploy/fake-gpu-operator -d ./charts --version ${{ needs.set-release-vars.outputs.release_version }} --app-version ${{ needs.set-release-vars.outputs.release_version }}

@@ -80,6 +80,10 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     # Deploy fake-gpu-operator with DRA plugin, status-updater, topology-server, and status-exporter
     echo "Deploying fake-gpu-operator..."
     cd "${PROJECT_ROOT}"
+    # Resolve subchart deps (gpu-operator, nvidia-dra-driver-gpu) into charts/.
+    # Helm requires charts/ populated for any install/upgrade/package even when
+    # the subchart's condition (gpuOperator.enabled, etc.) evaluates false.
+    helm dependency update deploy/fake-gpu-operator
     helm upgrade -i fake-gpu-operator deploy/fake-gpu-operator \
         --namespace gpu-operator \
         --create-namespace \
