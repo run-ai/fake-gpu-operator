@@ -33,9 +33,9 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 		return fmt.Errorf("reading topology config: %w", err)
 	}
 
-	desired, err := ComputeDesiredState(r.kube, cfg, r.params)
+	desired, err := ComputeMockPoolResources(r.kube, cfg, r.params)
 	if err != nil {
-		return fmt.Errorf("computing desired state: %w", err)
+		return fmt.Errorf("computing mock pool resources: %w", err)
 	}
 
 	if err := r.reconcileConfigMaps(ctx, desired); err != nil {

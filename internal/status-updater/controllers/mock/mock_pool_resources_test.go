@@ -27,7 +27,7 @@ func mkProfileCM(name, ns string) *corev1.ConfigMap {
 	}
 }
 
-func TestComputeDesiredState_OnlyMockPools(t *testing.T) {
+func TestComputeMockPoolResources_OnlyMockPools(t *testing.T) {
 	kube := fake.NewSimpleClientset(mkProfileCM("gpu-profile-a100", "ns"))
 	cfg := &topology.ClusterConfig{
 		NodePoolLabelKey: "k",
@@ -43,7 +43,7 @@ func TestComputeDesiredState_OnlyMockPools(t *testing.T) {
 		ImagePullPolicy: corev1.PullIfNotPresent,
 	}
 
-	objs, err := ComputeDesiredState(kube, cfg, params)
+	objs, err := ComputeMockPoolResources(kube, cfg, params)
 	require.NoError(t, err)
 
 	// 2 mock pools × (1 DS + 1 CM) = 4 resources; fake pool produces 0.
@@ -65,7 +65,7 @@ func TestComputeDesiredState_OnlyMockPools(t *testing.T) {
 	assert.False(t, dsNames["nvml-mock-fake-pool"])
 }
 
-func TestComputeDesiredState_DeterministicOrder(t *testing.T) {
+func TestComputeMockPoolResources_DeterministicOrder(t *testing.T) {
 	kube := fake.NewSimpleClientset(mkProfileCM("gpu-profile-a100", "ns"))
 	cfg := &topology.ClusterConfig{
 		NodePoolLabelKey: "k",
@@ -77,7 +77,7 @@ func TestComputeDesiredState_DeterministicOrder(t *testing.T) {
 	}
 	params := ReconcileParams{Namespace: "ns", Image: "img:t"}
 
-	objs, err := ComputeDesiredState(kube, cfg, params)
+	objs, err := ComputeMockPoolResources(kube, cfg, params)
 	require.NoError(t, err)
 
 	// Pool order should be sorted: aaa, mmm, zzz. Each pool emits CM then DS.
@@ -90,7 +90,7 @@ func TestComputeDesiredState_DeterministicOrder(t *testing.T) {
 	assert.Equal(t, "nvml-mock-zzz", cm4.Name)
 }
 
-func TestComputeDesiredState_PropagatesProfileError(t *testing.T) {
+func TestComputeMockPoolResources_PropagatesProfileError(t *testing.T) {
 	// No profile CMs in cluster → load fails for the mock pool.
 	kube := fake.NewSimpleClientset()
 	cfg := &topology.ClusterConfig{
@@ -99,7 +99,7 @@ func TestComputeDesiredState_PropagatesProfileError(t *testing.T) {
 			"mock-pool": {Gpu: topology.GpuConfig{Backend: "mock", Profile: "a100"}},
 		},
 	}
-	_, err := ComputeDesiredState(kube, cfg, ReconcileParams{Namespace: "ns"})
+	_, err := ComputeMockPoolResources(kube, cfg, ReconcileParams{Namespace: "ns"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mock-pool")
 }

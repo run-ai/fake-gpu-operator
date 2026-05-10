@@ -25,13 +25,13 @@ type ReconcileParams struct {
 	ImagePullPolicy corev1.PullPolicy
 }
 
-// ComputeDesiredState walks all mock pools in the topology config and produces
-// the per-pool ConfigMap + DaemonSet pairs the controller should ensure exist.
-// Pools are iterated in sorted order for deterministic output. Each pool emits
-// the ConfigMap first, then its DaemonSet (so callers iterating in order create
-// the CM before the DS, though the reconciler does this explicitly via
-// separate diff stages).
-func ComputeDesiredState(
+// ComputeMockPoolResources walks all mock pools in the topology config and
+// produces the per-pool ConfigMap + DaemonSet pairs the controller should
+// ensure exist. Pools are iterated in sorted order for deterministic output.
+// Each pool emits the ConfigMap first, then its DaemonSet (so callers
+// iterating in order create the CM before the DS, though the reconciler does
+// this explicitly via separate diff stages).
+func ComputeMockPoolResources(
 	kube kubernetes.Interface,
 	cfg *topology.ClusterConfig,
 	params ReconcileParams,
