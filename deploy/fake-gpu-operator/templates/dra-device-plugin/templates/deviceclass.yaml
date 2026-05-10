@@ -1,8 +1,3 @@
-{{- /*
-Render the gpu.nvidia.com DeviceClass only when the upstream
-nvidia-dra-driver-gpu subchart is NOT installed — that subchart owns the
-same DeviceClass name and must win the coexistence case.
-*/ -}}
 {{- if and (or .Values.draPlugin.enabled .Values.kwokDraPlugin.enabled) (not .Values.nvidiaDraDriver.enabled) -}}
 apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
 kind: DeviceClass

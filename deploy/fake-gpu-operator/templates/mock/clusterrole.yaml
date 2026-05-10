@@ -1,10 +1,4 @@
 {{- if or .Values.gpuOperator.enabled .Values.nvidiaDraDriver.enabled -}}
-{{- /*
-The nvml-mock setup script labels its host node with
-nvidia.com/gpu.present=true and feature.node.kubernetes.io/pci-10de.present=true
-so NFD/gpu-operator detect it as a GPU node. That requires get+patch on nodes.
-Mirrors NVIDIA/k8s-test-infra's nvml-mock chart RBAC.
-*/ -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
