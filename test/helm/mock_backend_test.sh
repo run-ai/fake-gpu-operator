@@ -81,7 +81,8 @@ echo "=== Case 1: defaults (both toggles false) ==="
 render
 # Polyfill placeholder Deployment: replicas 0 running ubuntu:22.04
 assert_contains "polyfill placeholder Deployment renders" "image: ubuntu:22.04"
-assert_contains "polyfill ClusterPolicy CRD renders"      "kind: CustomResourceDefinition"
+# Note: the ClusterPolicy CRD ships via the chart's crds/ folder, not via
+# templates/, so it doesn't appear in `helm template` output.
 # GPU operator subchart absent: ClusterPolicy CR would only appear if subchart ran
 assert_absent   "GPU Operator subchart absent"            "^kind: ClusterPolicy"
 # DRA subchart absent: kubelet-plugin DaemonSet name unique to that subchart

@@ -41,7 +41,7 @@ spec:
             - name: DISABLE_NODE_LABELING
               value: "{{ .Values.statusUpdater.disableNodeLabeling }}"
             - name: NVML_MOCK_IMAGE
-              value: "{{ .Values.nvmlMock.image.repository }}:{{ .Values.nvmlMock.image.tag }}"
+              value: "{{ (.Values.nvmlMock).image.repository | default "ghcr.io/nvidia/nvml-mock" }}:{{ (.Values.nvmlMock).image.tag | default "latest" }}"
             {{- if .Values.statusUpdater.runaiIntegration.enabled }}
             - name: RUNAI_INTEGRATION_ENABLED
               value: "true"
