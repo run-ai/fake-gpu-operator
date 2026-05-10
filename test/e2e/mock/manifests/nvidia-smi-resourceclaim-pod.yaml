@@ -1,0 +1,33 @@
+# DRA workload for Phase 2: a ResourceClaim referencing the GPU device class
+# published by nvidia-dra-driver-gpu, plus a pod that consumes it. Pinned to
+# worker-2 (the mock-b pool's worker).
+apiVersion: resource.k8s.io/v1beta1
+kind: ResourceClaim
+metadata:
+  name: gpu-claim
+  namespace: phase2-dra
+spec:
+  devices:
+    requests:
+      - name: gpu-req
+        deviceClassName: gpu.nvidia.com
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nvidia-smi-mock-b
+  namespace: phase2-dra
+spec:
+  restartPolicy: OnFailure
+  nodeSelector:
+    run.ai/simulated-gpu-node-pool: mock-b
+  resourceClaims:
+    - name: gpu
+      resourceClaimName: gpu-claim
+  containers:
+    - name: nvidia-smi
+      image: nvcr.io/nvidia/k8s/cuda-sample:vectoradd-cuda12.5.0
+      command: ["nvidia-smi"]
+      resources:
+        claims:
+          - name: gpu

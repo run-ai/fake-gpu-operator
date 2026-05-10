@@ -94,6 +94,29 @@ jobs:
           DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
           DOCKER_BUILDX_PLATFORMS: linux/amd64
 
+  e2e-mock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Install kind
+        uses: helm/kind-action@v1.13.0
+        with:
+          install_only: true
+      - name: Run mock e2e tests
+        run: make e2e-mock
+        env:
+          DOCKER_TAG: 0.0.0-dev
+          DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
+          DOCKER_BUILDX_PLATFORMS: linux/amd64
+
   set-release-vars:
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '' }}
     runs-on: ubuntu-latest
@@ -116,7 +139,7 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars, lint, test, e2e, e2e-profiles]
+    needs: [set-release-vars, lint, test, e2e, e2e-profiles, e2e-mock]
     if: ${{ needs.set-release-vars.outputs.release_version != '' }}
     permissions:
       contents: read

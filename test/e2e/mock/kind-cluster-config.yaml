@@ -1,0 +1,37 @@
+# KIND cluster for the Phase 5 mock-pool e2e suite.
+# Mirrors NVIDIA's tests/e2e/kind-multi-node-config.yaml + kind-dra-config.yaml from
+# NVIDIA/k8s-test-infra, fused into one config that covers both device-plugin and DRA paths.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: mock-cluster
+
+# DRA feature gate must be enabled for the DRA driver subchart to function.
+# resource.k8s.io/v1beta1 API server runtime-config is set on the control-plane below.
+featureGates:
+  DynamicResourceAllocation: true
+
+# CDI (Container Device Interface) — required for the toolkit to inject /dev/nvidia*
+# device files into containers via the NVIDIA container runtime.
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri"]
+      enable_cdi = true
+    [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+      runtime_type = "io.containerd.runc.v2"
+    [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+      BinaryName = "/usr/bin/nvidia-container-runtime"
+
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        apiServer:
+          extraArgs:
+            runtime-config: "resource.k8s.io/v1beta1=true"
+  - role: worker
+    labels:
+      run.ai/simulated-gpu-node-pool: mock-a
+  - role: worker
+    labels:
+      run.ai/simulated-gpu-node-pool: mock-b

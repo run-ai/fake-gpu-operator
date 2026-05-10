@@ -57,6 +57,21 @@ e2e-profiles:
 	VALUES_FILE=$(shell pwd)/test/e2e/values-profiles.yaml $(MAKE) e2e
 .PHONY: e2e-profiles
 
+setup-e2e-mock: ginkgo
+	test/e2e/mock/setup.sh
+.PHONY: setup-e2e-mock
+
+test-e2e-mock: ginkgo
+	cd test/e2e/mock && $(GINKGO) --procs=1 --timeout=30m --trace
+.PHONY: test-e2e-mock
+
+teardown-e2e-mock:
+	test/e2e/mock/teardown.sh
+.PHONY: teardown-e2e-mock
+
+e2e-mock: setup-e2e-mock test-e2e-mock teardown-e2e-mock
+.PHONY: e2e-mock
+
 clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean
