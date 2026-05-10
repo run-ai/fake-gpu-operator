@@ -9,6 +9,4 @@
 // This package does NOT use the Helm SDK at runtime — per-pool resources
 // are built directly as Kubernetes objects, mirroring the shape of
 // upstream nvml-mock's templates/daemonset.yaml.
-//
-// Spec: docs/superpowers/specs/2026-04-27-RUN-38195-mock-backend-design.md
 package mock
