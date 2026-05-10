@@ -8,8 +8,8 @@ import (
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -27,15 +27,13 @@ type ReconcileParams struct {
 
 // ComputeMockPoolResources walks all mock pools in the topology config and
 // produces the per-pool ConfigMap + DaemonSet pairs the controller should
-// ensure exist. Pools are iterated in sorted order for deterministic output.
-// Each pool emits the ConfigMap first, then its DaemonSet (so callers
-// iterating in order create the CM before the DS, though the reconciler does
-// this explicitly via separate diff stages).
+// ensure exist. Pools are iterated in sorted order so the returned slices
+// are deterministic across calls.
 func ComputeMockPoolResources(
 	kube kubernetes.Interface,
 	cfg *topology.ClusterConfig,
 	params ReconcileParams,
-) ([]runtime.Object, error) {
+) ([]*corev1.ConfigMap, []*appsv1.DaemonSet, error) {
 	poolNames := make([]string, 0, len(cfg.NodePools))
 	for name := range cfg.NodePools {
 		poolNames = append(poolNames, name)
@@ -47,7 +45,8 @@ func ComputeMockPoolResources(
 		pullPolicy = corev1.PullAlways
 	}
 
-	var resources []runtime.Object
+	var configMaps []*corev1.ConfigMap
+	var daemonSets []*appsv1.DaemonSet
 	for _, name := range poolNames {
 		pool := cfg.NodePools[name]
 		if pool.Gpu.Backend != constants.BackendMock {
@@ -56,11 +55,11 @@ func ComputeMockPoolResources(
 
 		configYAML, spec, err := RenderConfig(kube, params.Namespace, pool.Gpu)
 		if err != nil {
-			return nil, fmt.Errorf("rendering config for pool %q: %w", name, err)
+			return nil, nil, fmt.Errorf("rendering config for pool %q: %w", name, err)
 		}
 
-		cm := BuildConfigMap(params.Namespace, name, configYAML)
-		ds := BuildDaemonSet(BuildDaemonSetParams{
+		configMaps = append(configMaps, BuildConfigMap(params.Namespace, name, configYAML))
+		daemonSets = append(daemonSets, BuildDaemonSet(BuildDaemonSetParams{
 			Namespace:        params.Namespace,
 			Pool:             name,
 			NodePoolLabelKey: cfg.NodePoolLabelKey,
@@ -69,11 +68,9 @@ func ComputeMockPoolResources(
 			GpuCount:         spec.GpuCount,
 			DriverVersion:    spec.DriverVersion,
 			ConfigHash:       configHash(configYAML),
-		})
-
-		resources = append(resources, cm, ds)
+		}))
 	}
-	return resources, nil
+	return configMaps, daemonSets, nil
 }
 
 // configHash produces a hex SHA-256 of the rendered config YAML.

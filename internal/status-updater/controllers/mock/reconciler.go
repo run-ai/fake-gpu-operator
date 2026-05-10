@@ -7,8 +7,9 @@ import (
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -33,15 +34,15 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 		return fmt.Errorf("reading topology config: %w", err)
 	}
 
-	desired, err := ComputeMockPoolResources(r.kube, cfg, r.params)
+	configMaps, daemonSets, err := ComputeMockPoolResources(r.kube, cfg, r.params)
 	if err != nil {
 		return fmt.Errorf("computing mock pool resources: %w", err)
 	}
 
-	if err := r.reconcileConfigMaps(ctx, desired); err != nil {
+	if err := r.reconcileConfigMaps(ctx, configMaps); err != nil {
 		return fmt.Errorf("reconciling ConfigMaps: %w", err)
 	}
-	if err := r.reconcileDaemonSets(ctx, desired); err != nil {
+	if err := r.reconcileDaemonSets(ctx, daemonSets); err != nil {
 		return fmt.Errorf("reconciling DaemonSets: %w", err)
 	}
 	return nil
@@ -63,7 +64,7 @@ func (r *Reconciler) managedSelector() string {
 		"," + constants.LabelComponent + "=" + constants.ComponentNvmlMock
 }
 
-func (r *Reconciler) reconcileDaemonSets(ctx context.Context, desired []runtime.Object) error {
+func (r *Reconciler) reconcileDaemonSets(ctx context.Context, desired []*appsv1.DaemonSet) error {
 	actual, err := r.kube.AppsV1().DaemonSets(r.params.Namespace).
 		List(ctx, metav1.ListOptions{LabelSelector: r.managedSelector()})
 	if err != nil {
@@ -95,7 +96,7 @@ func (r *Reconciler) reconcileDaemonSets(ctx context.Context, desired []runtime.
 	return nil
 }
 
-func (r *Reconciler) reconcileConfigMaps(ctx context.Context, desired []runtime.Object) error {
+func (r *Reconciler) reconcileConfigMaps(ctx context.Context, desired []*corev1.ConfigMap) error {
 	actual, err := r.kube.CoreV1().ConfigMaps(r.params.Namespace).
 		List(ctx, metav1.ListOptions{LabelSelector: r.managedSelector()})
 	if err != nil {

@@ -3,7 +3,6 @@ package mock
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // DaemonSetDiff partitions name-keyed DaemonSets into Create/Update/Delete.
@@ -25,12 +24,10 @@ type ConfigMapDiff struct {
 // triggers an Update iff its first container image differs OR its config-hash
 // annotation differs. ResourceVersion is copied from actual into desired
 // before Update (optimistic concurrency requirement).
-func DiffDaemonSets(desired []runtime.Object, actual []appsv1.DaemonSet) DaemonSetDiff {
-	desiredByName := make(map[string]*appsv1.DaemonSet)
-	for _, obj := range desired {
-		if ds, ok := obj.(*appsv1.DaemonSet); ok {
-			desiredByName[ds.Name] = ds
-		}
+func DiffDaemonSets(desired []*appsv1.DaemonSet, actual []appsv1.DaemonSet) DaemonSetDiff {
+	desiredByName := make(map[string]*appsv1.DaemonSet, len(desired))
+	for _, ds := range desired {
+		desiredByName[ds.Name] = ds
 	}
 	actualByName := make(map[string]appsv1.DaemonSet, len(actual))
 	for _, ds := range actual {
@@ -74,12 +71,10 @@ func daemonsetNeedsUpdate(want, have *appsv1.DaemonSet) bool {
 
 // DiffConfigMaps compares desired vs actual ConfigMaps. Update fires when
 // data["config.yaml"] differs.
-func DiffConfigMaps(desired []runtime.Object, actual []corev1.ConfigMap) ConfigMapDiff {
-	desiredByName := make(map[string]*corev1.ConfigMap)
-	for _, obj := range desired {
-		if cm, ok := obj.(*corev1.ConfigMap); ok {
-			desiredByName[cm.Name] = cm
-		}
+func DiffConfigMaps(desired []*corev1.ConfigMap, actual []corev1.ConfigMap) ConfigMapDiff {
+	desiredByName := make(map[string]*corev1.ConfigMap, len(desired))
+	for _, cm := range desired {
+		desiredByName[cm.Name] = cm
 	}
 	actualByName := make(map[string]corev1.ConfigMap, len(actual))
 	for _, cm := range actual {

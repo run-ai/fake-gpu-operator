@@ -7,7 +7,6 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -43,25 +42,25 @@ func TestComputeMockPoolResources_OnlyMockPools(t *testing.T) {
 		ImagePullPolicy: corev1.PullIfNotPresent,
 	}
 
-	objs, err := ComputeMockPoolResources(kube, cfg, params)
+	configMaps, daemonSets, err := ComputeMockPoolResources(kube, cfg, params)
 	require.NoError(t, err)
 
-	// 2 mock pools × (1 DS + 1 CM) = 4 resources; fake pool produces 0.
-	assert.Len(t, objs, 4, "exactly two DS+CM pairs for the two mock pools")
+	// Two mock pools × (1 CM + 1 DS); fake pool produces neither.
+	assert.Len(t, configMaps, 2, "one CM per mock pool")
+	assert.Len(t, daemonSets, 2, "one DS per mock pool")
 
-	dsNames, cmNames := map[string]bool{}, map[string]bool{}
-	for _, o := range objs {
-		switch r := o.(type) {
-		case *appsv1.DaemonSet:
-			dsNames[r.Name] = true
-		case *corev1.ConfigMap:
-			cmNames[r.Name] = true
-		}
+	cmNames := map[string]bool{}
+	for _, cm := range configMaps {
+		cmNames[cm.Name] = true
 	}
-	assert.True(t, dsNames["nvml-mock-mock-train"])
-	assert.True(t, dsNames["nvml-mock-mock-inference"])
+	dsNames := map[string]bool{}
+	for _, ds := range daemonSets {
+		dsNames[ds.Name] = true
+	}
 	assert.True(t, cmNames["nvml-mock-mock-train"])
 	assert.True(t, cmNames["nvml-mock-mock-inference"])
+	assert.True(t, dsNames["nvml-mock-mock-train"])
+	assert.True(t, dsNames["nvml-mock-mock-inference"])
 	assert.False(t, dsNames["nvml-mock-fake-pool"])
 }
 
@@ -77,17 +76,17 @@ func TestComputeMockPoolResources_DeterministicOrder(t *testing.T) {
 	}
 	params := ReconcileParams{Namespace: "ns", Image: "img:t"}
 
-	objs, err := ComputeMockPoolResources(kube, cfg, params)
+	configMaps, daemonSets, err := ComputeMockPoolResources(kube, cfg, params)
 	require.NoError(t, err)
 
-	// Pool order should be sorted: aaa, mmm, zzz. Each pool emits CM then DS.
-	require.GreaterOrEqual(t, len(objs), 6)
-	cm0 := objs[0].(*corev1.ConfigMap)
-	cm2 := objs[2].(*corev1.ConfigMap)
-	cm4 := objs[4].(*corev1.ConfigMap)
-	assert.Equal(t, "nvml-mock-aaa", cm0.Name)
-	assert.Equal(t, "nvml-mock-mmm", cm2.Name)
-	assert.Equal(t, "nvml-mock-zzz", cm4.Name)
+	require.Len(t, configMaps, 3)
+	require.Len(t, daemonSets, 3)
+	assert.Equal(t, "nvml-mock-aaa", configMaps[0].Name)
+	assert.Equal(t, "nvml-mock-mmm", configMaps[1].Name)
+	assert.Equal(t, "nvml-mock-zzz", configMaps[2].Name)
+	assert.Equal(t, "nvml-mock-aaa", daemonSets[0].Name)
+	assert.Equal(t, "nvml-mock-mmm", daemonSets[1].Name)
+	assert.Equal(t, "nvml-mock-zzz", daemonSets[2].Name)
 }
 
 func TestComputeMockPoolResources_PropagatesProfileError(t *testing.T) {
@@ -99,7 +98,7 @@ func TestComputeMockPoolResources_PropagatesProfileError(t *testing.T) {
 			"mock-pool": {Gpu: topology.GpuConfig{Backend: "mock", Profile: "a100"}},
 		},
 	}
-	_, err := ComputeMockPoolResources(kube, cfg, ReconcileParams{Namespace: "ns"})
+	_, _, err := ComputeMockPoolResources(kube, cfg, ReconcileParams{Namespace: "ns"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mock-pool")
 }
