@@ -1,0 +1,29 @@
+{{- if or (.Values.gpuOperator).enabled (.Values.nvidiaDraDriver).enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nvml-mock
+  labels:
+    app.kubernetes.io/managed-by: fake-gpu-operator
+    fake-gpu-operator/component: nvml-mock
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nvml-mock
+  labels:
+    app.kubernetes.io/managed-by: fake-gpu-operator
+    fake-gpu-operator/component: nvml-mock
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nvml-mock
+subjects:
+  - kind: ServiceAccount
+    name: nvml-mock
+    namespace: {{ .Release.Namespace }}
+{{- end -}}

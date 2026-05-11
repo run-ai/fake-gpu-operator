@@ -1,10 +1,10 @@
-{{- if or .Values.draPlugin.enabled .Values.kwokDraPlugin.enabled -}}
+{{- if and (or .Values.draPlugin.enabled .Values.kwokDraPlugin.enabled) (not .Values.nvidiaDraDriver.enabled) -}}
 apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
 kind: DeviceClass
 metadata:
   name: gpu.nvidia.com
 spec:
   selectors:
-  - cel: 
+  - cel:
       expression: "device.driver == 'gpu.nvidia.com'"
 {{- end -}}

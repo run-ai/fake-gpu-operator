@@ -15,6 +15,20 @@ const (
 	LabelTopologyCMNodeTopology     = "node-topology"
 	LabelTopologyCMNodeName         = "node-name"
 
+	// Managed-resource labels — applied to all per-pool resources the
+	// status-updater controller manages, so listings can filter by them.
+	LabelManagedBy      = "app.kubernetes.io/managed-by"
+	LabelManagedByValue = "fake-gpu-operator"
+	LabelComponent      = "fake-gpu-operator/component"
+	LabelPool           = "fake-gpu-operator/pool"
+
+	// Component identifier values for LabelComponent.
+	ComponentNvmlMock = "nvml-mock"
+
+	// GPU backend types (backend field in GpuConfig).
+	BackendFake = "fake"
+	BackendMock = "mock"
+
 	ReservationNs = "runai-reservation"
 
 	GpuResourceName = "nvidia.com/gpu"
@@ -27,6 +41,7 @@ const (
 	EnvResourceReservationNamespace = "RESOURCE_RESERVATION_NAMESPACE"
 	EnvPrometheusURL                = "PROMETHEUS_URL"
 	EnvDisableNodeLabeling              = "DISABLE_NODE_LABELING"
+	EnvNvmlMockImage                    = "NVML_MOCK_IMAGE"
 	EnvRunaiIntegrationEnabled          = "RUNAI_INTEGRATION_ENABLED"
 	EnvRunaiIntegrationPollingInterval  = "RUNAI_INTEGRATION_POLLING_INTERVAL"
 )

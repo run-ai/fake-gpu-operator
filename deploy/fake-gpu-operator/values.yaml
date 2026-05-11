@@ -115,8 +115,22 @@ migFaker:
     repository: ghcr.io/run-ai/fake-gpu-operator/mig-faker
     tag: ""
 
+# Per-pool nvml-mock DaemonSet image (consumed by mock controller).
+nvmlMock:
+  image:
+    repository: ghcr.io/nvidia/nvml-mock
+    # Upstream publishes :latest only.
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# When true, installs upstream gpu-operator subchart. When false, renders a
+# placeholder Deployment polyfill (the ClusterPolicy CRD ships via crds/).
 gpuOperator:
-  enabled: true
+  enabled: false
+
+# When true, installs nvidia-dra-driver-gpu subchart for DRA-based GPU allocation.
+nvidiaDraDriver:
+  enabled: false
 
 runtimeClass:
   enabled: true
@@ -232,3 +246,67 @@ kwokComputeDomainDraPlugin:
     limits:
       cpu: "200m"
       memory: "400Mi"
+
+# Mirrors NVIDIA/k8s-test-infra's canonical nvml-mock + GPU Operator integration:
+# https://github.com/NVIDIA/k8s-test-infra/blob/main/tests/e2e/gpu-operator-values.yaml
+gpu-operator:
+  driver:
+    enabled: false
+  toolkit:
+    enabled: false
+  dcgm:
+    enabled: false
+  dcgmExporter:
+    enabled: false
+  # MIG isn't supported by mock NVML — strategy=none avoids the device-plugin
+  # treating MIG enumeration as fatal.
+  mig:
+    strategy: none
+  migManager:
+    enabled: false
+  nodeStatusExporter:
+    enabled: false
+  cdi:
+    enabled: true
+    default: true
+  devicePlugin:
+    enabled: true
+    config:
+      name: ""
+    env:
+      - name: NVIDIA_DRIVER_ROOT
+        value: "/var/lib/nvml-mock/driver"
+  gfd:
+    enabled: true
+    env:
+      - name: NVIDIA_DRIVER_ROOT
+        value: "/var/lib/nvml-mock/driver"
+  validator:
+    driver:
+      env:
+        - name: DRIVER_INSTALL_DIR
+          value: "/run/nvidia/driver"
+        - name: LD_LIBRARY_PATH
+          value: "/run/nvidia/driver/usr/lib64"
+        - name: DISABLE_DEV_CHAR_SYMLINK_CREATION
+          value: "true"
+    toolkit:
+      env:
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+    cuda:
+      env:
+        - name: WITH_WORKLOAD
+          value: "false"
+    plugin:
+      env:
+        - name: LD_LIBRARY_PATH
+          value: "/run/nvidia/driver/usr/lib64"
+
+# Mirrors nvml-mock README's DRA recipe.
+nvidia-dra-driver-gpu:
+  nvidiaDriverRoot: /var/lib/nvml-mock/driver
+  gpuResourcesEnabledOverride: true
+  resources:
+    computeDomains:
+      enabled: false

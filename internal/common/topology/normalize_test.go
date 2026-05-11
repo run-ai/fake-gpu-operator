@@ -284,6 +284,49 @@ nodePools:
 	assert.Equal(t, "h100", config.NodePools["pool-a"].Gpu.Profile)
 }
 
+// TestFromClusterConfigCM_MixedFormat exercises a topology where one pool uses
+// the legacy flat shape (gpuProduct/gpuCount) and another uses the new gpu:
+// nested shape. This happens in real clusters when the chart's default pool
+// is legacy but user values overlay new-format pools (e.g. e2e mock pools).
+//
+// The detection must be deterministic across calls — Go map iteration is
+// randomised, so an early-return on the first pool seen would flip the
+// detected format on different runs and cause controller flapping.
+func TestFromClusterConfigCM_MixedFormat(t *testing.T) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "topology", Namespace: "gpu-operator"},
+		Data: map[string]string{
+			CmTopologyKey: `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+migStrategy: none
+nodePools:
+  default:
+    gpuProduct: Tesla-K80
+    gpuCount: 2
+    gpuMemory: 11441
+  mock-a:
+    gpu:
+      backend: mock
+      profile: a100
+  mock-b:
+    gpu:
+      backend: mock
+      profile: h100
+`,
+		},
+	}
+
+	// Run 50 times to catch any non-determinism.
+	for i := 0; i < 50; i++ {
+		config, err := FromClusterConfigCM(cm)
+		require.NoError(t, err, "iteration %d", i)
+		assert.Equal(t, "mock", config.NodePools["mock-a"].Gpu.Backend, "iteration %d: mock-a backend lost", i)
+		assert.Equal(t, "a100", config.NodePools["mock-a"].Gpu.Profile, "iteration %d: mock-a profile lost", i)
+		assert.Equal(t, "mock", config.NodePools["mock-b"].Gpu.Backend, "iteration %d: mock-b backend lost", i)
+		assert.Equal(t, "h100", config.NodePools["mock-b"].Gpu.Profile, "iteration %d: mock-b profile lost", i)
+	}
+}
+
 func TestFromClusterConfigCM_MissingKey(t *testing.T) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "topology", Namespace: "gpu-operator"},
