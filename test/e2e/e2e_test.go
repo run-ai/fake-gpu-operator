@@ -124,7 +124,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("Basic GPU Allocation", func() {
 		It("should allocate a GPU to a pod", func() {
-			manifestPath := filepath.Join("manifests", "basic-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "basic-pod.yaml")
 			namespace := "gpu-test-basic"
 			podName := "pod0"
 
@@ -145,7 +145,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("Multiple Pods", func() {
 		It("should allocate distinct GPUs to multiple pods", func() {
-			manifestPath := filepath.Join("manifests", "multi-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "multi-pod.yaml")
 			namespace := "gpu-test-multi"
 			podNames := []string{"pod0", "pod1"}
 
@@ -170,7 +170,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("Shared ResourceClaim", func() {
 		It("should allocate the same GPU to multiple pods sharing a ResourceClaim", func() {
-			manifestPath := filepath.Join("manifests", "shared-claim-pods.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "shared-claim-pods.yaml")
 			namespace := "gpu-test-shared-claim"
 			sharedClaimName := "shared-gpu-claim"
 			podNames := []string{"pod0", "pod1"}
@@ -208,7 +208,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("TimeSlicing Sharing Strategy", func() {
 		It("should share GPU between containers using TimeSlicing", func() {
-			manifestPath := filepath.Join("manifests", "timeslicing-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "timeslicing-pod.yaml")
 			namespace := "gpu-test-timeslicing"
 			podName := "pod0"
 
@@ -236,7 +236,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("SpacePartitioning Sharing Strategy", func() {
 		It("should share GPU between containers using SpacePartitioning", func() {
-			manifestPath := filepath.Join("manifests", "spacepartitioning-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "spacepartitioning-pod.yaml")
 			namespace := "gpu-test-spacepartitioning"
 			podName := "pod0"
 
@@ -264,7 +264,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("CDI Environment Variables", func() {
 		It("should inject all required CDI environment variables", func() {
-			manifestPath := filepath.Join("manifests", "basic-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "basic-pod.yaml")
 			namespace := "gpu-test-basic"
 			podName := "pod0"
 
@@ -282,7 +282,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("nvidia-smi Binary", func() {
 		It("should have nvidia-smi binary available and working", func() {
-			manifestPath := filepath.Join("manifests", "basic-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "basic-pod.yaml")
 			namespace := "gpu-test-basic"
 			podName := "pod0"
 
@@ -296,7 +296,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 
 	Describe("nvidia-smi Utilization", func() {
 		It("should report GPU utilization from topology server", func() {
-			manifestPath := filepath.Join("manifests", "utilization-range-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "utilization-range-pod.yaml")
 			namespace := "gpu-test-util"
 			podName := "pod0"
 
@@ -314,7 +314,7 @@ var _ = Describe("DRA Plugin Tests", func() {
 		})
 
 		It("should show varying utilization values on repeated runs", func() {
-			manifestPath := filepath.Join("manifests", "utilization-range-pod.yaml")
+			manifestPath := filepath.Join("fixtures", "manifests", "utilization-range-pod.yaml")
 			namespace := "gpu-test-util-vary"
 			podName := "pod0"
 

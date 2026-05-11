@@ -39,7 +39,7 @@ var _ = Describe("Compute Domain Controller Tests", func() {
 
 	Describe("Basic ComputeDomain Creation", func() {
 		It("should create ResourceClaimTemplate for ComputeDomain", func() {
-			manifestPath := "manifests/compute-domain-basic.yaml"
+			manifestPath := "fixtures/manifests/compute-domain-basic.yaml"
 			namespace := "compute-domain-test-compute-domain-basic"
 			computeDomainName := "test-domain"
 			templateName := "test-domain-template"
@@ -81,7 +81,7 @@ var _ = Describe("Compute Domain Controller Tests", func() {
 
 	Describe("ComputeDomain with Pod", func() {
 		It("should allocate ComputeDomain to pod using ComputeDomain ResourceClaimTemplate", func() {
-			manifestPath := "manifests/compute-domain-with-pod.yaml"
+			manifestPath := "fixtures/manifests/compute-domain-with-pod.yaml"
 			namespace := "compute-domain-test-compute-domain-pod"
 			computeDomainName := "test-domain-pod"
 			podName := "pod0"
@@ -152,7 +152,7 @@ var _ = Describe("Compute Domain Controller Tests", func() {
 
 	Describe("ComputeDomain Deletion", func() {
 		It("should clean up ResourceClaimTemplate when ComputeDomain is deleted", func() {
-			manifestPath := "manifests/compute-domain-basic.yaml"
+			manifestPath := "fixtures/manifests/compute-domain-basic.yaml"
 			namespace := "compute-domain-test-compute-domain-basic"
 			computeDomainName := "test-domain"
 			templateName := "test-domain-template"
@@ -296,7 +296,7 @@ var _ = Describe("KWOK Compute Domain Tests", func() {
 
 	Describe("KWOK Compute Domain with Pod", func() {
 		It("should allocate ComputeDomain to pod on KWOK node and update status", func() {
-			manifestPath := "manifests/compute-domain-kwok-pod.yaml"
+			manifestPath := "fixtures/manifests/compute-domain-kwok-pod.yaml"
 			namespace := "compute-domain-test-kwok"
 			computeDomainName := "kwok-domain"
 			podName := "kwok-pod"

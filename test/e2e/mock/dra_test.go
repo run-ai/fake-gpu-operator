@@ -73,7 +73,7 @@ var _ = Describe("Phase 2: DRA path (worker-2 / mock-b / h100)", func() {
 			_ = kubeClient.CoreV1().Namespaces().Delete(context.Background(), podNs, metav1.DeleteOptions{})
 		})
 
-		manifestBytes, err := os.ReadFile("manifests/nvidia-smi-resourceclaim-pod.yaml")
+		manifestBytes, err := os.ReadFile("fixtures/manifests/nvidia-smi-resourceclaim-pod.yaml")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(kubectlApply(string(manifestBytes))).To(Succeed())
 

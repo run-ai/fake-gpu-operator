@@ -3,13 +3,14 @@
 set -euo pipefail
 
 SCRIPTS_DIR="$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
-PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../../.." &> /dev/null && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../../../.." &> /dev/null && pwd)"
+FIXTURES_DIR="$(cd -- "${SCRIPTS_DIR}/../fixtures" &> /dev/null && pwd)"
 
 CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')"
 
 : ${KIND_CLUSTER_NAME:="mock-cluster"}
-: ${VALUES_FILE:="${SCRIPTS_DIR}/values-mock.yaml"}
-: ${KIND_CLUSTER_CONFIG_PATH:="${SCRIPTS_DIR}/kind-cluster-config.yaml"}
+: ${VALUES_FILE:="${FIXTURES_DIR}/values-mock.yaml"}
+: ${KIND_CLUSTER_CONFIG_PATH:="${FIXTURES_DIR}/kind-cluster-config.yaml"}
 : ${KIND_K8S_TAG:="v1.34.2"}
 : ${KIND_IMAGE:="kindest/node:${KIND_K8S_TAG}"}
 : ${DOCKER_TAG:="0.0.0-dev"}
