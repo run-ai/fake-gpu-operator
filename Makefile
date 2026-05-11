@@ -39,7 +39,7 @@ test: ginkgo
 .PHONY: test
 
 setup-e2e:
-	test/e2e/setup.sh
+	test/e2e/scripts/setup.sh
 .PHONY: setup-e2e
 
 test-e2e: ginkgo
@@ -47,15 +47,30 @@ test-e2e: ginkgo
 .PHONY: test-e2e
 
 teardown-e2e:
-	test/e2e/teardown.sh
+	test/e2e/scripts/teardown.sh
 .PHONY: teardown-e2e
 
 e2e: setup-e2e test-e2e teardown-e2e
 .PHONY: e2e
 
 e2e-profiles:
-	VALUES_FILE=$(shell pwd)/test/e2e/values-profiles.yaml $(MAKE) e2e
+	VALUES_FILE=$(shell pwd)/test/e2e/fixtures/values-profiles.yaml $(MAKE) e2e
 .PHONY: e2e-profiles
+
+setup-e2e-mock: ginkgo
+	test/e2e/mock/scripts/setup.sh
+.PHONY: setup-e2e-mock
+
+test-e2e-mock: ginkgo
+	cd test/e2e/mock && $(GINKGO) --procs=1 --timeout=30m --trace
+.PHONY: test-e2e-mock
+
+teardown-e2e-mock:
+	test/e2e/mock/scripts/teardown.sh
+.PHONY: teardown-e2e-mock
+
+e2e-mock: setup-e2e-mock test-e2e-mock teardown-e2e-mock
+.PHONY: e2e-mock
 
 clean:
 	rm -rf ${BUILD_DIR}

@@ -4,7 +4,8 @@ set -e
 
 # A reference to the current directory where this script is located
 SCRIPTS_DIR="$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
-PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../.." &> /dev/null && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPTS_DIR}/../../.." &> /dev/null && pwd)"
+FIXTURES_DIR="$(cd -- "${SCRIPTS_DIR}/../fixtures" &> /dev/null && pwd)"
 
 # For e2e tests, we need to load images into docker (not push to registry)
 # --load only works with single-platform builds, so we detect the current platform
@@ -13,10 +14,10 @@ CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm6
 : ${KIND_CLUSTER_NAME:="fake-gpu-operator-cluster"}
 
 # Values file for Helm install (override to test profile-based config)
-: ${VALUES_FILE:="${SCRIPTS_DIR}/values.yaml"}
+: ${VALUES_FILE:="${FIXTURES_DIR}/values.yaml"}
 
 # The path to kind's cluster configuration file
-: ${KIND_CLUSTER_CONFIG_PATH:="${SCRIPTS_DIR}/kind-cluster-config.yaml"}
+: ${KIND_CLUSTER_CONFIG_PATH:="${FIXTURES_DIR}/kind-cluster-config.yaml"}
 
 # Kubernetes version for kind
 : ${KIND_K8S_TAG:="v1.34.0"}
@@ -134,7 +135,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     # Nodes are split across pools: 1-3 → "default", 4-5 → "highend"
     echo "Creating KWOK simulated GPU nodes..."
     KWOK_NODES=("kwok-gpu-node-1" "kwok-gpu-node-2" "kwok-gpu-node-3" "kwok-gpu-node-4" "kwok-gpu-node-5")
-    KWOK_NODE_TEMPLATE="${SCRIPTS_DIR}/kwok-node-template.yaml"
+    KWOK_NODE_TEMPLATE="${FIXTURES_DIR}/kwok-node-template.yaml"
 
     # Returns pool name for a given node name (nodes 1-3 → default, 4-5 → highend)
     pool_for_node() {

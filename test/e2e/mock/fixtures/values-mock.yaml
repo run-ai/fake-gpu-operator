@@ -1,0 +1,96 @@
+# Helm values for the mock-pool e2e. Both subcharts coexist on one cluster
+# via per-component nodeSelector overrides (gpu-operator → worker-1,
+# nvidia-dra-driver-gpu → worker-2), sidestepping the kubelet-plugin conflict
+# for nvidia.com/gpu.
+
+environment:
+  openshift: false
+
+devicePlugin:
+  enabled: false
+
+statusUpdater:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+topologyServer:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Disabled to avoid a Service-name collision race with gpu-operator's
+# nvidia-dcgm-exporter (both create a Service of the same name).
+statusExporter:
+  enabled: false
+
+# Serves the fake-default pool's legacy device-plugin path (Phase 4).
+kwokGpuDevicePlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Gives the fake-default KWOK node a ResourceSlice (Phase 4 verifies the
+# mock controller correctly skips fake pools).
+kwokDraPlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+migFaker:
+  enabled: false
+
+gpuOperator:
+  enabled: true
+
+nvidiaDraDriver:
+  enabled: true
+
+runtimeClass:
+  enabled: false
+
+computeDomainController:
+  image:
+    pullPolicy: Never
+
+computeDomainDraPlugin:
+  enabled: false
+
+kwokComputeDomainDraPlugin:
+  enabled: false
+
+topology:
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+  migStrategy: none
+  nodePools:
+    mock-a:
+      gpu:
+        backend: mock
+        profile: a100
+    mock-b:
+      gpu:
+        backend: mock
+        profile: h100
+        # Profile override: rename the GPU product. Asserted by the Phase 3
+        # spec to prove gpu.overrides flows through to the per-pool CM.
+        overrides:
+          device_defaults:
+            name: "Renamed-H100-For-E2E"
+    fake-default:
+      gpu:
+        backend: fake
+        profile: a100
+
+# operator.nodeSelector scopes only the manager Deployment. The DaemonSet
+# operands (devicePlugin, gfd, validator) are pinned via NFD's
+# feature.node.kubernetes.io/pci-10de.present label, which nvml-mock adds
+# only on worker-1.
+gpu-operator:
+  operator:
+    nodeSelector:
+      run.ai/simulated-gpu-node-pool: mock-a
+
+nvidia-dra-driver-gpu:
+  kubeletPlugin:
+    nodeSelector:
+      run.ai/simulated-gpu-node-pool: mock-b

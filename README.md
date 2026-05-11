@@ -203,7 +203,7 @@ spec:
     resourceClaimTemplateName: gpu-claim
 ```
 
-See [test/e2e/manifests/](test/e2e/manifests/) for more examples.
+See [test/e2e/fixtures/manifests/](test/e2e/fixtures/manifests/) for more examples.
 
 ## 🔐 Compute Domain DRA (Secure Workload Isolation)
 
