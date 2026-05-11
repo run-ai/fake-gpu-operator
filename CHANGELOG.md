@@ -14,6 +14,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   format. PRs should add an entry here under `## [Unreleased]` unless the
   `skip-changelog` label is applied.
+- Mock backend for per-pool `nvml-mock` integration: nodes in pools with
+  `gpu.backend: mock` get a profile-driven `nvml-mock` DaemonSet plus
+  ConfigMap, exposing a real `libnvidia-ml.so` so the upstream NVIDIA
+  device-plugin and DRA driver enumerate synthetic GPUs through NVML.
+  Toggles via new `gpuOperator.enabled` / `nvidiaDraDriver.enabled` chart
+  subcharts. See `docs/mock-backend.md`.
+  ([RUN-38195](https://runai.atlassian.net/browse/RUN-38195))
+- KIND-based mock-pool e2e suite (`make e2e-mock`) covering the
+  device-plugin path, DRA path, multi-pool differentiation, profile
+  overrides, and fake/mock coexistence. Wired into CI as a release gate.
+  ([RUN-38195](https://runai.atlassian.net/browse/RUN-38195))
 
 ### Changed
 
