@@ -18,3 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 ### Fixed
+
+- `status-updater` mock controller emitting constant `configmaps "topology"
+  is forbidden: cannot watch` errors. The chart's `fake-status-updater`
+  ClusterRole was missing the `watch` verb on `configmaps`, so the informer
+  added in Phase 5 (mock backend) could never establish a watch and fell
+  back to polling-style reconciles.
+  ([RUN-38195](https://runai.atlassian.net/browse/RUN-38195))

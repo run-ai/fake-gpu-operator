@@ -32,6 +32,7 @@ rules:
       - create
       - list
       - delete
+      - watch
   - apiGroups:
       - scheduling.run.ai
     resources:
