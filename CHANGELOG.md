@@ -28,6 +28,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `gpu-operator` subchart defaults adjusted for mock-pool usage:
+  `gpu-operator.gfd.enabled` now defaults to `false` (FGO's status-exporter
+  already writes the labels GFD would; GFD's pod can't load mock NVML
+  anyway), and `gpu-operator.toolkit.env` now defaults to
+  `[CREATE_DEVICE_NODES=none]` so the toolkit installer skips real-device
+  enumeration when users flip `toolkit.enabled: true`. (RUN-38195)
+
 ### Fixed
 
 - `status-updater` mock controller emitting constant `configmaps "topology"
@@ -36,3 +43,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   added in Phase 5 (mock backend) could never establish a watch and fell
   back to polling-style reconciles.
   ([RUN-38195](https://runai.atlassian.net/browse/RUN-38195))
+- Mock-pool operand DaemonSets (`nvidia-device-plugin-daemonset`,
+  `gpu-feature-discovery`, `nvidia-operator-validator`) blocking at
+  `Init:0/1` forever on mock-NVML nodes. Their hardcoded `toolkit-validation`
+  init container polls for `/run/nvidia/validations/toolkit-ready`, but
+  nothing wrote that marker on mock setups — the upstream gpu-operator
+  validator that normally writes it can't `exec nvidia-smi` in its
+  isolated init container. Result: `nvidia.com/gpu` never advertised, no
+  workload schedulable. The per-pool `nvml-mock` DaemonSet now backgrounds
+  upstream's `entrypoint.sh` and writes the marker once `setup.sh`
+  signals completion (the `/run/nvidia/driver` symlink). Upstream's
+  script is preserved verbatim so future setup-script evolution flows
+  through automatically. Interim until [NVIDIA/k8s-test-infra#346](https://github.com/NVIDIA/k8s-test-infra/pull/346)
+  lands the marker write in nvml-mock's `setup.sh` upstream.

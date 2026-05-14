@@ -67,6 +67,31 @@ func TestDiffDaemonSets_UpdateOnConfigHashChange(t *testing.T) {
 	assert.Equal(t, "h2", d.ToUpdate[0].Spec.Template.Annotations[ConfigHashAnnotation])
 }
 
+func TestDiffDaemonSets_UpdateOnCommandChange(t *testing.T) {
+	desired := []*appsv1.DaemonSet{newDS("nvml-mock-a", "img:1", "h1")}
+	desired[0].Spec.Template.Spec.Containers[0].Command = []string{"/bin/sh", "-c"}
+	desired[0].Spec.Template.Spec.Containers[0].Args = []string{"/scripts/setup.sh && touch /marker"}
+	existing := newDS("nvml-mock-a", "img:1", "h1")
+	existing.Spec.Template.Spec.Containers[0].Command = []string{"/scripts/entrypoint.sh"}
+	existing.ResourceVersion = "9"
+	d := DiffDaemonSets(desired, []appsv1.DaemonSet{*existing})
+	require.Len(t, d.ToUpdate, 1, "Command/Args drift must trigger Update — covers the status-updater-upgrade case")
+}
+
+func TestDiffDaemonSets_UpdateOnLifecycleChange(t *testing.T) {
+	desired := []*appsv1.DaemonSet{newDS("nvml-mock-a", "img:1", "h1")}
+	desired[0].Spec.Template.Spec.Containers[0].Lifecycle = &corev1.Lifecycle{
+		PostStart: &corev1.LifecycleHandler{
+			Exec: &corev1.ExecAction{Command: []string{"/bin/sh", "-c", "touch /marker"}},
+		},
+	}
+	existing := newDS("nvml-mock-a", "img:1", "h1")
+	existing.Spec.Template.Spec.Containers[0].Lifecycle = nil
+	existing.ResourceVersion = "11"
+	d := DiffDaemonSets(desired, []appsv1.DaemonSet{*existing})
+	require.Len(t, d.ToUpdate, 1, "Lifecycle drift must trigger Update — covers the postStart hook addition")
+}
+
 func TestDiffDaemonSets_Delete(t *testing.T) {
 	actual := []appsv1.DaemonSet{*newDS("nvml-mock-old", "img:1", "h1")}
 	d := DiffDaemonSets(nil, actual)
