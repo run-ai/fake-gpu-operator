@@ -1,0 +1,12 @@
+{{- /*
+This file exists solely to trigger chart-wide validations defined in
+`_validation.tpl`. The include emits no output on success, so the file
+renders to an empty document (Helm tolerates this). On validation
+failure, `{{ fail ... }}` aborts before any resource is sent to the
+apiserver.
+
+Cannot live in `_validation.tpl` because Helm skips `.tpl` files during
+manifest rendering — only files matching a manifest extension are
+evaluated to produce output.
+*/ -}}
+{{- template "fake-gpu-operator.validate" . -}}

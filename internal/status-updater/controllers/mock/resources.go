@@ -98,21 +98,28 @@ func BuildDaemonSet(p BuildDaemonSetParams) *appsv1.DaemonSet {
 						ImagePullPolicy: p.ImagePullPolicy,
 						SecurityContext: &corev1.SecurityContext{Privileged: ptr.To(true)},
 						// Background upstream's entrypoint.sh, wait for its setup.sh to
-						// signal completion (creating /run/nvidia/driver as a symlink
-						// near its end), touch /run/nvidia/validations/toolkit-ready,
+						// signal full completion (writing /run/nvidia/validations/driver-ready
+						// as its terminal artifact), touch /run/nvidia/validations/toolkit-ready,
 						// then `wait` to inherit entrypoint.sh's sleep-infinity. Without
 						// the marker, gpu-operator operand pods (device-plugin, GFD)
 						// block at Init:0/1 forever and `nvidia.com/gpu` never becomes
-						// allocatable. We do this in the container's own process tree
-						// (rather than a postStart hook) to avoid kubelet→containerd
-						// gRPC failures during the toolkit DS's containerd reload.
-						// Tracked upstream at NVIDIA/k8s-test-infra#346; drop this
-						// wrapper when the marker write lands in nvml-mock's setup.sh.
+						// allocatable.
+						//
+						// We gate on driver-ready (the *last* file setup.sh writes) rather
+						// than the /run/nvidia/driver symlink (an *earlier* step). setup.sh
+						// recreates /run/nvidia/validations later in its run, which wiped
+						// the marker if we wrote it right after the symlink appeared.
+						//
+						// We do this in the container's own process tree (rather than a
+						// postStart hook) to avoid kubelet→containerd gRPC failures during
+						// the toolkit DS's containerd reload. Tracked upstream at
+						// NVIDIA/k8s-test-infra#346; drop this wrapper when the marker
+						// write lands in nvml-mock's setup.sh.
 						Command: []string{"/bin/sh", "-c"},
 						Args: []string{
 							"/scripts/entrypoint.sh & ENTRY=$!; " +
-								"while ! [ -L /host/run/nvidia/driver ] && kill -0 $ENTRY 2>/dev/null; do sleep 1; done; " +
-								"[ -L /host/run/nvidia/driver ] && mkdir -p /host/run/nvidia/validations && touch /host/run/nvidia/validations/toolkit-ready; " +
+								"while ! [ -f /host/run/nvidia/validations/driver-ready ] && kill -0 $ENTRY 2>/dev/null; do sleep 1; done; " +
+								"[ -f /host/run/nvidia/validations/driver-ready ] && touch /host/run/nvidia/validations/toolkit-ready; " +
 								"wait $ENTRY",
 						},
 						Lifecycle: &corev1.Lifecycle{

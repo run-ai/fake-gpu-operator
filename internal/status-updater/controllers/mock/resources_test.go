@@ -79,13 +79,14 @@ func TestBuildDaemonSet_WritesToolkitReadyMarker(t *testing.T) {
 	c := ds.Spec.Template.Spec.Containers[0]
 
 	// Wrapper backgrounds upstream entrypoint.sh, waits for setup completion
-	// (driver symlink), touches the marker, then `wait`s to inherit
-	// entrypoint.sh's sleep. Upstream's script is preserved verbatim so
-	// future setup steps run unchanged.
+	// (driver-ready, the terminal artifact setup.sh writes), touches the
+	// marker, then `wait`s to inherit entrypoint.sh's sleep. Upstream's
+	// script is preserved verbatim so future setup steps run unchanged.
 	require.Equal(t, []string{"/bin/sh", "-c"}, c.Command)
 	require.Len(t, c.Args, 1)
 	assert.Contains(t, c.Args[0], "/scripts/entrypoint.sh &", "must background upstream entrypoint")
-	assert.Contains(t, c.Args[0], "/host/run/nvidia/driver", "must poll for setup-completion signal")
+	assert.Contains(t, c.Args[0], "/host/run/nvidia/validations/driver-ready", "must gate on setup.sh's terminal artifact, not an earlier step")
+	assert.NotContains(t, c.Args[0], "-L /host/run/nvidia/driver ]", "must not gate on the driver symlink — setup.sh recreates validations/ later and wipes the marker")
 	assert.Contains(t, c.Args[0], "/host/run/nvidia/validations/toolkit-ready", "must write the marker")
 	assert.Contains(t, c.Args[0], "wait $ENTRY", "must wait on backgrounded entrypoint to keep container alive")
 

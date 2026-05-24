@@ -1,0 +1,114 @@
+{{- /*
+Pre-upgrade cleanup for chart-version transitions that bring in the upstream
+gpu-operator subchart (gpuOperator.enabled: false -> true).
+
+Helm matches resources by Kind+Namespace+Name; on transition it tries to
+PATCH the existing polyfill resources (RuntimeClass/nvidia handler=runc,
+left over from older chart versions whose runtime-class.yml polyfill did
+not yet gate on `gpuOperator.enabled`) into the upstream-shaped versions.
+RuntimeClass.handler is immutable so the patch fails.
+
+This Job runs ONCE at pre-upgrade time, deletes the stale handler=runc
+polyfill if it exists, and exits. The upstream subchart's RuntimeClass
+template then creates the correct handler=nvidia resource in the upgrade's
+main rollout phase. It is a no-op on:
+  - First-time installs (no existing RuntimeClass)
+  - Upgrades where gpuOperator.enabled stays false (the polyfill is still
+    correct as-is, gated above)
+  - Upgrades from a chart that already had the gate (the RuntimeClass is
+    upstream-owned with handler=nvidia, we leave it alone)
+
+The Deployment/gpu-operator polyfill does NOT need a cleanup hook — its
+selector labels have been aligned with the upstream subchart's selector,
+so the helm patch is a no-op for that immutable field.
+*/ -}}
+{{- if (.Values.gpuOperator).enabled -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fake-gpu-operator-pre-upgrade-cleanup
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+  labels:
+    app.kubernetes.io/managed-by: fake-gpu-operator
+    fake-gpu-operator/component: pre-upgrade-cleanup
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fake-gpu-operator-pre-upgrade-cleanup
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+  labels:
+    app.kubernetes.io/managed-by: fake-gpu-operator
+    fake-gpu-operator/component: pre-upgrade-cleanup
+rules:
+  - apiGroups: ["node.k8s.io"]
+    resources: ["runtimeclasses"]
+    verbs: ["get", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fake-gpu-operator-pre-upgrade-cleanup
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+  labels:
+    app.kubernetes.io/managed-by: fake-gpu-operator
+    fake-gpu-operator/component: pre-upgrade-cleanup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fake-gpu-operator-pre-upgrade-cleanup
+subjects:
+  - kind: ServiceAccount
+    name: fake-gpu-operator-pre-upgrade-cleanup
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fake-gpu-operator-pre-upgrade-cleanup
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+  labels:
+    app.kubernetes.io/managed-by: fake-gpu-operator
+    fake-gpu-operator/component: pre-upgrade-cleanup
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: fake-gpu-operator
+        fake-gpu-operator/component: pre-upgrade-cleanup
+    spec:
+      serviceAccountName: fake-gpu-operator-pre-upgrade-cleanup
+      restartPolicy: Never
+      containers:
+        - name: cleanup
+          image: bitnami/kubectl:1.31
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              handler=$(kubectl get runtimeclass nvidia -o jsonpath='{.handler}' 2>/dev/null || true)
+              if [ "$handler" = "runc" ]; then
+                echo "Deleting stale RuntimeClass/nvidia (handler=runc polyfill); upstream gpu-operator will recreate with handler=nvidia."
+                kubectl delete runtimeclass nvidia
+              elif [ -n "$handler" ]; then
+                echo "RuntimeClass/nvidia already has handler=$handler — leaving it alone."
+              else
+                echo "RuntimeClass/nvidia does not exist — nothing to clean up."
+              fi
+{{- end -}}

@@ -261,10 +261,18 @@ gpu-operator:
     env:
       - name: CREATE_DEVICE_NODES
         value: "none"
+  # dcgm + dcgmExporter are enabled so the upstream gpu-operator's
+  # state-dcgm-exporter reconciler creates the `nvidia-dcgm-exporter` Service
+  # that runai-cluster's GPU-stack health check polls. FGO's own
+  # `statusExporter` cannot coexist (both produce the same Service name and
+  # upstream's reconciler deletes whatever it doesn't own) — see the helper
+  # in `_helpers/validation.tpl` for the corresponding fail-fast guard.
+  # The dcgm-exporter pod itself will crashloop on mock-NVML nodes (mock NVML
+  # has no DCGM bindings), but the Service is what runaiconfig validates.
   dcgm:
-    enabled: false
+    enabled: true
   dcgmExporter:
-    enabled: false
+    enabled: true
   # MIG isn't supported by mock NVML — strategy=none avoids the device-plugin
   # treating MIG enumeration as fatal.
   mig:

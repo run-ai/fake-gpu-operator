@@ -1,4 +1,14 @@
-{{- if .Values.runtimeClass.enabled -}}
+{{- /*
+Polyfill RuntimeClass for fake-mode installs (no upstream gpu-operator).
+The upstream gpu-operator subchart creates `RuntimeClass/nvidia` with
+`handler: nvidia`. RuntimeClass.handler is immutable, so we MUST NOT
+render this polyfill when `gpuOperator.enabled: true` — otherwise both
+manifests collide on the same name with different handlers and the
+helm patch fails with `field is immutable`. Transitions from polyfill
+(handler:runc) to upstream (handler:nvidia) are handled by the pre-upgrade
+cleanup hook in `pre-upgrade-cleanup.yaml`.
+*/ -}}
+{{- if and .Values.runtimeClass.enabled (not (.Values.gpuOperator).enabled) -}}
 apiVersion: node.k8s.io/v1
 kind: RuntimeClass
 metadata:
