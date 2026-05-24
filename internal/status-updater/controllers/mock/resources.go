@@ -97,8 +97,33 @@ func BuildDaemonSet(p BuildDaemonSetParams) *appsv1.DaemonSet {
 						Image:           p.Image,
 						ImagePullPolicy: p.ImagePullPolicy,
 						SecurityContext: &corev1.SecurityContext{Privileged: ptr.To(true)},
-						Command:         []string{"/scripts/entrypoint.sh"},
+						// Background upstream's entrypoint.sh, wait for its setup.sh to
+						// signal completion (creating /run/nvidia/driver as a symlink
+						// near its end), touch /run/nvidia/validations/toolkit-ready,
+						// then `wait` to inherit entrypoint.sh's sleep-infinity. Without
+						// the marker, gpu-operator operand pods (device-plugin, GFD)
+						// block at Init:0/1 forever and `nvidia.com/gpu` never becomes
+						// allocatable. We do this in the container's own process tree
+						// (rather than a postStart hook) to avoid kubelet→containerd
+						// gRPC failures during the toolkit DS's containerd reload.
+						// Tracked upstream at NVIDIA/k8s-test-infra#346; drop this
+						// wrapper when the marker write lands in nvml-mock's setup.sh.
+						Command: []string{"/bin/sh", "-c"},
+						Args: []string{
+							"/scripts/entrypoint.sh & ENTRY=$!; " +
+								"while ! [ -L /host/run/nvidia/driver ] && kill -0 $ENTRY 2>/dev/null; do sleep 1; done; " +
+								"[ -L /host/run/nvidia/driver ] && mkdir -p /host/run/nvidia/validations && touch /host/run/nvidia/validations/toolkit-ready; " +
+								"wait $ENTRY",
+						},
 						Lifecycle: &corev1.Lifecycle{
+							// Deliberately does NOT remove the toolkit-ready marker:
+							// on DaemonSet recreate the old pod's preStop races with
+							// the new pod's setup wrapper (both touch the same host
+							// path) and an `rm` here can blow away the marker the new
+							// pod just wrote. The marker is sticky-positive — leaving
+							// it on shutdown is harmless because operand pods that
+							// scheduled while we were running already passed their
+							// init poll.
 							PreStop: &corev1.LifecycleHandler{
 								Exec: &corev1.ExecAction{Command: []string{"/scripts/cleanup.sh"}},
 							},

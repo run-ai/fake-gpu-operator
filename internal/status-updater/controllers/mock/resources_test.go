@@ -70,6 +70,34 @@ func TestBuildDaemonSet_Shape(t *testing.T) {
 	assert.True(t, mountPaths["/host/run/nvidia"])
 }
 
+func TestBuildDaemonSet_WritesToolkitReadyMarker(t *testing.T) {
+	ds := BuildDaemonSet(BuildDaemonSetParams{
+		Namespace: "ns", Pool: "training",
+		NodePoolLabelKey: "k", Image: "img", ImagePullPolicy: corev1.PullAlways,
+		ConfigHash: "x",
+	})
+	c := ds.Spec.Template.Spec.Containers[0]
+
+	// Wrapper backgrounds upstream entrypoint.sh, waits for setup completion
+	// (driver symlink), touches the marker, then `wait`s to inherit
+	// entrypoint.sh's sleep. Upstream's script is preserved verbatim so
+	// future setup steps run unchanged.
+	require.Equal(t, []string{"/bin/sh", "-c"}, c.Command)
+	require.Len(t, c.Args, 1)
+	assert.Contains(t, c.Args[0], "/scripts/entrypoint.sh &", "must background upstream entrypoint")
+	assert.Contains(t, c.Args[0], "/host/run/nvidia/driver", "must poll for setup-completion signal")
+	assert.Contains(t, c.Args[0], "/host/run/nvidia/validations/toolkit-ready", "must write the marker")
+	assert.Contains(t, c.Args[0], "wait $ENTRY", "must wait on backgrounded entrypoint to keep container alive")
+
+	// preStop invokes upstream cleanup but does NOT remove the marker —
+	// on DS recreate the old pod's preStop races with the new pod's setup
+	// wrapper for the same host path.
+	require.NotNil(t, c.Lifecycle)
+	require.NotNil(t, c.Lifecycle.PreStop)
+	require.NotNil(t, c.Lifecycle.PreStop.Exec)
+	assert.Equal(t, []string{"/scripts/cleanup.sh"}, c.Lifecycle.PreStop.Exec.Command)
+}
+
 func TestBuildDaemonSet_ConfigMapVolumePointsAtPerPoolCM(t *testing.T) {
 	ds := BuildDaemonSet(BuildDaemonSetParams{
 		Namespace: "ns", Pool: "training",
