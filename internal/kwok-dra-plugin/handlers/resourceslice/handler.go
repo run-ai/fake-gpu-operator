@@ -136,11 +136,28 @@ func (h *ResourceSliceHandler) devicesFromTopology(nodeTopology *topology.NodeTo
 		// Use ID (UUID) as device name, convert to lowercase for RFC 1123 compliance
 		deviceName := strings.ToLower(gpu.ID)
 
+		// Attributes under the `gpu.nvidia.com` domain satisfy upstream
+		// nvidia-dra-driver-gpu's DeviceClass CEL selector
+		// (`device.attributes['gpu.nvidia.com'].type == 'gpu'`). DRA addresses
+		// `<domain>/<name>` qualified keys as `attributes[<domain>].<name>`
+		// in CEL, so the keys MUST carry the `gpu.nvidia.com/` prefix —
+		// unqualified `type` would resolve to a different namespace and
+		// fail the same selector. Unqualified `uuid` and `model` are kept
+		// for backwards compatibility with any consumer reading them.
 		attributes := map[resourceapi.QualifiedName]resourceapi.DeviceAttribute{
 			"uuid": {
 				StringValue: ptr.To(gpu.ID),
 			},
 			"model": {
+				StringValue: ptr.To(nodeTopology.GpuProduct),
+			},
+			"gpu.nvidia.com/type": {
+				StringValue: ptr.To("gpu"),
+			},
+			"gpu.nvidia.com/uuid": {
+				StringValue: ptr.To(gpu.ID),
+			},
+			"gpu.nvidia.com/productName": {
 				StringValue: ptr.To(nodeTopology.GpuProduct),
 			},
 		}

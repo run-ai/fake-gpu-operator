@@ -37,6 +37,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `kwok-dra-plugin` ResourceSlices failing upstream `nvidia-dra-driver-gpu`
+  DeviceClass CEL selector on hybrid clusters. Pods requesting
+  `gpu.nvidia.com` ResourceClaims and targeting KWOK fake nodes hit
+  `CEL runtime error: no such key: type` because slices only carried
+  unqualified `uuid`/`model` attributes — upstream's selector reads
+  `device.attributes['gpu.nvidia.com'].type`. The plugin now also emits
+  qualified `gpu.nvidia.com/type=gpu`, `gpu.nvidia.com/uuid`, and
+  `gpu.nvidia.com/productName`, and the chart's own `gpu.nvidia.com`
+  DeviceClass mirrors upstream's CEL + `extendedResourceName` so the
+  contract is identical regardless of whether `nvidiaDraDriver.enabled`
+  is set. (RUN-39005)
 - `status-updater` mock controller emitting constant `configmaps "topology"
   is forbidden: cannot watch` errors. The chart's `fake-status-updater`
   ClusterRole was missing the `watch` verb on `configmaps`, so the informer

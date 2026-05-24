@@ -1,10 +1,22 @@
+{{- /*
+  When the upstream nvidia-dra-driver-gpu subchart is enabled it installs
+  its own gpu.nvidia.com DeviceClass with this exact selector. We render
+  ours only when that subchart is OFF, and we mirror its CEL expression
+  and extendedResourceName so the contract is identical across modes —
+  consumers reading ResourceClaims for `gpu.nvidia.com` don't see different
+  scheduling behavior depending on which DeviceClass renders.
+*/ -}}
 {{- if and (or .Values.draPlugin.enabled .Values.kwokDraPlugin.enabled) (not .Values.nvidiaDraDriver.enabled) -}}
-apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
+{{- $resourceApiVersion := include "dra-example-driver.resourceApiVersion" . -}}
+apiVersion: {{ $resourceApiVersion }}
 kind: DeviceClass
 metadata:
   name: gpu.nvidia.com
 spec:
   selectors:
   - cel:
-      expression: "device.driver == 'gpu.nvidia.com'"
+      expression: "device.driver == 'gpu.nvidia.com' && device.attributes['gpu.nvidia.com'].type == 'gpu'"
+  {{- if eq $resourceApiVersion "resource.k8s.io/v1" }}
+  extendedResourceName: nvidia.com/gpu
+  {{- end }}
 {{- end -}}
