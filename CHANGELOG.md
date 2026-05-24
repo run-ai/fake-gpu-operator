@@ -25,9 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   device-plugin path, DRA path, multi-pool differentiation, profile
   overrides, and fake/mock coexistence. Wired into CI as a release gate.
   ([RUN-38195](https://runai.atlassian.net/browse/RUN-38195))
-- Helm-upgrade e2e suite (`make e2e-upgrade`) that installs the published
-  OCI baseline (version pinned to env-in-a-click's
-  `fake_gpu_operator_version`) and then upgrades to the chart on the
+- Helm-upgrade e2e suite (`make e2e-upgrade`) that installs a pinned
+  published OCI baseline chart and then upgrades to the chart on the
   current branch with the same values. Catches the regression class
   where a new top-level chart value gets referenced unsafely in a
   template and breaks `helm upgrade` for users whose stored values

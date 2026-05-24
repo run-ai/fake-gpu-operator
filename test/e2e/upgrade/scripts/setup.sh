@@ -14,10 +14,9 @@ FIXTURES_DIR="$(cd -- "${SCRIPTS_DIR}/../fixtures" &> /dev/null && pwd)"
 
 CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')"
 
-# Baseline chart version. Pinned to the version env-in-a-click currently
-# installs in real environments — see:
-#   https://github.com/run-ai/env-in-a-click/blob/master/thirdparty/variables.tf
-# Bump in lockstep with env-in-a-click's `fake_gpu_operator_version` default.
+# Baseline chart version. Pinned to a known-good published release so the
+# upgrade path is deterministic and reproducible — bumping this is an
+# intentional change, not a side-effect of "newest available on GHCR".
 : ${BASELINE_CHART_VERSION:="0.0.80"}
 
 : ${KIND_CLUSTER_NAME:="upgrade-cluster"}

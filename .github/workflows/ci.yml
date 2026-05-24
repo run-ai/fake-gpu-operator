@@ -134,10 +134,9 @@ jobs:
         with:
           install_only: true
       - name: Run helm-upgrade e2e tests
-        # Installs the published OCI chart (pin tracks env-in-a-click's
-        # fake_gpu_operator_version), then upgrades to the chart on this
-        # branch. Catches the RUN-39195 regression class — templates that
-        # reference top-level values stored values predate (RUN-39195).
+        # Installs a pinned published OCI baseline chart, then upgrades to
+        # the chart on this branch. Catches the RUN-39195 regression class —
+        # templates that reference top-level values stored values predate.
         run: make e2e-upgrade
         env:
           DOCKER_TAG: 0.0.0-dev

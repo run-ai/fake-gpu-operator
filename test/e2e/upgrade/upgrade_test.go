@@ -21,8 +21,8 @@ var _ = Describe("Helm upgrade from baseline OCI release to local chart", func()
 
 	BeforeEach(func() {
 		// Capture pre-upgrade UID of the topology CM. After upgrade, an
-		// unchanged UID proves the CM was preserved (not deleted+recreated),
-		// which is what users on env-in-a-click would see.
+		// unchanged UID proves the CM was preserved (not deleted+recreated)
+		// — preserving it across upgrade is what real users expect.
 		cm, err := kubeClient.CoreV1().ConfigMaps(releaseNamespace).Get(
 			context.Background(), topologyCMName, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(),
