@@ -1,0 +1,56 @@
+# Values for the helm-upgrade e2e — deliberately mirrors what env-in-a-click
+# installs (legacy topology format: gpuProduct/gpuCount/gpuMemory, no mock
+# backend, no DRA subchart). Source of truth:
+#   https://github.com/run-ai/env-in-a-click/blob/master/thirdparty/fake_gpu_operator/helm_values.tpl
+#
+# The bug class this test catches is "new chart references a top-level key
+# that the user's stored values don't have." Using a minimalist user-realistic
+# values file is the point — a maximalist config that sets every key would
+# defeat the test.
+#
+# pullPolicy: IfNotPresent works for both phases:
+#   - install (OCI v0.0.80): images pulled from GHCR (public, no auth)
+#   - upgrade (local chart, tag=0.0.0-dev): images pre-loaded into kind by
+#     setup.sh, so IfNotPresent finds them locally without a pull attempt.
+
+devicePlugin:
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+
+statusUpdater:
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+
+topologyServer:
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+
+statusExporter:
+  enabled: false
+
+migFaker:
+  enabled: false
+
+kwokGpuDevicePlugin:
+  enabled: false
+
+kwokDraPlugin:
+  enabled: false
+
+gpuOperator:
+  enabled: false
+
+nvidiaDraDriver:
+  enabled: false
+
+topology:
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+  migStrategy: mixed
+  nodePools:
+    default-pool:
+      gpuProduct: NVIDIA-A100-SXM4-40GB
+      gpuCount: 4
+      gpuMemory: 40000

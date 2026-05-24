@@ -117,6 +117,33 @@ jobs:
           DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
           DOCKER_BUILDX_PLATFORMS: linux/amd64
 
+  e2e-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Install kind
+        uses: helm/kind-action@v1.13.0
+        with:
+          install_only: true
+      - name: Run helm-upgrade e2e tests
+        # Installs the published OCI chart (pin tracks env-in-a-click's
+        # fake_gpu_operator_version), then upgrades to the chart on this
+        # branch. Catches the RUN-39195 regression class — templates that
+        # reference top-level values stored values predate (RUN-39195).
+        run: make e2e-upgrade
+        env:
+          DOCKER_TAG: 0.0.0-dev
+          DOCKER_REPO_BASE: ghcr.io/run-ai/fake-gpu-operator
+          DOCKER_BUILDX_PLATFORMS: linux/amd64
+
   set-release-vars:
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '' }}
     runs-on: ubuntu-latest
@@ -139,7 +166,7 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars, lint, test, e2e, e2e-profiles, e2e-mock]
+    needs: [set-release-vars, lint, test, e2e, e2e-profiles, e2e-mock, e2e-upgrade]
     if: ${{ needs.set-release-vars.outputs.release_version != '' }}
     permissions:
       contents: read

@@ -72,6 +72,21 @@ teardown-e2e-mock:
 e2e-mock: setup-e2e-mock test-e2e-mock teardown-e2e-mock
 .PHONY: e2e-mock
 
+setup-e2e-upgrade:
+	test/e2e/upgrade/scripts/setup.sh
+.PHONY: setup-e2e-upgrade
+
+test-e2e-upgrade: ginkgo
+	cd test/e2e/upgrade && $(GINKGO) --procs=1 --timeout=15m --trace
+.PHONY: test-e2e-upgrade
+
+teardown-e2e-upgrade:
+	test/e2e/upgrade/scripts/teardown.sh
+.PHONY: teardown-e2e-upgrade
+
+e2e-upgrade: setup-e2e-upgrade test-e2e-upgrade teardown-e2e-upgrade
+.PHONY: e2e-upgrade
+
 clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean
