@@ -1,28 +1,32 @@
 {{- /*
-Pre-upgrade cleanup for chart-version transitions that bring in the upstream
-gpu-operator subchart (gpuOperator.enabled: false -> true).
+Pre-upgrade cleanup for polyfill resources that hit Kubernetes' immutable
+field constraints across chart-version upgrades or `gpuOperator.enabled`
+flips.
 
-Helm matches resources by Kind+Namespace+Name; on transition it tries to
-PATCH the existing polyfill resources (RuntimeClass/nvidia handler=runc,
-left over from older chart versions whose runtime-class.yml polyfill did
-not yet gate on `gpuOperator.enabled`) into the upstream-shaped versions.
-RuntimeClass.handler is immutable so the patch fails.
+Helm matches resources by Kind+Namespace+Name and patches in place — but:
 
-This Job runs ONCE at pre-upgrade time, deletes the stale handler=runc
-polyfill if it exists, and exits. The upstream subchart's RuntimeClass
-template then creates the correct handler=nvidia resource in the upgrade's
-main rollout phase. It is a no-op on:
-  - First-time installs (no existing RuntimeClass)
-  - Upgrades where gpuOperator.enabled stays false (the polyfill is still
-    correct as-is, gated above)
-  - Upgrades from a chart that already had the gate (the RuntimeClass is
-    upstream-owned with handler=nvidia, we leave it alone)
+  1) The polyfill `Deployment/gpu-operator` (rendered when
+     `gpuOperator.enabled: false`) has `spec.selector` as an immutable
+     field. Any change in selector labels — whether across chart versions
+     (older charts used `{app, component}`, this chart uses
+     `{app, app.kubernetes.io/component}` to match the upstream subchart),
+     or when flipping to the upstream subchart's Deployment — fails the
+     patch with `field is immutable`.
 
-The Deployment/gpu-operator polyfill does NOT need a cleanup hook — its
-selector labels have been aligned with the upstream subchart's selector,
-so the helm patch is a no-op for that immutable field.
+  2) The polyfill `RuntimeClass/nvidia` (handler=runc) collides with the
+     upstream gpu-operator subchart's RuntimeClass (handler=nvidia). The
+     `.handler` field is immutable, so the patch fails.
+
+This Job runs ALWAYS on pre-upgrade and deletes only resources matching
+the polyfill fingerprint (Deployment with `replicas: 0` and image starting
+with `ubuntu:`; RuntimeClass with `handler: runc`). Real upstream-shaped
+resources are left alone. It is a no-op when those fingerprints don't
+match — first-time installs (resources don't exist) or already-migrated
+clusters (resources are upstream-shaped).
+
+Runs unconditionally because the Deployment selector can shift across
+chart versions even when `gpuOperator.enabled` stays `false`.
 */ -}}
-{{- if (.Values.gpuOperator).enabled -}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -50,6 +54,9 @@ metadata:
 rules:
   - apiGroups: ["node.k8s.io"]
     resources: ["runtimeclasses"]
+    verbs: ["get", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
     verbs: ["get", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -97,18 +104,39 @@ spec:
       restartPolicy: Never
       containers:
         - name: cleanup
-          image: bitnami/kubectl:1.31
+          image: {{ .Values.preUpgradeCleanup.image.repository }}:{{ .Values.preUpgradeCleanup.image.tag }}
+          imagePullPolicy: {{ .Values.preUpgradeCleanup.image.pullPolicy }}
           command: ["/bin/sh", "-c"]
           args:
             - |
               set -eu
+
+              ns={{ .Release.Namespace | quote }}
+
+              # 1) Stale `nvidia` RuntimeClass polyfill (handler=runc).
               handler=$(kubectl get runtimeclass nvidia -o jsonpath='{.handler}' 2>/dev/null || true)
               if [ "$handler" = "runc" ]; then
-                echo "Deleting stale RuntimeClass/nvidia (handler=runc polyfill); upstream gpu-operator will recreate with handler=nvidia."
+                echo "Deleting stale RuntimeClass/nvidia (handler=runc polyfill)."
                 kubectl delete runtimeclass nvidia
               elif [ -n "$handler" ]; then
-                echo "RuntimeClass/nvidia already has handler=$handler — leaving it alone."
+                echo "RuntimeClass/nvidia has handler=$handler — leaving it alone."
               else
                 echo "RuntimeClass/nvidia does not exist — nothing to clean up."
               fi
-{{- end -}}
+
+              # 2) Stale `gpu-operator` Deployment polyfill (replicas=0, ubuntu placeholder image).
+              if kubectl get deployment gpu-operator -n "$ns" -o jsonpath='{.spec.replicas}' >/dev/null 2>&1; then
+                replicas=$(kubectl get deployment gpu-operator -n "$ns" -o jsonpath='{.spec.replicas}')
+                image=$(kubectl get deployment gpu-operator -n "$ns" -o jsonpath='{.spec.template.spec.containers[0].image}')
+                case "$image" in
+                  ubuntu:*)
+                    echo "Deleting stale Deployment/gpu-operator polyfill (replicas=$replicas, image=$image)."
+                    kubectl delete deployment gpu-operator -n "$ns"
+                    ;;
+                  *)
+                    echo "Deployment/gpu-operator image=$image — not a polyfill, leaving it alone."
+                    ;;
+                esac
+              else
+                echo "Deployment/gpu-operator does not exist — nothing to clean up."
+              fi

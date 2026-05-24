@@ -83,10 +83,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `gpuOperator.enabled: false -> true` failed with
   `RuntimeClass.node.k8s.io "nvidia" is invalid: handler: Invalid value:
   "nvidia": field is immutable`. Fix: gate the polyfill on
-  `(not gpuOperator.enabled)`, and add a `pre-upgrade` hook Job that
-  deletes the stale `handler: runc` RuntimeClass during the transition
-  so the upstream subchart can recreate it with the correct handler.
-  (RUN-38195)
+  `(not gpuOperator.enabled)`, and add a `pre-upgrade` hook Job
+  (`templates/pre-upgrade-cleanup.yaml`) that deletes the stale
+  `handler: runc` RuntimeClass *and* the stale `Deployment/gpu-operator`
+  polyfill (identified by `replicas: 0` + `image: ubuntu:*`) before
+  helm's main rollout. The hook runs unconditionally on every upgrade,
+  not just when `gpuOperator.enabled` flips, because the Deployment
+  polyfill's `spec.selector` was also changed in this release (aligned
+  with upstream's selector labels) and `spec.selector` is immutable too.
+  Hook image is configurable via `preUpgradeCleanup.image.*` and defaults
+  to `alpine/k8s:1.31.0` (need a shell + kubectl; distroless `rancher/kubectl`
+  and deprecated `bitnami/kubectl:<MAJOR>.<MINOR>` tags don't satisfy
+  both). (RUN-38195)
 - Conflicting `nvidia-dcgm-exporter` Service when both
   `statusExporter.enabled: true` and `gpuOperator.enabled: true`. FGO's
   status-exporter and the upstream gpu-operator's state-dcgm-exporter
