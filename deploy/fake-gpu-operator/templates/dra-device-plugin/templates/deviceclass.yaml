@@ -1,11 +1,4 @@
-{{- /*
-  When the upstream nvidia-dra-driver-gpu subchart is enabled it installs
-  its own gpu.nvidia.com DeviceClass with this exact selector. We render
-  ours only when that subchart is OFF, and we mirror its CEL expression
-  and extendedResourceName so the contract is identical across modes —
-  consumers reading ResourceClaims for `gpu.nvidia.com` don't see different
-  scheduling behavior depending on which DeviceClass renders.
-*/ -}}
+{{- /* Mirrors nvidia-dra-driver-gpu's gpu.nvidia.com DeviceClass; rendered only when that subchart is off. */ -}}
 {{- if and (or .Values.draPlugin.enabled .Values.kwokDraPlugin.enabled) (not .Values.nvidiaDraDriver.enabled) -}}
 {{- $resourceApiVersion := include "dra-example-driver.resourceApiVersion" . -}}
 apiVersion: {{ $resourceApiVersion }}
