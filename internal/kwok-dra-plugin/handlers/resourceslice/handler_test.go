@@ -188,9 +188,17 @@ var _ = Describe("ResourceSliceHandler", func() {
 			Expect(*devices[0].Attributes["uuid"].StringValue).To(Equal("GPU-0001-0001-0001-0001"))
 			Expect(*devices[0].Attributes["model"].StringValue).To(Equal("NVIDIA-A100-SXM4-40GB"))
 
+			// Qualified attributes satisfy upstream nvidia-dra-driver-gpu's
+			// DeviceClass CEL selector (`device.attributes['gpu.nvidia.com'].type == 'gpu'`).
+			Expect(*devices[0].Attributes["gpu.nvidia.com/type"].StringValue).To(Equal("gpu"))
+			Expect(*devices[0].Attributes["gpu.nvidia.com/uuid"].StringValue).To(Equal("GPU-0001-0001-0001-0001"))
+			Expect(*devices[0].Attributes["gpu.nvidia.com/productName"].StringValue).To(Equal("NVIDIA-A100-SXM4-40GB"))
+
 			// Check second device
 			Expect(devices[1].Name).To(Equal("gpu-0002-0002-0002-0002"))
 			Expect(*devices[1].Attributes["uuid"].StringValue).To(Equal("GPU-0002-0002-0002-0002"))
+			Expect(*devices[1].Attributes["gpu.nvidia.com/type"].StringValue).To(Equal("gpu"))
+			Expect(*devices[1].Attributes["gpu.nvidia.com/uuid"].StringValue).To(Equal("GPU-0002-0002-0002-0002"))
 		})
 
 		It("should skip GPUs without ID", func() {
