@@ -87,6 +87,24 @@ teardown-e2e-upgrade:
 e2e-upgrade: setup-e2e-upgrade test-e2e-upgrade teardown-e2e-upgrade
 .PHONY: e2e-upgrade
 
+# Convenience: run e2e-upgrade with the baseline pinned to the latest
+# pullable chart from origin/main (walks back through the last 5 commits
+# until one is found in the registry). CI does the same via matrix.
+e2e-upgrade-from-main:
+	@CHART=oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator; \
+	git fetch origin main >/dev/null 2>&1 || true; \
+	for SHA in $$(git log origin/main --format='%h' --max-count=5); do \
+		VERSION="0.0.0-$$SHA"; \
+		if helm pull $$CHART --version $$VERSION --destination /tmp >/dev/null 2>&1; then \
+			echo "Using main baseline: $$VERSION"; \
+			BASELINE_CHART_VERSION=$$VERSION $(MAKE) e2e-upgrade; \
+			exit 0; \
+		fi; \
+		echo "  not pullable: $$VERSION"; \
+	done; \
+	echo "ERROR: no chart found for the last 5 main commits"; exit 1
+.PHONY: e2e-upgrade-from-main
+
 clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean

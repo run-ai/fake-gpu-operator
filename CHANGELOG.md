@@ -30,7 +30,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   current branch with the same values. Catches the regression class
   where a new top-level chart value gets referenced unsafely in a
   template and breaks `helm upgrade` for users whose stored values
-  predate that key. Wired into CI as a release gate. (RUN-39195)
+  predate that key. In CI runs as a matrix with two baselines — the
+  pinned release and the latest published `main` chart (via
+  `make e2e-upgrade-from-main` locally) — so regressions are caught
+  both against shipped releases and against not-yet-released main.
+  Wired into CI as a release gate. (RUN-39195)
 
 ### Changed
 
