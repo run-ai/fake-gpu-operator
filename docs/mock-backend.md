@@ -81,6 +81,25 @@ A node is in **one** pool at a time — either `fake` or `mock`, not both. The t
 
 - **Switching a node's pool at runtime** doesn't re-reconcile its FGO-applied labels — status-updater's node controller only watches Add/Delete, not Update. Drain + rejoin (or delete the device-plugin pod) to force a clean transition.
 - **`--reuse-values` upgrade fails** for users whose stored values predate new top-level keys — [#195 / RUN-39195](https://github.com/run-ai/fake-gpu-operator/issues/195). Use `helm upgrade -f values.yaml` instead.
+- **Upgrading from chart 0.0.80** (or any pre-RUN-38195 chart) directly to a chart with the mock backend requires deleting two stale polyfill resources manually first, regardless of whether `gpuOperator.enabled` flips. Both resources have an immutable field whose value changed between chart versions, so helm's in-place patch attempt fails. Run this before `helm upgrade`:
+
+  ```bash
+  # Stale RuntimeClass polyfill (handler=runc -> handler=nvidia is immutable).
+  # Only delete if the existing handler is `runc` — leave upstream-owned ones alone.
+  if [ "$(kubectl get runtimeclass nvidia -o jsonpath='{.handler}' 2>/dev/null)" = "runc" ]; then
+    kubectl delete runtimeclass nvidia
+  fi
+
+  # Stale Deployment polyfill (selector labels changed; spec.selector is immutable).
+  # Only delete if it looks like the polyfill (replicas: 0, ubuntu placeholder image).
+  if kubectl get deployment gpu-operator -n gpu-operator >/dev/null 2>&1 \
+     && [ "$(kubectl get deployment gpu-operator -n gpu-operator -o jsonpath='{.spec.replicas}')" = "0" ] \
+     && kubectl get deployment gpu-operator -n gpu-operator -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -q '^ubuntu:'; then
+    kubectl delete deployment gpu-operator -n gpu-operator
+  fi
+  ```
+
+  After this one-time cleanup, future chart upgrades within the new lineage are a normal `helm upgrade` — the polyfills now use the upstream subchart's selector labels, and the RuntimeClass polyfill is gated off whenever `gpuOperator.enabled: true`.
 - **In-pod `nvidia-smi` reports the compiled-in default model** (A100) regardless of pool profile. The mock library inside DRA- and device-plugin-allocated pods can't auto-locate the per-pool config. See `docs/RUN-38195-nvml-mock-failure-explainer.html`.
 
 ## When to use which

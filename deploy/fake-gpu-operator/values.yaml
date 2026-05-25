@@ -186,18 +186,6 @@ ubuntu:
     repository: "ubuntu"
     tag: "24.04"
 
-# Image used by the pre-upgrade cleanup hook (templates/pre-upgrade-cleanup.yaml)
-# to remove stale polyfill RuntimeClass on `gpuOperator.enabled: false -> true`
-# transitions. Override if you mirror images internally or hit upstream
-# registry deprecations (e.g. bitnami's namespace changes).
-preUpgradeCleanup:
-  image:
-    # alpine/k8s ships kubectl plus a real /bin/sh (rancher/kubectl and
-    # bitnami/kubectl:<MAJOR>.<MINOR> tags are distroless or deprecated).
-    repository: alpine/k8s
-    tag: 1.31.0
-    pullPolicy: IfNotPresent
-
 topology:
   # nodePools is a map of node pool name to node pool configuration.
   # Nodes are assigned to node pools based on the node pool label's value (key is configurable via nodePoolLabelKey).

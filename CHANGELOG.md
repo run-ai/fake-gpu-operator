@@ -45,11 +45,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Polyfill `Deployment/gpu-operator` (rendered when `gpuOperator.enabled:
   false`) now uses the same selector labels as the upstream gpu-operator
   subchart (`app.kubernetes.io/component: gpu-operator` +
-  `app: gpu-operator`). Without this, upgrading from
-  `gpuOperator.enabled: false -> true` failed with
-  `Deployment.apps "gpu-operator" is invalid: spec.selector: field is
-  immutable` because helm tried to patch the polyfill into the
-  subchart-shaped Deployment. (RUN-38195)
+  `app: gpu-operator`). Future `gpuOperator.enabled: false -> true`
+  flips within this chart's lineage are now an in-place helm patch.
+  Upgrades from chart 0.0.80 (or any pre-RUN-38195 chart whose polyfill
+  carried the older `{app, component}` selector) still require a one-time
+  manual delete of the stale Deployment — see the "Known limitations"
+  section of `docs/mock-backend.md` for the exact commands. (RUN-38195)
 
 ### Fixed
 
@@ -79,22 +80,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Polyfill `RuntimeClass/nvidia` (rendered when `gpuOperator.enabled:
   false`) used `handler: runc`, while the upstream gpu-operator subchart
   creates the same RuntimeClass with `handler: nvidia`. RuntimeClass
-  `.handler` is immutable, so upgrading from
-  `gpuOperator.enabled: false -> true` failed with
-  `RuntimeClass.node.k8s.io "nvidia" is invalid: handler: Invalid value:
-  "nvidia": field is immutable`. Fix: gate the polyfill on
-  `(not gpuOperator.enabled)`, and add a `pre-upgrade` hook Job
-  (`templates/pre-upgrade-cleanup.yaml`) that deletes the stale
-  `handler: runc` RuntimeClass *and* the stale `Deployment/gpu-operator`
-  polyfill (identified by `replicas: 0` + `image: ubuntu:*`) before
-  helm's main rollout. The hook runs unconditionally on every upgrade,
-  not just when `gpuOperator.enabled` flips, because the Deployment
-  polyfill's `spec.selector` was also changed in this release (aligned
-  with upstream's selector labels) and `spec.selector` is immutable too.
-  Hook image is configurable via `preUpgradeCleanup.image.*` and defaults
-  to `alpine/k8s:1.31.0` (need a shell + kubectl; distroless `rancher/kubectl`
-  and deprecated `bitnami/kubectl:<MAJOR>.<MINOR>` tags don't satisfy
-  both). (RUN-38195)
+  `.handler` is immutable, so leaving both manifests fighting for the
+  name during a `gpuOperator.enabled: false -> true` flip failed the
+  upgrade with `RuntimeClass.node.k8s.io "nvidia" is invalid: handler:
+  Invalid value: "nvidia": field is immutable`. Fix: gate the polyfill
+  on `(not gpuOperator.enabled)` so the upstream subchart owns the
+  resource whenever it is active. Upgrades from chart 0.0.80 still need
+  a one-time manual delete of the stale `handler: runc` RuntimeClass —
+  see the "Known limitations" section of `docs/mock-backend.md` for the
+  exact commands. (RUN-38195)
 - Conflicting `nvidia-dcgm-exporter` Service when both
   `statusExporter.enabled: true` and `gpuOperator.enabled: true`. FGO's
   status-exporter and the upstream gpu-operator's state-dcgm-exporter
