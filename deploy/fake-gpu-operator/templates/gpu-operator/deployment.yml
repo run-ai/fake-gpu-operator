@@ -1,14 +1,5 @@
+{{- /* Polyfill — selector mirrors upstream subchart so gpuOperator.enabled flips are mutable patches (.spec.selector is immutable). */ -}}
 {{- if not (.Values.gpuOperator).enabled -}}
-# Placeholder Deployment so consumers that probe for `Deployment/gpu-operator`
-# (e.g. runai-cluster's GPU-stack discovery) find a resource even when the
-# upstream gpu-operator subchart is disabled.
-#
-# The selector labels mirror the upstream subchart's selector
-# (`app.kubernetes.io/component: gpu-operator` + `app: gpu-operator`) so that
-# flipping `gpuOperator.enabled: false -> true` is a mutable helm patch.
-# Without this alignment, the immutable `spec.selector` field changes during
-# the transition and the upgrade fails with
-# `Deployment.apps "gpu-operator" is invalid: spec.selector: field is immutable`.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
