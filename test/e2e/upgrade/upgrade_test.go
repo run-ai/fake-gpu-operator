@@ -3,8 +3,8 @@ package upgrade_e2e_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,37 +16,19 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// markerFile is where scripts/apply-upgrade.sh writes the pre-upgrade
+// topology ConfigMap UID. The Ginkgo suite reads it to verify the CM was
+// patched in place (UID unchanged), not deleted+recreated, by the upgrade.
+const markerFile = "/tmp/upgrade-cluster-pre-upgrade-cm-uid"
+
 var _ = Describe("Helm upgrade from baseline OCI release to local chart", func() {
-	var preUpgradeTopologyUID types.UID
-
-	BeforeEach(func() {
-		// Capture pre-upgrade UID of the topology CM. After upgrade, an
-		// unchanged UID proves the CM was preserved (not deleted+recreated)
-		// — preserving it across upgrade is what real users expect.
-		cm, err := kubeClient.CoreV1().ConfigMaps(releaseNamespace).Get(
-			context.Background(), topologyCMName, metav1.GetOptions{})
+	It("leaves the release healthy and the topology ConfigMap preserved", func() {
+		By("reading pre-upgrade CM UID written by apply-upgrade.sh")
+		raw, err := os.ReadFile(markerFile)
 		Expect(err).NotTo(HaveOccurred(),
-			"baseline release must have created the %q ConfigMap", topologyCMName)
-		preUpgradeTopologyUID = cm.UID
-	})
-
-	It("upgrades cleanly to the local chart with the same values", func() {
-		localChartPath := filepath.Join(projectRoot, "deploy", "fake-gpu-operator")
-		valuesPath := filepath.Join(projectRoot, "test", "e2e", "upgrade", "fixtures", "values-upgrade.yaml")
-		dockerTag := "0.0.0-dev"
-
-		// Populate charts/ for the conditional subcharts (gpuOperator /
-		// nvidiaDraDriver). Even though they render to nothing here, helm
-		// refuses to upgrade with missing dep archives.
-		helm("dependency", "update", localChartPath)
-
-		// The upgrade. If any template references a top-level value that
-		// the baseline's stored values lack, this fails — which is the
-		// regression class RUN-39195 exists to catch.
-		upgradeArgs := []string{"upgrade", releaseName, localChartPath, "-f", valuesPath}
-		upgradeArgs = append(upgradeArgs, imageTagSets(dockerTag, "devicePlugin", "statusUpdater", "topologyServer")...)
-		upgradeArgs = append(upgradeArgs, "--wait", "--timeout", helmUpgradeTimeout.String())
-		helm(upgradeArgs...)
+			"marker file %s missing — has apply-upgrade.sh run?", markerFile)
+		preUpgradeUID := types.UID(strings.TrimSpace(string(raw)))
+		Expect(preUpgradeUID).NotTo(BeEmpty(), "marker file should contain a UID")
 
 		By("verifying enabled component pods reach steady state")
 		waitForPodReady("app=status-updater", podReadyTimeout)
@@ -62,35 +44,16 @@ var _ = Describe("Helm upgrade from baseline OCI release to local chart", func()
 		postCM, err := kubeClient.CoreV1().ConfigMaps(releaseNamespace).Get(
 			context.Background(), topologyCMName, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(postCM.UID).To(Equal(preUpgradeTopologyUID),
+		Expect(postCM.UID).To(Equal(preUpgradeUID),
 			"topology ConfigMap should be patched in place, not recreated")
 		Expect(postCM.Data).To(HaveKey("topology.yml"))
 
 		By("verifying helm sees the release as deployed (not failed/pending)")
-		out := helm("list", "-o", "json")
+		out := runOrFail("helm", "-n", releaseNamespace, "list", "-o", "json")
 		Expect(out).To(ContainSubstring(`"status":"deployed"`),
 			"helm release should be in 'deployed' state after upgrade")
 	})
 })
-
-// helm runs `helm <args...>` with -n releaseNamespace pre-populated. The
-// namespace flag is a helm global, accepted (and ignored) by subcommands
-// like `dependency update` that don't operate on a cluster — so bundling
-// it here keeps every call site one short slice.
-func helm(args ...string) string {
-	return runOrFail("helm", append([]string{"-n", releaseNamespace}, args...)...)
-}
-
-// imageTagSets returns the `--set <component>.image.tag=<tag>` pairs that
-// flip every named chart component from the baseline's published tag to the
-// local-build tag for the upgrade step.
-func imageTagSets(tag string, components ...string) []string {
-	out := make([]string, 0, 2*len(components))
-	for _, c := range components {
-		out = append(out, "--set", c+".image.tag="+tag)
-	}
-	return out
-}
 
 // runOrFail shells out to a command, streams output to GinkgoWriter, and
 // fails the spec with the captured output if the command exits non-zero.

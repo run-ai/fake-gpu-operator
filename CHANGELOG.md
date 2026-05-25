@@ -34,7 +34,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   pinned release and the latest published `main` chart (via
   `make e2e-upgrade-from-main` locally) — so regressions are caught
   both against shipped releases and against not-yet-released main.
-  Wired into CI as a release gate. (RUN-39195)
+  The suite is split into three idempotent stages for ad-hoc iteration:
+  `make setup-e2e-upgrade` (cluster + baseline), `make upgrade-e2e-upgrade`
+  (apply HEAD chart, re-runnable after each chart edit), and
+  `make test-e2e-upgrade` (assertions only). Wired into CI as a release
+  gate. (RUN-39195)
 
 ### Changed
 

@@ -72,9 +72,19 @@ teardown-e2e-mock:
 e2e-mock: setup-e2e-mock test-e2e-mock teardown-e2e-mock
 .PHONY: e2e-mock
 
+# The upgrade suite is split into three stages so the inner loop is fast:
+#   make setup-e2e-upgrade    — kind cluster + baseline OCI install   (~3 min, once)
+#   make upgrade-e2e-upgrade  — helm upgrade to local HEAD chart      (~30s,  per chart edit)
+#   make test-e2e-upgrade     — Ginkgo assertions only                (~5s,   per check)
+# Compose them via 'make e2e-upgrade' for end-to-end CI / one-shot local runs.
+
 setup-e2e-upgrade:
 	test/e2e/upgrade/scripts/setup.sh
 .PHONY: setup-e2e-upgrade
+
+upgrade-e2e-upgrade:
+	test/e2e/upgrade/scripts/apply-upgrade.sh
+.PHONY: upgrade-e2e-upgrade
 
 test-e2e-upgrade: ginkgo
 	cd test/e2e/upgrade && $(GINKGO) --procs=1 --timeout=15m --trace
@@ -84,7 +94,7 @@ teardown-e2e-upgrade:
 	test/e2e/upgrade/scripts/teardown.sh
 .PHONY: teardown-e2e-upgrade
 
-e2e-upgrade: setup-e2e-upgrade test-e2e-upgrade teardown-e2e-upgrade
+e2e-upgrade: setup-e2e-upgrade upgrade-e2e-upgrade test-e2e-upgrade teardown-e2e-upgrade
 .PHONY: e2e-upgrade
 
 # Convenience: run e2e-upgrade with the baseline pinned to the latest
