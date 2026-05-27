@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+
+## [0.0.81] - 2026-05-27
+
+### Added
+
 - `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`, and structured issue
   templates (`BUG_REPORT.yaml`, `ENHANCEMENT.yaml`) to guide external
   contributors. ([RUN-38925](https://runai.atlassian.net/browse/RUN-38925))
