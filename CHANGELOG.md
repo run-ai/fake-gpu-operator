@@ -25,6 +25,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   device-plugin path, DRA path, multi-pool differentiation, profile
   overrides, and fake/mock coexistence. Wired into CI as a release gate.
   ([RUN-38195](https://runai.atlassian.net/browse/RUN-38195))
+- Helm-upgrade e2e suite (`make e2e-upgrade`) that installs a pinned
+  published OCI baseline chart and then upgrades to the chart on the
+  current branch with the same values. Catches the regression class
+  where a new top-level chart value gets referenced unsafely in a
+  template and breaks `helm upgrade` for users whose stored values
+  predate that key. In CI runs as a matrix with two baselines — the
+  pinned release and the latest published `main` chart (via
+  `make e2e-upgrade-from-main` locally) — so regressions are caught
+  both against shipped releases and against not-yet-released main.
+  The suite is split into three idempotent stages for ad-hoc iteration:
+  `make setup-e2e-upgrade` (cluster + baseline), `make upgrade-e2e-upgrade`
+  (apply HEAD chart, re-runnable after each chart edit), and
+  `make test-e2e-upgrade` (assertions only). Wired into CI as a release
+  gate. (RUN-39195)
 
 ### Changed
 
