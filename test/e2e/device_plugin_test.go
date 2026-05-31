@@ -1,11 +1,15 @@
 package e2e_test
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Covers the legacy (non-DRA) device-plugin path, which the rest of this suite does not
@@ -17,6 +21,17 @@ import (
 // topology-server, and panicked ("invalid character 'C' looking for beginning of value").
 var _ = Describe("Device-Plugin Path Tests", func() {
 	var testNamespaces []string
+
+	BeforeEach(func() {
+		// The legacy device-plugin runs only when devicePlugin.enabled=true (values.yaml).
+		// Other suites that share this package (e.g. make e2e-profiles) leave it disabled, so
+		// skip rather than fail when the daemonset isn't deployed.
+		_, err := kubeClient.AppsV1().DaemonSets("gpu-operator").Get(context.Background(), "device-plugin", metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			Skip("device-plugin daemonset not deployed (devicePlugin.enabled=false) — skipping legacy device-plugin path test")
+		}
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	AfterEach(func() {
 		for _, ns := range testNamespaces {
