@@ -30,9 +30,14 @@ topologyServer:
 topologyConfigMap:
   enabled: true
 
-# Disable components not needed for e2e tests
+# Enable the legacy device-plugin path so its nvidia-smi behavior is covered (RUN-39004).
+# The daemonset is gated by the nvidia.com/gpu.deploy.device-plugin nodeSelector, which
+# status-updater sets only on the real (non-KWOK) worker — so it stays confined to that
+# node and does not affect the KWOK-based DRA tests.
 devicePlugin:
-  enabled: false
+  enabled: true
+  image:
+    pullPolicy: Never
 
 statusExporter:
   enabled: true

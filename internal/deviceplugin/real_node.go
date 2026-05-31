@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -177,6 +178,11 @@ func (m *RealNodeDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.All
 		response := pluginapi.ContainerAllocateResponse{
 			Envs: map[string]string{
 				"MOCK_NVIDIA_VISIBLE_DEVICES": strings.Join(req.DevicesIds, ","),
+				// nvidia-smi resolves its node topology from NODE_NAME. The
+				// DaemonSet receives it via the downward API (spec.nodeName);
+				// propagate it to the workload so /bin/nvidia-smi doesn't query
+				// an empty node and panic on the non-JSON error response.
+				constants.EnvNodeName: os.Getenv(constants.EnvNodeName),
 			},
 			Mounts: []*pluginapi.Mount{
 				{
