@@ -64,6 +64,94 @@ var _ = Describe("NewDevicePlugins", func() {
 			Expect(devicePlugins).To(HaveLen(3))
 			Expect(devicePlugins[0]).To(BeAssignableToTypeOf(&RealNodeDevicePlugin{}))
 		})
+
+		It("should return MIG device plugins for mixed MIG topology", func() {
+			topology := &topology.NodeTopology{
+				MigStrategy: "mixed",
+				Gpus: []topology.GpuDetails{
+					{
+						ID:         "GPU-0",
+						MigEnabled: true,
+						MigInstances: []topology.MigInstance{
+							{Profile: "1g.5gb"},
+							{Profile: "1g.5gb"},
+						},
+					},
+				},
+			}
+			kubeClient := &fake.Clientset{}
+			devicePlugins := NewDevicePlugins(topology, kubeClient)
+			Expect(devicePlugins).To(HaveLen(1))
+
+			plugin, ok := devicePlugins[0].(*RealNodeDevicePlugin)
+			Expect(ok).To(BeTrue())
+			Expect(plugin.resourceName).To(Equal("nvidia.com/mig-1g.5gb"))
+			Expect(plugin.devs).To(HaveLen(2))
+		})
+
+		It("should return one device plugin per MIG profile", func() {
+			topology := &topology.NodeTopology{
+				MigStrategy: "mixed",
+				Gpus: []topology.GpuDetails{
+					{
+						ID:         "GPU-0",
+						MigEnabled: true,
+						MigInstances: []topology.MigInstance{
+							{Profile: "1g.5gb"},
+							{Profile: "2g.10gb"},
+						},
+					},
+				},
+			}
+			kubeClient := &fake.Clientset{}
+			devicePlugins := NewDevicePlugins(topology, kubeClient)
+			Expect(devicePlugins).To(HaveLen(2))
+
+			mig1g, ok := devicePlugins[0].(*RealNodeDevicePlugin)
+			Expect(ok).To(BeTrue())
+			Expect(mig1g.resourceName).To(Equal("nvidia.com/mig-1g.5gb"))
+
+			mig2g, ok := devicePlugins[1].(*RealNodeDevicePlugin)
+			Expect(ok).To(BeTrue())
+			Expect(mig2g.resourceName).To(Equal("nvidia.com/mig-2g.10gb"))
+		})
+
+		It("should keep full GPUs alongside MIG profiles in mixed mode", func() {
+			topology := &topology.NodeTopology{
+				MigStrategy: "mixed",
+				Gpus: []topology.GpuDetails{
+					{
+						ID:         "GPU-0",
+						MigEnabled: true,
+						MigInstances: []topology.MigInstance{
+							{Profile: "1g.5gb"},
+						},
+					},
+					{ID: "GPU-1"},
+				},
+			}
+			kubeClient := &fake.Clientset{}
+			devicePlugins := NewDevicePlugins(topology, kubeClient)
+			Expect(devicePlugins).To(HaveLen(2))
+
+			gpuPlugin, ok := devicePlugins[0].(*RealNodeDevicePlugin)
+			Expect(ok).To(BeTrue())
+			Expect(gpuPlugin.resourceName).To(Equal("nvidia.com/gpu"))
+
+			migPlugin, ok := devicePlugins[1].(*RealNodeDevicePlugin)
+			Expect(ok).To(BeTrue())
+			Expect(migPlugin.resourceName).To(Equal("nvidia.com/mig-1g.5gb"))
+		})
 	})
 
+})
+
+var _ = Describe("resourceSocket", func() {
+	It("uses the legacy socket path for nvidia.com/gpu", func() {
+		Expect(resourceSocket("nvidia.com/gpu")).To(Equal(serverSock))
+	})
+
+	It("uses a fake-prefixed socket for MIG resources", func() {
+		Expect(resourceSocket("nvidia.com/mig-1g.5gb")).To(ContainSubstring("fake-nvidia_com_mig_1g_5gb.sock"))
+	})
 })

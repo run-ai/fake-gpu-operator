@@ -23,13 +23,13 @@ type NodePoolTopology struct {
 type ClusterConfig struct {
 	NodePoolLabelKey string                    `yaml:"nodePoolLabelKey"`
 	MigStrategy      string                    `yaml:"migStrategy"`
-	NodePools        map[string]NodePoolConfig  `yaml:"nodePools"`
-	GpuOperator      *GpuOperatorConfig         `yaml:"gpuOperator,omitempty"`
+	NodePools        map[string]NodePoolConfig `yaml:"nodePools"`
+	GpuOperator      *GpuOperatorConfig        `yaml:"gpuOperator,omitempty"`
 }
 
 type NodePoolConfig struct {
-	Gpu       GpuConfig          `yaml:"gpu"`
-	Resources []map[string]int   `yaml:"resources,omitempty"`
+	Gpu       GpuConfig        `yaml:"gpu"`
+	Resources []map[string]int `yaml:"resources,omitempty"`
 }
 
 type GpuConfig struct {
@@ -53,6 +53,28 @@ type NodeTopology struct {
 
 type GpuDetails struct {
 	ID     string    `yaml:"id"`
+	Status GpuStatus `yaml:"status"`
+
+	// MigEnabled marks this physical GPU as sliced. Per NVIDIA convention a
+	// MIG-enabled GPU contributes 0 to nvidia.com/gpu — its slices show up
+	// individually under nvidia.com/mig-<profile> when migStrategy is "mixed".
+	MigEnabled bool `yaml:"migEnabled,omitempty"`
+
+	// MigInstances enumerates the slices on this GPU (empty when !MigEnabled).
+	// The list is the source of truth for per-slice allocation; advertised
+	// resource counts are computed from it by AdvertisedResources.
+	MigInstances []MigInstance `yaml:"migInstances,omitempty"`
+}
+
+// MigInstance describes a single MIG slice on a physical GPU.
+type MigInstance struct {
+	// Profile is the NVIDIA MIG profile name, e.g. "1g.5gb", "2g.10gb".
+	Profile string `yaml:"profile"`
+	// Index is the slot of this slice within the parent GPU (0-based).
+	Index int `yaml:"index"`
+	// UUID is what NVML would report for this slice — format "MIG-<uuid>".
+	UUID string `yaml:"uuid"`
+	// Status mirrors GpuStatus's shape — per-slice allocation + usage tracking.
 	Status GpuStatus `yaml:"status"`
 }
 

@@ -11,6 +11,7 @@ rules:
     verbs:
       - get
       - update
+      - patch
       - watch
       - list
   - apiGroups:
@@ -22,4 +23,11 @@ rules:
       - update
       - list
       - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+      - delete
 {{- end -}}

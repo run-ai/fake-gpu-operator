@@ -67,7 +67,7 @@ func (app *MigFakeApp) Init(stop chan struct{}) {
 
 	app.SyncableMigConfig = NewSyncableMigConfig()
 
-	app.MigFaker = NewMigFaker(app.KubeClient)
+	app.MigFaker = NewMigFaker(app.KubeClient, app.KubeClient.ClientSet)
 }
 
 func (app *MigFakeApp) Name() string {

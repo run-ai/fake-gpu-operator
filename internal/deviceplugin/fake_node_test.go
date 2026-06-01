@@ -25,9 +25,11 @@ var _ = Describe("FakeNodeDevicePlugin.Serve", func() {
 		fakeClient := fake.NewSimpleClientset(node)
 
 		fakeNodeDevicePlugin := &FakeNodeDevicePlugin{
-			kubeClient:   fakeClient,
-			gpuCount:     1,
-			otherDevices: map[string]int{"device1": 2},
+			kubeClient: fakeClient,
+			resources: map[string]int{
+				nvidiaGPUResourceName: 1,
+				"device1":             2,
+			},
 		}
 
 		err = fakeNodeDevicePlugin.Serve()

@@ -50,18 +50,14 @@ func (p *ConfigMapHandler) HandleAdd(cm *v1.ConfigMap) error {
 func (p *ConfigMapHandler) applyFakeDevicePlugin(nodeTopology *topology.NodeTopology, nodeName string) error {
 	nodePatch := &v1.Node{
 		Status: v1.NodeStatus{
-			Capacity: v1.ResourceList{
-				v1.ResourceName(constants.GpuResourceName): *resource.NewQuantity(int64(len(nodeTopology.Gpus)), resource.DecimalSI),
-			},
-			Allocatable: v1.ResourceList{
-				v1.ResourceName(constants.GpuResourceName): *resource.NewQuantity(int64(len(nodeTopology.Gpus)), resource.DecimalSI),
-			},
+			Capacity:    v1.ResourceList{},
+			Allocatable: v1.ResourceList{},
 		},
 	}
 
-	for _, otherDevice := range nodeTopology.OtherDevices {
-		nodePatch.Status.Capacity[v1.ResourceName(otherDevice.Name)] = *resource.NewQuantity(int64(otherDevice.Count), resource.DecimalSI)
-		nodePatch.Status.Allocatable[v1.ResourceName(otherDevice.Name)] = *resource.NewQuantity(int64(otherDevice.Count), resource.DecimalSI)
+	for _, advertisedResource := range topology.AdvertisedResources(nodeTopology) {
+		nodePatch.Status.Capacity[v1.ResourceName(advertisedResource.Name)] = *resource.NewQuantity(int64(advertisedResource.Count), resource.DecimalSI)
+		nodePatch.Status.Allocatable[v1.ResourceName(advertisedResource.Name)] = *resource.NewQuantity(int64(advertisedResource.Count), resource.DecimalSI)
 	}
 
 	patchBytes, err := json.Marshal(nodePatch)

@@ -154,6 +154,90 @@ When requests flow to this inference pod, GPU utilization metrics will reflect t
 - `workloadKind: "InferenceWorkload"` - Single-node inference with Knative metrics
 - `workloadKind: "DistributedWorkload"` - Distributed inference with Knative metrics
 
+## 🧩 NVIDIA MIG (Multi-Instance GPU)
+
+The Fake GPU Operator can simulate [MIG](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/) so that a single simulated GPU is published to the scheduler as its individual MIG slices (e.g. `nvidia.com/mig-1g.5gb`). This runs on the **legacy device-plugin path** (not DRA), driven by the `mig-faker` component.
+
+> **Note:** MIG resource _scheduling_ is supported; per-slice metrics monitoring is not yet supported.
+
+### 1. Enable the device plugin and the `mixed` MIG strategy
+
+MIG uses the device plugin, so make sure the DRA plugin is disabled. Set `migStrategy: mixed` so MIG-enabled GPUs are advertised as their individual profiles:
+
+```yaml
+# values.yaml
+devicePlugin:
+  enabled: true
+migFaker:
+  enabled: true
+draPlugin:
+  enabled: false  # device-plugin and DRA are mutually exclusive
+topology:
+  migStrategy: mixed
+  nodePools:
+    mig-pool:
+      gpuProduct: NVIDIA-A100-SXM4-40GB
+      gpuCount: 1
+      gpuMemory: 40960
+```
+
+### 2. Label the node
+
+In addition to the node-pool label, label the node so `mig-faker` runs on it:
+
+```bash
+kubectl label node <node-name> run.ai/simulated-gpu-node-pool=mig-pool --overwrite
+kubectl label node <node-name> node-role.kubernetes.io/runai-dynamic-mig=true --overwrite
+```
+
+### 3. Apply a MIG config annotation
+
+`mig-faker` watches the `run.ai/mig.config` node annotation. Its value is a YAML document that selects which GPU indices to slice and into which profiles. For example, to slice GPU `0` into seven `1g.5gb` instances:
+
+```bash
+kubectl annotate node <node-name> run.ai/mig.config='
+version: v1
+mig-configs:
+  selected:
+  - devices: ["0"]          # GPU indices to enable MIG on; use ["all"] for every GPU
+    mig-enabled: true
+    mig-devices:
+    - {name: 1g.5gb, position: 0, size: 1}
+    - {name: 1g.5gb, position: 1, size: 1}
+    - {name: 1g.5gb, position: 2, size: 1}
+    - {name: 1g.5gb, position: 3, size: 1}
+    - {name: 1g.5gb, position: 4, size: 1}
+    - {name: 1g.5gb, position: 5, size: 1}
+    - {name: 1g.5gb, position: 6, size: 1}
+' --overwrite
+```
+
+`devices` entries are GPU indices as strings (or `["all"]`). Valid profile `name`s depend on the GPU product (e.g. `1g.5gb`, `2g.10gb`, `3g.20gb` for A100-40GB).
+
+`mig-faker` then marks the node with `nvidia.com/mig.config.state: success`, records the slices in the node's topology ConfigMap, and restarts the device-plugin pod so kubelet picks up the new resources.
+
+### 4. Verify and schedule
+
+```bash
+kubectl get node <node-name> -o jsonpath='{.status.allocatable}' | tr ',' '\n' | grep nvidia
+# nvidia.com/mig-1g.5gb":"7"
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mig-pod
+spec:
+  containers:
+  - name: main
+    image: ubuntu:22.04
+    command: ["sleep", "infinity"]
+    resources:
+      limits:
+        nvidia.com/mig-1g.5gb: 1
+```
+
 ## 🔌 Dynamic Resource Allocation (DRA)
 
 For Kubernetes 1.31+, you can use the DRA plugin instead of the legacy device plugin.

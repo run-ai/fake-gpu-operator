@@ -1,0 +1,80 @@
+# E2E values for the device-plugin / mig-faker suite.
+#
+# Enables the legacy Kubelet device-plugin path (mutually exclusive with DRA) so
+# that mig-faker can turn migStrategy: mixed into nvidia.com/mig-<profile>
+# resources in node allocatable.
+
+environment:
+  openshift: false
+  resourceReservationNamespace: runai-reservation
+
+# status-updater creates/maintains the per-node topology ConfigMaps and labels
+# the real node with nvidia.com/gpu.deploy.device-plugin.
+statusUpdater:
+  enabled: true
+  runaiIntegration:
+    enabled: false
+  image:
+    pullPolicy: Never
+
+# topology-server backs nvidia-smi and is a light dependency; keep it on.
+topologyServer:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# The cluster topology ConfigMap that status-updater reads.
+topologyConfigMap:
+  enabled: true
+
+# The component under test: legacy device-plugin (advertises nvidia.com/gpu and,
+# after mig-faker runs, nvidia.com/mig-<profile>).
+devicePlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# The component under test: mig-faker.
+migFaker:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+# Everything else off — this suite is intentionally device-plugin-only.
+draPlugin:
+  enabled: false
+
+statusExporter:
+  enabled: false
+
+kwokGpuDevicePlugin:
+  enabled: false
+
+kwokDraPlugin:
+  enabled: false
+
+computeDomainController:
+  enabled: false
+
+computeDomainDraPlugin:
+  enabled: false
+
+kwokComputeDomainDraPlugin:
+  enabled: false
+
+gpuOperator:
+  enabled: false
+
+runtimeClass:
+  enabled: false
+
+# GPU topology: a single MIG-capable A100 pool. migStrategy: mixed means a
+# MIG-enabled GPU is published as its individual nvidia.com/mig-<profile> slices.
+topology:
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+  migStrategy: mixed
+  nodePools:
+    mig-pool:
+      gpuProduct: NVIDIA-A100-SXM4-40GB
+      gpuCount: 2
+      gpuMemory: 40960
