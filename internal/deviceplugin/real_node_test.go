@@ -31,10 +31,7 @@ var _ = Describe("RealNodeDevicePlugin Allocate", func() {
 		Expect(resp.ContainerResponses).To(HaveLen(1))
 
 		container := resp.ContainerResponses[0]
-		// The actual fix for RUN-39004: NODE_NAME must be propagated so nvidia-smi
-		// can resolve its node topology instead of querying an empty node.
 		Expect(container.Envs).To(HaveKeyWithValue(constants.EnvNodeName, nodeName))
-		// Pre-existing behavior must be preserved.
 		Expect(container.Envs).To(HaveKeyWithValue("MOCK_NVIDIA_VISIBLE_DEVICES", "gpu-0,gpu-1"))
 		Expect(container.Mounts).To(ContainElement(&pluginapi.Mount{
 			ContainerPath: "/bin/nvidia-smi",

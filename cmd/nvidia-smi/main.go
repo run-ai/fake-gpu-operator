@@ -79,9 +79,6 @@ func getNvidiaSmiArgs() []nvidiaSmiArgs {
 		}
 	}()
 
-	// Guard against non-JSON responses (e.g. an empty NODE_NAME yields a plain-text
-	// error from topology-server) so we fail with a clear message instead of a
-	// cryptic JSON decode panic.
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		panic(fmt.Sprintf("topology-server returned %d for %s: %s", resp.StatusCode, topologyUrl, strings.TrimSpace(string(body))))

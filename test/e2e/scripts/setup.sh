@@ -102,11 +102,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
     echo "Waiting for status-updater pod to be ready..."
     kubectl wait --for=condition=Ready pod -l app=status-updater -n gpu-operator --timeout=120s
 
-    # Only present when devicePlugin.enabled=true (e.g. values.yaml, not values-profiles.yaml).
-    # The daemonset schedules on the real worker (status-updater labels it
-    # nvidia.com/gpu.deploy.device-plugin=true) and exits(1) until status-updater creates the
-    # node topology CM, so it may restart once before settling — rollout status waits for the
-    # eventual Ready pod.
+    # Present only when devicePlugin.enabled=true (values.yaml, not values-profiles.yaml).
     if kubectl get daemonset/device-plugin -n gpu-operator >/dev/null 2>&1; then
         echo "Waiting for device-plugin daemonset to be ready..."
         kubectl rollout status daemonset/device-plugin -n gpu-operator --timeout=180s

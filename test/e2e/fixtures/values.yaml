@@ -30,10 +30,8 @@ topologyServer:
 topologyConfigMap:
   enabled: true
 
-# Enable the legacy device-plugin path so its nvidia-smi behavior is covered (RUN-39004).
-# The daemonset is gated by the nvidia.com/gpu.deploy.device-plugin nodeSelector, which
-# status-updater sets only on the real (non-KWOK) worker — so it stays confined to that
-# node and does not affect the KWOK-based DRA tests.
+# Enabled to cover the legacy device-plugin nvidia-smi path (gated to the real worker
+# by the nvidia.com/gpu.deploy.device-plugin nodeSelector, so KWOK/DRA tests are unaffected).
 devicePlugin:
   enabled: true
   image:

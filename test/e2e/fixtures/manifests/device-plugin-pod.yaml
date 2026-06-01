@@ -1,8 +1,4 @@
-# Non-DRA pod exercising the legacy device-plugin path (RUN-39004).
-# Requests the nvidia.com/gpu extended resource (NOT a ResourceClaim), which the fake
-# RealNodeDevicePlugin advertises on the real worker. Allocate() bind-mounts
-# /bin/nvidia-smi and injects NODE_NAME so the in-container nvidia-smi can resolve its
-# node topology instead of panicking on an empty-node response.
+# Non-DRA pod: requests the nvidia.com/gpu extended resource (not a ResourceClaim).
 apiVersion: v1
 kind: Namespace
 metadata:
