@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -72,16 +71,6 @@ func getNvidiaSmiArgs() []nvidiaSmiArgs {
 	resp, err := http.Get(topologyUrl)
 	if err != nil {
 		panic(err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			fmt.Printf("Error closing response body: %v\n", err)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		panic(fmt.Sprintf("topology-server returned %d for %s: %s", resp.StatusCode, topologyUrl, strings.TrimSpace(string(body))))
 	}
 
 	var nodeTopology topology.NodeTopology

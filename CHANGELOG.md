@@ -8,22 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- E2E coverage for the legacy device-plugin path in `make e2e`: enables
-  `devicePlugin` and adds a spec that runs `/bin/nvidia-smi` in a non-DRA
-  `nvidia.com/gpu` pod, guarding against the regression below.
-  ([#191](https://github.com/run-ai/fake-gpu-operator/issues/191), RUN-39004)
-
 ### Changed
 
 ### Fixed
 
-- `device-plugin` `Allocate()` now injects `NODE_NAME` into workload
-  containers, reaching parity with the DRA/CDI path. Without it, a non-DRA pod
-  running `/bin/nvidia-smi` queried an empty node on `topology-server` and
-  panicked decoding the plain-text error response
-  (`invalid character 'C'`). `nvidia-smi` also now fails with a clear message
-  on non-2xx topology responses instead of a JSON-decode panic.
-  ([#191](https://github.com/run-ai/fake-gpu-operator/issues/191), RUN-39004)
+- `device-plugin` injects `NODE_NAME` so non-DRA pods can run the fake `nvidia-smi`. ([#191](https://github.com/run-ai/fake-gpu-operator/issues/191))
 
 
 ## [0.0.81] - 2026-05-27
