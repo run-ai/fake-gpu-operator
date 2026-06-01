@@ -63,11 +63,22 @@ func enumerateAllPossibleDevices(nodeName string) (AllocatableDevices, error) {
 		// Use ID (UUID) as device name, convert to lowercase for RFC 1123 compliance
 		deviceName := strings.ToLower(gpu.ID)
 
+		// gpu.nvidia.com/* keys are required: upstream DeviceClass CEL reads
+		// device.attributes['gpu.nvidia.com'].type. Unqualified uuid/model kept for back-compat.
 		attributes := map[resourceapi.QualifiedName]resourceapi.DeviceAttribute{
 			"uuid": {
 				StringValue: ptr.To(gpu.ID),
 			},
 			"model": {
+				StringValue: ptr.To(nodeTopology.GpuProduct),
+			},
+			"gpu.nvidia.com/type": {
+				StringValue: ptr.To("gpu"),
+			},
+			"gpu.nvidia.com/uuid": {
+				StringValue: ptr.To(gpu.ID),
+			},
+			"gpu.nvidia.com/productName": {
 				StringValue: ptr.To(nodeTopology.GpuProduct),
 			},
 		}

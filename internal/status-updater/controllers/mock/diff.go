@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"reflect"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -54,16 +56,27 @@ func DiffDaemonSets(desired []*appsv1.DaemonSet, actual []appsv1.DaemonSet) Daem
 	return d
 }
 
-// daemonsetNeedsUpdate returns true iff the first container image OR the
-// config-hash annotation differs. Other fields are sourced from the
-// status-updater pod's env/values or hardcoded in resources.go and only
-// change across a status-updater rollout — so a CM-driven reconcile cannot
-// observe a difference there.
+// daemonsetNeedsUpdate returns true iff the first container's image,
+// command, args, or lifecycle hooks differ; or the config-hash annotation
+// differs. Command/Args/Lifecycle are checked because resources.go evolves
+// across status-updater versions (e.g., adding a postStart hook for the
+// toolkit-ready marker write) — bumping status-updater needs to propagate
+// those changes to existing DSes.
 func daemonsetNeedsUpdate(want, have *appsv1.DaemonSet) bool {
 	if len(want.Spec.Template.Spec.Containers) == 0 || len(have.Spec.Template.Spec.Containers) == 0 {
 		return true
 	}
-	if want.Spec.Template.Spec.Containers[0].Image != have.Spec.Template.Spec.Containers[0].Image {
+	wantC, haveC := want.Spec.Template.Spec.Containers[0], have.Spec.Template.Spec.Containers[0]
+	if wantC.Image != haveC.Image {
+		return true
+	}
+	if !reflect.DeepEqual(wantC.Command, haveC.Command) {
+		return true
+	}
+	if !reflect.DeepEqual(wantC.Args, haveC.Args) {
+		return true
+	}
+	if !reflect.DeepEqual(wantC.Lifecycle, haveC.Lifecycle) {
 		return true
 	}
 	return want.Spec.Template.Annotations[ConfigHashAnnotation] != have.Spec.Template.Annotations[ConfigHashAnnotation]

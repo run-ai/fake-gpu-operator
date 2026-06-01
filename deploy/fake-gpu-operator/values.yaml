@@ -254,6 +254,13 @@ gpu-operator:
     enabled: false
   toolkit:
     enabled: false
+    # When toolkit.enabled is flipped to true, the installer's device-node
+    # enumeration step queries real NVML and fails on mock-NVML nodes with
+    # "no NVIDIA devices found". Skip it — nvml-mock already creates the
+    # /dev/nvidia* nodes under its driver root.
+    env:
+      - name: CREATE_DEVICE_NODES
+        value: "none"
   dcgm:
     enabled: false
   dcgmExporter:
@@ -276,8 +283,13 @@ gpu-operator:
     env:
       - name: NVIDIA_DRIVER_ROOT
         value: "/var/lib/nvml-mock/driver"
+  # GFD's job (write nvidia.com/gpu.product/count/memory node labels) is
+  # already covered by FGO's status-exporter, which reads from the topology
+  # CM. GFD's own NVML lookup fails on mock-NVML containers because its
+  # pod template doesn't mount /var/lib/nvml-mock. Disabled to avoid a
+  # cosmetic CrashLoopBackOff that doesn't add functionality.
   gfd:
-    enabled: true
+    enabled: false
     env:
       - name: NVIDIA_DRIVER_ROOT
         value: "/var/lib/nvml-mock/driver"

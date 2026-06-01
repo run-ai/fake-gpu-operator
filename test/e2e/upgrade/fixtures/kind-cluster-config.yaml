@@ -1,0 +1,13 @@
+# KIND cluster for the helm-upgrade e2e suite.
+# Minimal config: one worker labeled for the default pool. No feature gates,
+# no CDI, no nvidia-container-toolkit setup — the upgrade flow exercises chart
+# templates and their workload pods only, not the mock NVML stack.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: upgrade-cluster
+
+nodes:
+  - role: control-plane
+  - role: worker
+    labels:
+      run.ai/simulated-gpu-node-pool: default-pool
