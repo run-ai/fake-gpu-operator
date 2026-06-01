@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -31,10 +30,6 @@ type RealNodeDevicePlugin struct {
 	server *grpc.Server
 
 	resourceName string
-}
-
-func getGpuCount(nodeTopology *topology.NodeTopology) int {
-	return len(nodeTopology.Gpus)
 }
 
 func (m *RealNodeDevicePlugin) GetDevicePluginOptions(context.Context, *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {

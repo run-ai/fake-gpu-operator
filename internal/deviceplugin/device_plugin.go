@@ -1,7 +1,9 @@
 package deviceplugin
 
 import (
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
@@ -20,41 +22,58 @@ type Interface interface {
 	Name() string
 }
 
-func NewDevicePlugins(topology *topology.NodeTopology, kubeClient kubernetes.Interface) []Interface {
-	if topology == nil {
+func NewDevicePlugins(nodeTopology *topology.NodeTopology, kubeClient kubernetes.Interface) []Interface {
+	if nodeTopology == nil {
 		panic("topology is nil")
 	}
 
+	resources := topology.AdvertisedResources(nodeTopology)
 	if viper.GetBool(constants.EnvFakeNode) {
-		otherDevices := make(map[string]int)
-		for _, genericDevice := range topology.OtherDevices {
-			otherDevices[genericDevice.Name] = genericDevice.Count
+		deviceResources := make(map[string]int)
+		for _, resource := range resources {
+			deviceResources[resource.Name] = resource.Count
 		}
 
 		return []Interface{&FakeNodeDevicePlugin{
-			kubeClient:   kubeClient,
-			gpuCount:     getGpuCount(topology),
-			otherDevices: otherDevices,
+			kubeClient: kubeClient,
+			resources:  deviceResources,
 		}}
 	}
 
-	devicePlugins := []Interface{
-		&RealNodeDevicePlugin{
-			devs:         createDevices(getGpuCount(topology)),
-			socket:       serverSock,
-			resourceName: nvidiaGPUResourceName,
-		},
-	}
-
-	for _, genericDevice := range topology.OtherDevices {
+	devicePlugins := make([]Interface, 0, len(resources))
+	for _, resource := range resources {
 		devicePlugins = append(devicePlugins, &RealNodeDevicePlugin{
-			devs:         createDevices(genericDevice.Count),
-			socket:       path.Join(pluginapi.DevicePluginPath, normalizeDeviceName(genericDevice.Name)+".sock"),
-			resourceName: genericDevice.Name,
+			devs:         createDevices(resource.Count),
+			socket:       resourceSocket(resource.Name),
+			resourceName: resource.Name,
+			stop:         make(chan interface{}),
+			health:       make(chan *pluginapi.Device),
 		})
 	}
 
 	return devicePlugins
+}
+
+func CleanupStaleSockets() error {
+	sockets, err := filepath.Glob(path.Join(pluginapi.DevicePluginPath, "fake-*.sock"))
+	if err != nil {
+		return err
+	}
+
+	for _, socket := range sockets {
+		if err := os.Remove(socket); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func resourceSocket(resourceName string) string {
+	if resourceName == nvidiaGPUResourceName {
+		return serverSock
+	}
+	return path.Join(pluginapi.DevicePluginPath, "fake-"+normalizeDeviceName(resourceName)+".sock")
 }
 
 func normalizeDeviceName(deviceName string) string {

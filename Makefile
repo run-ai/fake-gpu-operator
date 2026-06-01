@@ -72,6 +72,21 @@ teardown-e2e-mock:
 e2e-mock: setup-e2e-mock test-e2e-mock teardown-e2e-mock
 .PHONY: e2e-mock
 
+setup-e2e-device-plugin: ginkgo
+	test/e2e/device-plugin/scripts/setup.sh
+.PHONY: setup-e2e-device-plugin
+
+test-e2e-device-plugin: ginkgo
+	cd test/e2e/device-plugin && $(GINKGO) --procs=1 --timeout=30m --trace
+.PHONY: test-e2e-device-plugin
+
+teardown-e2e-device-plugin:
+	test/e2e/device-plugin/scripts/teardown.sh
+.PHONY: teardown-e2e-device-plugin
+
+e2e-device-plugin: setup-e2e-device-plugin test-e2e-device-plugin teardown-e2e-device-plugin
+.PHONY: e2e-device-plugin
+
 clean:
 	rm -rf ${BUILD_DIR}
 .PHONY: clean

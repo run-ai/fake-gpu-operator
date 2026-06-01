@@ -1,0 +1,19 @@
+# KIND cluster for the device-plugin / mig-faker e2e suite.
+#
+# Unlike the main suite (DRA-based, KWOK nodes) this suite exercises the legacy
+# Kubelet device-plugin path: the device-plugin registers sockets with a REAL
+# kubelet, and mig-faker drives MIG resources onto that node. KWOK nodes have no
+# kubelet, so a real kind worker is required.
+#
+# The worker is dedicated to the MIG/device-plugin path; setup.sh labels it with
+# the pool label plus the MIG-specific labels (nvidia.com/gpu.present and
+# node-role.kubernetes.io/runai-dynamic-mig).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: device-plugin-cluster
+
+nodes:
+  - role: control-plane
+  - role: worker
+    labels:
+      run.ai/simulated-gpu-node-pool: mig-pool

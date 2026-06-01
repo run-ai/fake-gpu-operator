@@ -16,22 +16,17 @@ import (
 )
 
 type FakeNodeDevicePlugin struct {
-	kubeClient   kubernetes.Interface
-	gpuCount     int
-	otherDevices map[string]int
+	kubeClient kubernetes.Interface
+	resources  map[string]int
 }
 
 func (f *FakeNodeDevicePlugin) Serve() error {
 	nodeStatus := v1.NodeStatus{
-		Capacity: v1.ResourceList{
-			v1.ResourceName(nvidiaGPUResourceName): *resource.NewQuantity(int64(f.gpuCount), resource.DecimalSI),
-		},
-		Allocatable: v1.ResourceList{
-			v1.ResourceName(nvidiaGPUResourceName): *resource.NewQuantity(int64(f.gpuCount), resource.DecimalSI),
-		},
+		Capacity:    v1.ResourceList{},
+		Allocatable: v1.ResourceList{},
 	}
 
-	for deviceName, count := range f.otherDevices {
+	for deviceName, count := range f.resources {
 		nodeStatus.Capacity[v1.ResourceName(deviceName)] = *resource.NewQuantity(int64(count), resource.DecimalSI)
 		nodeStatus.Allocatable[v1.ResourceName(deviceName)] = *resource.NewQuantity(int64(count), resource.DecimalSI)
 	}
