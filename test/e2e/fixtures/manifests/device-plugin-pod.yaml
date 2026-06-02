@@ -1,0 +1,22 @@
+# Non-DRA pod: requests the nvidia.com/gpu extended resource (not a ResourceClaim).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gpu-test-device-plugin
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: gpu-test-device-plugin
+  name: device-plugin-pod0
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: ctr0
+    image: ubuntu:22.04
+    command: ["bash", "-c"]
+    args: ["trap 'exit 0' TERM; sleep 9999 & wait"]
+    resources:
+      limits:
+        nvidia.com/gpu: "1"

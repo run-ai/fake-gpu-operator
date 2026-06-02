@@ -68,11 +68,6 @@ spec:
     resources:
       limits:
         nvidia.com/gpu: 1
-    env:
-      - name: NODE_NAME
-        valueFrom:
-          fieldRef:
-            fieldPath: spec.nodeName
 ```
 
 ## 🛠️ Configuration
@@ -408,15 +403,10 @@ kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged
 
 ### nvidia-smi Support
 
-The operator injects a simulated `nvidia-smi` tool into GPU pods. Ensure your pods include the required environment variable:
-
-```yaml
-env:
-  - name: NODE_NAME
-    valueFrom:
-      fieldRef:
-        fieldPath: spec.nodeName
-```
+The operator injects a simulated `nvidia-smi` tool into GPU pods. `nvidia-smi` uses the
+`NODE_NAME` environment variable to resolve the pod's node topology; both the device-plugin
+and the DRA driver inject it automatically at allocation time, so no manual pod configuration
+is required.
 
 ## 🤝 Contributing
 

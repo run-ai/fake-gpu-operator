@@ -30,9 +30,12 @@ topologyServer:
 topologyConfigMap:
   enabled: true
 
-# Disable components not needed for e2e tests
+# Enabled to cover the legacy device-plugin nvidia-smi path (gated to the real worker
+# by the nvidia.com/gpu.deploy.device-plugin nodeSelector, so KWOK/DRA tests are unaffected).
 devicePlugin:
-  enabled: false
+  enabled: true
+  image:
+    pullPolicy: Never
 
 statusExporter:
   enabled: true
