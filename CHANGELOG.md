@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- README: "Mixed Real + Fake GPU Nodes" guide for running alongside a real NVIDIA GPU Operator (install in a separate namespace and disable the colliding `devicePlugin`, `statusExporter`, and `runtimeClass` components).
+
 ### Changed
 
 ### Fixed
