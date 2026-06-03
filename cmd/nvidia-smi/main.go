@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -39,26 +40,27 @@ func main() {
 		fmt.Println("Debug mode enabled")
 	}
 
-	err := os.Setenv(constants.EnvTopologyCmNamespace, "gpu-operator")
-	if err != nil {
-		panic(err)
-	}
-	err = os.Setenv(constants.EnvTopologyCmName, "topology")
-	if err != nil {
-		panic(err)
-	}
+	args, errs := getNvidiaSmiArgs()
 
-	if conf.Debug {
-		fmt.Printf("Set topology configmap namespace: %s\n", constants.EnvTopologyCmNamespace)
-		fmt.Printf("Set topology configmap name: %s\n", constants.EnvTopologyCmName)
+	if len(args) == 0 {
+		fmt.Println("no devices found")
+		printErrors(errs)
+		os.Exit(1)
 	}
-
-	args := getNvidiaSmiArgs()
 
 	printArgs(args)
+	printErrors(errs)
 }
 
-func getNvidiaSmiArgs() []nvidiaSmiArgs {
+func printErrors(errs []error) {
+	for _, err := range errs {
+		fmt.Fprintln(os.Stderr, err)
+	}
+}
+
+func getNvidiaSmiArgs() ([]nvidiaSmiArgs, []error) {
+	var errs []error
+
 	nodeName := os.Getenv(constants.EnvNodeName)
 	if conf.Debug {
 		fmt.Printf("Node name: %s\n", nodeName)
@@ -68,26 +70,40 @@ func getNvidiaSmiArgs() []nvidiaSmiArgs {
 	if conf.Debug {
 		fmt.Printf("Requesting topology from: %s\n", topologyUrl)
 	}
+	// Topology is required to render any device, so fetch/status/decode failures
+	// are fatal: accumulate the error and return no devices.
 	resp, err := http.Get(topologyUrl)
 	if err != nil {
-		panic(err)
+		return nil, append(errs, fmt.Errorf("fetching topology from %s: %w", topologyUrl, err))
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing topology response body: %v\n", err)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, append(errs, fmt.Errorf("topology server %s returned %s: %s", topologyUrl, resp.Status, strings.TrimSpace(string(body))))
 	}
 
 	var nodeTopology topology.NodeTopology
-	err = json.NewDecoder(resp.Body).Decode(&nodeTopology)
-	if err != nil {
-		panic(err)
+	if err := json.NewDecoder(resp.Body).Decode(&nodeTopology); err != nil {
+		return nil, append(errs, fmt.Errorf("decoding topology from %s: %w", topologyUrl, err))
 	}
 	if conf.Debug {
 		fmt.Printf("Received topology: %+v\n", nodeTopology)
 	}
 
+	// gpuPortion only affects reported memory; a bad RUNAI_NUM_OF_GPUS is
+	// non-fatal — keep the default and still render the table.
 	gpuPortion := 1.0
 	numOfGpus := os.Getenv("RUNAI_NUM_OF_GPUS")
 	if numOfGpus != "" {
-		gpuPortion, err = strconv.ParseFloat(numOfGpus, 32)
-		if err != nil {
-			panic(err)
+		if parsed, err := strconv.ParseFloat(numOfGpus, 32); err != nil {
+			errs = append(errs, fmt.Errorf("parsing RUNAI_NUM_OF_GPUS %q: %w", numOfGpus, err))
+		} else {
+			gpuPortion = parsed
 		}
 		if conf.Debug {
 			fmt.Printf("GPU portion from RUNAI_NUM_OF_GPUS: %f\n", gpuPortion)
@@ -101,7 +117,11 @@ func getNvidiaSmiArgs() []nvidiaSmiArgs {
 		fmt.Printf("Current pod name: %s, UUID: %s\n", currentPodName, currentPodUuid)
 	}
 
-	processName := readProcessName()
+	// A missing process name only blanks one table column — non-fatal.
+	processName, err := readProcessName()
+	if err != nil {
+		errs = append(errs, err)
+	}
 
 	var allArgs []nvidiaSmiArgs
 	for idx, gpu := range nodeTopology.Gpus {
@@ -140,27 +160,26 @@ func getNvidiaSmiArgs() []nvidiaSmiArgs {
 		})
 	}
 
-	return allArgs
+	return allArgs, errs
 }
 
-func readProcessName() string {
+func readProcessName() (string, error) {
 	cmdlineFile, err := os.Open("/proc/1/cmdline")
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("opening /proc/1/cmdline: %w", err)
 	}
 	defer func() {
 		if err := cmdlineFile.Close(); err != nil {
-			fmt.Printf("Error closing cmdline file: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error closing cmdline file: %v\n", err)
 		}
 	}()
 
 	cmdlineBytes := make([]byte, 50)
-	_, err = cmdlineFile.Read(cmdlineBytes)
-	if err != nil {
-		panic(err)
+	if _, err := cmdlineFile.Read(cmdlineBytes); err != nil {
+		return "", fmt.Errorf("reading /proc/1/cmdline: %w", err)
 	}
 
-	return string(bytes.Trim(cmdlineBytes, "\x00"))
+	return string(bytes.Trim(cmdlineBytes, "\x00")), nil
 }
 
 func printArgs(allArgs []nvidiaSmiArgs) {
