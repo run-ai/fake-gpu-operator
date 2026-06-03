@@ -137,10 +137,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Need recent origin/main history for the latest-main lane to walk
-          # back through commits if the newest one's chart hasn't been
-          # published yet (release-helm runs ~5 min after a main merge).
-          fetch-depth: 10
+          # Need recent origin/main history AND tags for the latest-main lane:
+          # it walks first-parent commits to find a published chart, and falls
+          # back to the latest release tag if none is published yet.
+          fetch-depth: 40
+          fetch-tags: true
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -160,11 +161,16 @@ jobs:
             echo "version=${{ matrix.baseline }}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Walk last 5 main commits; first one with a pullable chart wins.
-          # release-helm publishes 0.0.0-<7-char-sha> for every push to main.
-          git fetch origin main --depth=10
+          # release-helm publishes 0.0.0-<7-char-sha> only for first-parent
+          # commits (merge commits / direct pushes to main). Walking every
+          # commit would waste the window on feature-branch commits that a
+          # merge drags into history but that were never published — a single
+          # PR with >=4 commits could fill the whole window with dead SHAs.
+          # So walk --first-parent, and keep the window wide enough to ride out
+          # a streak of in-flight/unpublished commits.
+          git fetch origin main --depth=40
           CHART=oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator
-          for SHA in $(git log origin/main --format='%h' --max-count=5); do
+          for SHA in $(git log origin/main --first-parent --format='%h' --max-count=15); do
             VERSION="0.0.0-${SHA}"
             if helm pull "$CHART" --version "$VERSION" --destination /tmp >/dev/null 2>&1; then
               echo "Resolved latest-main chart: ${VERSION}"
@@ -173,8 +179,19 @@ jobs:
             fi
             echo "  not pullable: ${VERSION}"
           done
-          echo "ERROR: no published chart found for the last 5 main commits."
-          exit 1
+          # No recent main chart published yet — fall back to the latest release
+          # tag instead of failing. This keeps the lane (and the release gate it
+          # blocks via `needs`) from deadlocking when main charts are missing or
+          # in-flight: a hard failure here skips release-helm, which then never
+          # publishes the chart the next run would need.
+          git fetch origin --tags --depth=1 >/dev/null 2>&1 || true
+          LATEST="$(git tag -l 'v*' --sort=-v:refname | sed -n '1s/^v//p')"
+          if [[ -z "$LATEST" ]]; then
+            echo "ERROR: no recent main chart and no release tag to fall back to."
+            exit 1
+          fi
+          echo "No recent main chart published; falling back to latest release: ${LATEST}"
+          echo "version=${LATEST}" >> "$GITHUB_OUTPUT"
       - name: Run helm-upgrade e2e tests
         # Installs the resolved baseline chart, then upgrades to the chart on
         # this branch. Catches the RUN-39195 regression class — templates
