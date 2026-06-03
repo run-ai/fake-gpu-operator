@@ -415,6 +415,32 @@ kubectl get resourceslices | grep kwok
 kubectl get pod kwok-gpu-pod -o wide
 ```
 
+## 🔀 Mixed Real + Fake GPU Nodes
+
+You can run the Fake GPU Operator **alongside** a real NVIDIA GPU Operator on the same cluster: real-GPU nodes stay fully managed by the real operator, while simulated GPU nodes are added for scale and scheduler testing.
+
+By default the Fake GPU Operator is a drop-in replacement for the real one, so to make them coexist you must (1) install it in its **own namespace** (not `gpu-operator`) and (2) disable the components whose node selectors / cluster-scoped objects collide with the real operator:
+
+```yaml
+# mixed-mode-values.yaml — coexist with a real NVIDIA GPU Operator
+devicePlugin:   { enabled: false }  # selector collides with the real device-plugin on real-GPU nodes
+statusExporter: { enabled: false }  # selector collides with the real dcgm-exporter on real-GPU nodes
+runtimeClass:   { enabled: false }  # cluster-scoped RuntimeClass/nvidia is already owned by the real operator
+```
+
+Install into a dedicated namespace:
+
+```bash
+helm upgrade -i fake-gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator \
+  --namespace fake-gpu-operator --create-namespace \
+  --version <VERSION> -f mixed-mode-values.yaml
+```
+
+Then:
+
+- **Fake GPUs run on KWOK nodes** (see [KWOK Integration](#-kwok-integration-simulated-nodes) above). Their `nvidia.com/gpu` capacity is published by the central `kwok-gpu-device-plugin`, so the disabled per-node DaemonSets aren't needed, and the KWOK `NoSchedule` taint keeps the real operator's DaemonSets off the simulated nodes.
+- **Real-GPU nodes are left untouched** — simply do **not** label them with `run.ai/simulated-gpu-node-pool`. The `status-updater` only acts on nodes carrying that label, so the real operator keeps exclusive ownership of your hardware.
+
 ## 🔍 Troubleshooting
 
 ### Pod Security Admission
