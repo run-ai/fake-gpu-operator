@@ -98,12 +98,14 @@ e2e-upgrade: setup-e2e-upgrade upgrade-e2e-upgrade test-e2e-upgrade teardown-e2e
 .PHONY: e2e-upgrade
 
 # Convenience: run e2e-upgrade with the baseline pinned to the latest
-# pullable chart from origin/main (walks back through the last 5 commits
-# until one is found in the registry). CI does the same via matrix.
+# pullable chart from origin/main. Walks first-parent commits (only those
+# get a published 0.0.0-<sha> chart) and falls back to the latest release
+# tag if none is published yet. CI does the same via matrix.
 e2e-upgrade-from-main:
 	@CHART=oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator; \
-	git fetch origin main >/dev/null 2>&1 || true; \
-	for SHA in $$(git log origin/main --format='%h' --max-count=5); do \
+	git fetch origin main --depth=40 >/dev/null 2>&1 || true; \
+	git fetch origin --tags --depth=1 >/dev/null 2>&1 || true; \
+	for SHA in $$(git log origin/main --first-parent --format='%h' --max-count=15); do \
 		VERSION="0.0.0-$$SHA"; \
 		if helm pull $$CHART --version $$VERSION --destination /tmp >/dev/null 2>&1; then \
 			echo "Using main baseline: $$VERSION"; \
@@ -112,7 +114,10 @@ e2e-upgrade-from-main:
 		fi; \
 		echo "  not pullable: $$VERSION"; \
 	done; \
-	echo "ERROR: no chart found for the last 5 main commits"; exit 1
+	LATEST=$$(git tag -l 'v*' --sort=-v:refname | sed -n '1s/^v//p'); \
+	if [ -z "$$LATEST" ]; then echo "ERROR: no main chart and no release tag to fall back to"; exit 1; fi; \
+	echo "No recent main chart; falling back to latest release: $$LATEST"; \
+	BASELINE_CHART_VERSION=$$LATEST $(MAKE) e2e-upgrade
 .PHONY: e2e-upgrade-from-main
 
 clean:
