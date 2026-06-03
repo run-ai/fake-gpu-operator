@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- README: "Mock Backend (Real NVML)" section summarizing the `fake` vs `mock` backends and how to enable mock per pool (links to `docs/mock-backend.md`). (RUN-40088)
+
 ### Changed
 
 ### Fixed

@@ -149,6 +149,30 @@ When requests flow to this inference pod, GPU utilization metrics will reflect t
 - `workloadKind: "InferenceWorkload"` - Single-node inference with Knative metrics
 - `workloadKind: "DistributedWorkload"` - Distributed inference with Knative metrics
 
+## Mock Backend (Real NVML)
+
+Most pools use the **`fake`** backend, where FGO's own device-plugin advertises synthetic `nvidia.com/gpu`.
+
+Switch a pool to the **`mock`** backend to:
+
+- Run the **real upstream NVIDIA gpu-operator** components against simulated GPUs.
+- Support **apps that call NVML directly**, such as `nvidia-smi` or CUDA device discovery.
+
+It installs NVIDIA's [`nvml-mock`](https://github.com/NVIDIA/k8s-test-infra/tree/main/deployments/nvml-mock) on the pool's nodes. It runs privileged pods and writes host files under `/var/lib/nvml-mock`, so it is opt-in per pool:
+
+```yaml
+topology:
+  nodePools:
+    my-mock-pool:
+      gpu:
+        backend: mock
+        profile: a100        # or h100, b200, gb200, l40s, t4
+gpuOperator: { enabled: true }        # device-plugin path; also set gpu-operator.toolkit.enabled
+# nvidiaDraDriver: { enabled: true }  # or use this lighter DRA-only path instead
+```
+
+See **[docs/mock-backend.md](docs/mock-backend.md)** for profiles, caveats such as the cosmetic `ClusterPolicy NotReady` status, and cleanup notes.
+
 ## 🔌 Dynamic Resource Allocation (DRA)
 
 For Kubernetes 1.31+, you can use the DRA plugin instead of the legacy device plugin.
