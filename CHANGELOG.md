@@ -15,6 +15,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - `device-plugin` injects `NODE_NAME` so non-DRA pods can run the fake `nvidia-smi`. ([#191](https://github.com/run-ai/fake-gpu-operator/issues/191))
+- CI `e2e-upgrade (latest-main)` lane no longer deadlocks resolving its baseline
+  chart. It now walks `--first-parent` main commits (only those publish a
+  `0.0.0-<sha>` chart, so merges no longer fill the window with unpublished
+  feature-branch commits), widens the lookback, and falls back to the latest
+  release tag instead of hard-failing — a hard failure here skipped
+  `release-helm`, which then never published the chart the next run needed.
+  Mirrored in the `make e2e-upgrade-from-main` target. (RUN-40080)
 
 
 ## [0.0.81] - 2026-05-27
