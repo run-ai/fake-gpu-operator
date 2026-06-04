@@ -12,9 +12,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Built-in GPU profiles re-synced from NVIDIA/k8s-test-infra `main` (commit
+  `497fa04`): each profile now includes a `pcie_topology` block (PCI root
+  complexes with per-device `numa_node`), and a `gb300` profile is added. This
+  is what lets the mock backend report per-GPU NUMA affinity. (RUN-40173)
+- `hack/sync-profiles.sh`: default source bumped `v0.1.0` → `main`; now resolves
+  a tag, branch, or commit SHA (was tags/branches only) and records the resolved
+  commit in the generated `# Source:` header. (RUN-40173)
+
 ### Fixed
 
 - `device-plugin` injects `NODE_NAME` so non-DRA pods can run the fake `nvidia-smi`. ([#191](https://github.com/run-ai/fake-gpu-operator/issues/191))
+- `sync-gpu-profiles` workflow read the synced version with `head -2`, but the `# Source:` line is line 3, so the PR title/commit version was always empty. (RUN-40173)
 - CI `e2e-upgrade (latest-main)` lane no longer deadlocks resolving its baseline
   chart. It now walks `--first-parent` main commits (only those publish a
   `0.0.0-<sha>` chart, so merges no longer fill the window with unpublished

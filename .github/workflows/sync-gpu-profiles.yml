@@ -40,7 +40,7 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         id: version
         run: |
-          ver=$(head -2 deploy/fake-gpu-operator/templates/profiles/builtin.yaml | grep '# Source:' | sed 's/.*k8s-test-infra //')
+          ver=$(head -3 deploy/fake-gpu-operator/templates/profiles/builtin.yaml | grep '# Source:' | sed 's/.*k8s-test-infra //')
           echo "version=$ver" >> "$GITHUB_OUTPUT"
 
       - name: Create PR
