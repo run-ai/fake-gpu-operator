@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- README: "Mock Backend (Real NVML)" section summarizing the `fake` vs `mock` backends and how to enable mock per pool (links to `docs/mock-backend.md`). (RUN-40088)
 - README: "Mixed Real + Fake GPU Nodes" guide for running alongside a real NVIDIA GPU Operator (install in a separate namespace and disable the colliding `devicePlugin`, `statusExporter`, and `runtimeClass` components).
 
 ### Changed
