@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `release-helm`, which then never published the chart the next run needed.
   Mirrored in the `make e2e-upgrade-from-main` target. (RUN-40080)
 - Fake `nvidia-smi` exits gracefully instead of panicking on errors. ([#206](https://github.com/run-ai/fake-gpu-operator/issues/206))
+- Fake `nvidia-smi` failure output mirrors real `nvidia-smi` per error instead of one generic line.
 
 
 ## [0.0.81] - 2026-05-27

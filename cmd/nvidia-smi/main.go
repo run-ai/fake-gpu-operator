@@ -40,10 +40,10 @@ func main() {
 		fmt.Println("Debug mode enabled")
 	}
 
-	args, errs := getNvidiaSmiArgs()
+	args, summary, errs := getNvidiaSmiArgs()
 
 	if len(args) == 0 {
-		fmt.Println("no devices found")
+		fmt.Println(summary)
 		printErrors(errs)
 		os.Exit(1)
 	}
@@ -58,8 +58,10 @@ func printErrors(errs []error) {
 	}
 }
 
-func getNvidiaSmiArgs() ([]nvidiaSmiArgs, []error) {
-	var errs []error
+// getNvidiaSmiArgs returns the per-GPU rows to render. When no devices can be
+// obtained it returns an empty slice plus a user-facing summary line describing
+// the failure (printed to stdout), with the underlying causes in errs (stderr).
+func getNvidiaSmiArgs() (args []nvidiaSmiArgs, summary string, errs []error) {
 
 	nodeName := os.Getenv(constants.EnvNodeName)
 	if conf.Debug {
@@ -74,7 +76,7 @@ func getNvidiaSmiArgs() ([]nvidiaSmiArgs, []error) {
 	// are fatal: accumulate the error and return no devices.
 	resp, err := http.Get(topologyUrl)
 	if err != nil {
-		return nil, append(errs, fmt.Errorf("fetching topology from %s: %w", topologyUrl, err))
+		return nil, "NVIDIA-SMI has failed because it couldn't communicate with the topology server.", append(errs, fmt.Errorf("fetching topology from %s: %w", topologyUrl, err))
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -84,12 +86,12 @@ func getNvidiaSmiArgs() ([]nvidiaSmiArgs, []error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, append(errs, fmt.Errorf("topology server %s returned %s: %s", topologyUrl, resp.Status, strings.TrimSpace(string(body))))
+		return nil, "No devices were found", append(errs, fmt.Errorf("topology server %s returned %s: %s", topologyUrl, resp.Status, strings.TrimSpace(string(body))))
 	}
 
 	var nodeTopology topology.NodeTopology
 	if err := json.NewDecoder(resp.Body).Decode(&nodeTopology); err != nil {
-		return nil, append(errs, fmt.Errorf("decoding topology from %s: %w", topologyUrl, err))
+		return nil, "Failed to parse devices data", append(errs, fmt.Errorf("decoding topology from %s: %w", topologyUrl, err))
 	}
 	if conf.Debug {
 		fmt.Printf("Received topology: %+v\n", nodeTopology)
@@ -160,7 +162,7 @@ func getNvidiaSmiArgs() ([]nvidiaSmiArgs, []error) {
 		})
 	}
 
-	return allArgs, errs
+	return allArgs, "", errs
 }
 
 func readProcessName() (string, error) {
