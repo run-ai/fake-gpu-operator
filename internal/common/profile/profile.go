@@ -137,11 +137,13 @@ func DeviceCount(profile map[string]interface{}) int {
 	return 0
 }
 
-// PCITopology maps each GPU's device index to its NUMA node, derived from the
-// profile's pcie_topology block. Returns an empty (non-nil) map when the profile
-// has no pcie_topology (older profiles / override-only pools). BDFs are lowercased
-// before matching, since a profile's pcie_topology and devices[].pci.bus_id may
-// differ in case.
+// PCITopology maps each GPU's 0-based position in the profile's devices list to
+// its NUMA node, derived from the profile's pcie_topology block. Keys are list
+// positions (not the devices[].index field) to match the positional GPU ordering
+// used downstream (generateGpuDetails and the device-plugin). Returns an empty
+// (non-nil) map when the profile has no pcie_topology (older profiles /
+// override-only pools). BDFs are lowercased before matching, since a profile's
+// pcie_topology and devices[].pci.bus_id may differ in case.
 func PCITopology(profile map[string]interface{}) map[int]int {
 	result := map[int]int{}
 	if profile == nil {
@@ -183,12 +185,8 @@ func PCITopology(profile map[string]interface{}) map[int]int {
 	if !ok {
 		return result
 	}
-	for _, d := range devices {
+	for i, d := range devices {
 		dMap, ok := d.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		idx, ok := toInt(dMap["index"])
 		if !ok {
 			continue
 		}
@@ -201,7 +199,7 @@ func PCITopology(profile map[string]interface{}) map[int]int {
 			continue
 		}
 		if numa, ok := bdfToNUMA[strings.ToLower(busID)]; ok {
-			result[idx] = numa
+			result[i] = numa
 		}
 	}
 

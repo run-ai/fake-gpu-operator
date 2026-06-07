@@ -344,6 +344,28 @@ pcie_topology:
 `,
 			want: map[int]int{0: 0}, // index 1's BDF is not in pcie_topology -> omitted
 		},
+		"keys by list position, not the devices[].index field": {
+			yaml: `
+devices:
+  - index: 7
+    pci:
+      bus_id: "0000:07:00.0"
+  - index: 5
+    pci:
+      bus_id: "0000:87:00.0"
+pcie_topology:
+  root_complexes:
+    - id: "pci0000:00"
+      numa_node: 0
+      devices:
+        - "0000:07:00.0"
+    - id: "pci0000:80"
+      numa_node: 1
+      devices:
+        - "0000:87:00.0"
+`,
+			want: map[int]int{0: 0, 1: 1}, // positions 0,1 used; index fields 7,5 ignored
+		},
 	}
 
 	for name, tc := range cases {
