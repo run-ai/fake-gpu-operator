@@ -22,9 +22,11 @@ import (
 const (
 	serverSock = pluginapi.DevicePluginPath + "fake-nvidia-gpu.sock"
 
-	// sysDevicesSystemNodePath is where the host's /sys/devices/system/node is mounted
-	// read-only into the device-plugin container by the Helm chart (device-plugin DaemonSet).
-	sysDevicesSystemNodePath = "/host-sys-node"
+	// sysDevicesSystemNodePath is the per-NUMA-node sysfs dir, under the host /sys that the
+	// Helm chart mounts read-only at /host-sys. Mounting all of /sys (which always exists)
+	// rather than the leaf node dir lets the device-plugin pod start even when this subpath
+	// is absent (e.g. KIND / non-NUMA sysfs); realNUMACount then falls back to 1.
+	sysDevicesSystemNodePath = "/host-sys/devices/system/node"
 )
 
 var numaNodeDirRe = regexp.MustCompile(`^node[0-9]+$`)

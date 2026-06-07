@@ -51,8 +51,8 @@ containers:
         name: runai-shared-directory              
       - mountPath: /var/lib/kubelet/device-plugins
         name: device-plugin
-      - mountPath: /host-sys-node
-        name: host-sys-node
+      - mountPath: /host-sys
+        name: host-sys
         readOnly: true
 dnsPolicy: ClusterFirst
 restartPolicy: Always
@@ -78,7 +78,7 @@ volumes:
       type: DirectoryOrCreate
     name: runai-shared-directory
   - hostPath:
-      path: /sys/devices/system/node
-      type: ""
-    name: host-sys-node
+      path: /sys
+      type: Directory
+    name: host-sys
 {{- end }}
