@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/profile"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -197,4 +199,43 @@ func TestResolveNodePool_ProfileNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing profile, got nil")
 	}
+}
+
+func TestResolveNodePool_PopulatesGpuNUMA(t *testing.T) {
+	profileData := `
+device_defaults:
+  name: "NVIDIA A100"
+  memory:
+    total_bytes: 85899345920
+devices:
+  - index: 0
+    pci:
+      bus_id: "0000:07:00.0"
+  - index: 1
+    pci:
+      bus_id: "0000:87:00.0"
+pcie_topology:
+  root_complexes:
+    - id: "pci0000:00"
+      numa_node: 0
+      devices:
+        - "0000:07:00.0"
+    - id: "pci0000:80"
+      numa_node: 1
+      devices:
+        - "0000:87:00.0"
+`
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gpu-profile-a100",
+			Namespace: "default",
+		},
+		Data: map[string]string{profile.CmProfileKey: profileData},
+	}
+	client := fake.NewSimpleClientset(cm)
+
+	pool := NodePoolConfig{Gpu: GpuConfig{Backend: "fake", Profile: "a100"}}
+	resolved, err := ResolveNodePool(client, "default", pool)
+	require.NoError(t, err)
+	assert.Equal(t, map[int]int{0: 0, 1: 1}, resolved.GpuNUMA)
 }

@@ -15,6 +15,7 @@ type ResolvedPool struct {
 	GpuProduct   string
 	GpuMemory    int // MiB
 	GpuCount     int
+	GpuNUMA      map[int]int // gpu index -> NUMA node from profile pcie_topology; nil = override-only pool, empty = profile without pcie_topology
 	OtherDevices []GenericDevice
 }
 
@@ -63,6 +64,7 @@ func resolveWithProfile(kubeClient kubernetes.Interface, namespace string, pool 
 	resolved.GpuProduct = spec.GpuProduct
 	resolved.GpuMemory = spec.GpuMemory
 	resolved.GpuCount = spec.GpuCount
+	resolved.GpuNUMA = profile.PCITopology(merged)
 
 	return resolved, nil
 }
