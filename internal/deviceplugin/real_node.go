@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -20,7 +21,34 @@ import (
 
 const (
 	serverSock = pluginapi.DevicePluginPath + "fake-nvidia-gpu.sock"
+
+	// sysDevicesSystemNodePath is where the host's /sys/devices/system/node is mounted
+	// read-only into the device-plugin container by the Helm chart (device-plugin DaemonSet).
+	sysDevicesSystemNodePath = "/host-sys-node"
 )
+
+var numaNodeDirRe = regexp.MustCompile(`^node[0-9]+$`)
+
+// realNUMACount counts node<N> directories under the given sysfs node path.
+// It returns 1 when the path is missing, unreadable, or contains no node dirs,
+// so NUMA reporting degrades gracefully on nodes without NUMA sysfs.
+func realNUMACount(sysNodePath string) int {
+	entries, err := os.ReadDir(sysNodePath)
+	if err != nil {
+		log.Printf("realNUMACount: cannot read %s, defaulting to 1 NUMA node: %v", sysNodePath, err)
+		return 1
+	}
+	count := 0
+	for _, e := range entries {
+		if e.IsDir() && numaNodeDirRe.MatchString(e.Name()) {
+			count++
+		}
+	}
+	if count == 0 {
+		return 1
+	}
+	return count
+}
 
 type RealNodeDevicePlugin struct {
 	pluginapi.UnimplementedDevicePluginServer
