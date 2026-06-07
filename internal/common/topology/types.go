@@ -52,8 +52,9 @@ type NodeTopology struct {
 }
 
 type GpuDetails struct {
-	ID     string    `yaml:"id"`
-	Status GpuStatus `yaml:"status"`
+	ID       string    `yaml:"id"`
+	Status   GpuStatus `yaml:"status"`
+	NUMANode *int      `yaml:"numaNode,omitempty"`
 }
 
 type PodGpuUsageStatusMap map[types.UID]GpuUsageStatus
