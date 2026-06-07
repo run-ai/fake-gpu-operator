@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `status-updater` now records each GPU's NUMA node (`numaNode`) in the per-node
   topology ConfigMap, derived from the GPU profile's `pcie_topology`. This is the
   data the device-plugin uses to report GPU NUMA affinity. (RUN-40241)
+- Fake-backend device-plugin now reports per-GPU NUMA affinity in `Device.Topology`,
+  clamped to the node's real NUMA count, so NFD's topology-updater places fake GPUs
+  into the correct `NodeResourceTopology` zones on real (non-KWOK) nodes. (RUN-40242)
 
 ### Changed
 
