@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLoad_ValidProfile(t *testing.T) {
@@ -273,4 +274,86 @@ func TestExtract_MemoryAsInt(t *testing.T) {
 	}
 	spec := Extract(data)
 	assert.Equal(t, 16384, spec.GpuMemory)
+}
+
+func TestPCITopology(t *testing.T) {
+	// Note: devices[].pci.bus_id is UPPERCASE here, pcie_topology devices are
+	// lowercase, to prove case-insensitive matching.
+	const withTopology = `
+devices:
+  - index: 0
+    pci:
+      bus_id: "0000:07:00.0"
+  - index: 1
+    pci:
+      bus_id: "0000:0F:00.0"
+  - index: 2
+    pci:
+      bus_id: "0000:87:00.0"
+pcie_topology:
+  root_complexes:
+    - id: "pci0000:00"
+      numa_node: 0
+      devices:
+        - "0000:07:00.0"
+        - "0000:0f:00.0"
+    - id: "pci0000:80"
+      numa_node: 1
+      devices:
+        - "0000:87:00.0"
+`
+	const noTopology = `
+device_defaults:
+  name: "NVIDIA H100 80GB HBM3"
+devices:
+  - index: 0
+    pci:
+      bus_id: "0000:07:00.0"
+`
+	cases := map[string]struct {
+		yaml string
+		want map[int]int
+	}{
+		"maps each index to its root-complex NUMA (case-insensitive)": {
+			yaml: withTopology,
+			want: map[int]int{0: 0, 1: 0, 2: 1},
+		},
+		"no pcie_topology yields empty map": {
+			yaml: noTopology,
+			want: map[int]int{},
+		},
+		"nil profile yields empty map": {
+			yaml: "",
+			want: map[int]int{},
+		},
+		"device with unmatched BDF is omitted": {
+			yaml: `
+devices:
+  - index: 0
+    pci:
+      bus_id: "0000:07:00.0"
+  - index: 1
+    pci:
+      bus_id: "ffff:ff:00.0"
+pcie_topology:
+  root_complexes:
+    - id: "pci0000:00"
+      numa_node: 0
+      devices:
+        - "0000:07:00.0"
+`,
+			want: map[int]int{0: 0}, // index 1's BDF is not in pcie_topology -> omitted
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var prof map[string]interface{}
+			if tc.yaml != "" {
+				require.NoError(t, yaml.Unmarshal([]byte(tc.yaml), &prof))
+			}
+			got := PCITopology(prof)
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }

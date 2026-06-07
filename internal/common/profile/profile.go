@@ -3,6 +3,7 @@ package profile
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,6 +135,91 @@ func DeviceCount(profile map[string]interface{}) int {
 		return len(devices)
 	}
 	return 0
+}
+
+// PCITopology maps each GPU's device index to its NUMA node, derived from the
+// profile's pcie_topology block. Returns an empty (non-nil) map when the profile
+// has no pcie_topology (older profiles / override-only pools). BDFs are lowercased
+// before matching, since a profile's pcie_topology and devices[].pci.bus_id may
+// differ in case.
+func PCITopology(profile map[string]interface{}) map[int]int {
+	result := map[int]int{}
+	if profile == nil {
+		return result
+	}
+
+	pcie, ok := getMap(profile, "pcie_topology")
+	if !ok {
+		return result
+	}
+	complexes, ok := pcie["root_complexes"].([]interface{})
+	if !ok {
+		return result
+	}
+
+	// bus_id (BDF) -> numa_node
+	bdfToNUMA := map[string]int{}
+	for _, rc := range complexes {
+		rcMap, ok := rc.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		numa, ok := toInt(rcMap["numa_node"])
+		if !ok {
+			continue
+		}
+		devices, ok := rcMap["devices"].([]interface{})
+		if !ok {
+			continue
+		}
+		for _, d := range devices {
+			if bdf, ok := d.(string); ok {
+				bdfToNUMA[strings.ToLower(bdf)] = numa
+			}
+		}
+	}
+
+	devices, ok := profile["devices"].([]interface{})
+	if !ok {
+		return result
+	}
+	for _, d := range devices {
+		dMap, ok := d.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		idx, ok := toInt(dMap["index"])
+		if !ok {
+			continue
+		}
+		pci, ok := getMap(dMap, "pci")
+		if !ok {
+			continue
+		}
+		busID, ok := pci["bus_id"].(string)
+		if !ok {
+			continue
+		}
+		if numa, ok := bdfToNUMA[strings.ToLower(busID)]; ok {
+			result[idx] = numa
+		}
+	}
+
+	return result
+}
+
+// toInt coerces an int/int64/float64 (as produced by YAML unmarshaling) to int.
+func toInt(v interface{}) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case float64:
+		return int(n), true
+	default:
+		return 0, false
+	}
 }
 
 // toMiB converts a bytes value (which may be int, int64, or float64 from YAML
