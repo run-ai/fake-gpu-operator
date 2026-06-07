@@ -11,6 +11,7 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
+	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 )
 
 var _ = Describe("RealNodeDevicePlugin Allocate", func() {
@@ -61,5 +62,58 @@ var _ = Describe("realNUMACount", func() {
 		dir := GinkgoT().TempDir()
 		Expect(os.Mkdir(filepath.Join(dir, "online"), 0o755)).To(Succeed())
 		Expect(realNUMACount(dir)).To(Equal(1))
+	})
+})
+
+var _ = Describe("createDevices", func() {
+	numa := func(n int) *int { return &n }
+
+	It("clamps profile NUMA onto the real NUMA count and sets Topology per index", func() {
+		gpus := []topology.GpuDetails{
+			{ID: "g0", NUMANode: numa(0)},
+			{ID: "g1", NUMANode: numa(1)},
+			{ID: "g2", NUMANode: numa(1)},
+		}
+		// realNUMA=1 -> every GPU clamps to node 0
+		devs := createDevices(len(gpus), gpus, 1)
+		Expect(devs).To(HaveLen(3))
+		for _, d := range devs {
+			Expect(d.Topology).NotTo(BeNil())
+			Expect(d.Topology.Nodes).To(HaveLen(1))
+			Expect(d.Topology.Nodes[0].ID).To(Equal(int64(0)))
+		}
+
+		// realNUMA=2 -> NUMA preserved
+		devs = createDevices(len(gpus), gpus, 2)
+		Expect(devs[0].Topology.Nodes[0].ID).To(Equal(int64(0)))
+		Expect(devs[1].Topology.Nodes[0].ID).To(Equal(int64(1)))
+		Expect(devs[2].Topology.Nodes[0].ID).To(Equal(int64(1)))
+	})
+
+	It("leaves Topology nil when a GPU has no NUMANode", func() {
+		gpus := []topology.GpuDetails{{ID: "g0"}}
+		devs := createDevices(1, gpus, 2)
+		Expect(devs).To(HaveLen(1))
+		Expect(devs[0].Topology).To(BeNil())
+	})
+
+	It("leaves Topology nil for non-GPU devices (nil gpus slice)", func() {
+		devs := createDevices(2, nil, 2)
+		Expect(devs).To(HaveLen(2))
+		Expect(devs[0].Topology).To(BeNil())
+		Expect(devs[1].Topology).To(BeNil())
+	})
+
+	It("wraps a profile NUMA value >= realNUMA via modulo", func() {
+		gpus := []topology.GpuDetails{{ID: "g0", NUMANode: numa(3)}}
+		devs := createDevices(1, gpus, 2)
+		Expect(devs[0].Topology).NotTo(BeNil())
+		Expect(devs[0].Topology.Nodes[0].ID).To(Equal(int64(1))) // 3 % 2 == 1
+	})
+
+	It("leaves Topology nil for a negative NUMANode sentinel", func() {
+		gpus := []topology.GpuDetails{{ID: "g0", NUMANode: numa(-1)}}
+		devs := createDevices(1, gpus, 2)
+		Expect(devs[0].Topology).To(BeNil())
 	})
 })

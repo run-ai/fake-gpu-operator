@@ -38,9 +38,11 @@ func NewDevicePlugins(topology *topology.NodeTopology, kubeClient kubernetes.Int
 		}}
 	}
 
+	realNUMA := realNUMACount(sysDevicesSystemNodePath)
+
 	devicePlugins := []Interface{
 		&RealNodeDevicePlugin{
-			devs:         createDevices(getGpuCount(topology)),
+			devs:         createDevices(getGpuCount(topology), topology.Gpus, realNUMA),
 			socket:       serverSock,
 			resourceName: nvidiaGPUResourceName,
 		},
@@ -48,7 +50,7 @@ func NewDevicePlugins(topology *topology.NodeTopology, kubeClient kubernetes.Int
 
 	for _, genericDevice := range topology.OtherDevices {
 		devicePlugins = append(devicePlugins, &RealNodeDevicePlugin{
-			devs:         createDevices(genericDevice.Count),
+			devs:         createDevices(genericDevice.Count, nil, realNUMA),
 			socket:       path.Join(pluginapi.DevicePluginPath, normalizeDeviceName(genericDevice.Name)+".sock"),
 			resourceName: genericDevice.Name,
 		})

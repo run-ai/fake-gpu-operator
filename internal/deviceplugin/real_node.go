@@ -93,14 +93,26 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 	return c, nil
 }
 
-func createDevices(devCount int) []*pluginapi.Device {
+func createDevices(devCount int, gpus []topology.GpuDetails, realNUMA int) []*pluginapi.Device {
 	var devs []*pluginapi.Device
 	for i := 0; i < devCount; i++ {
 		u, _ := uuid.NewRandom()
-		devs = append(devs, &pluginapi.Device{
+		dev := &pluginapi.Device{
 			ID:     u.String(),
 			Health: pluginapi.Healthy,
-		})
+		}
+		// gpus is nil for non-GPU (OtherDevices) resources, and devCount == len(gpus)
+		// for GPUs by construction, so i < len(gpus) only sets topology for real GPUs.
+		// NUMANode >= 0 skips the sentinel/negative case (e.g. -1 = no NUMA); realNUMA > 0
+		// guards the modulo.
+		if i < len(gpus) && gpus[i].NUMANode != nil && *gpus[i].NUMANode >= 0 && realNUMA > 0 {
+			dev.Topology = &pluginapi.TopologyInfo{
+				Nodes: []*pluginapi.NUMANode{
+					{ID: int64(*gpus[i].NUMANode % realNUMA)},
+				},
+			}
+		}
+		devs = append(devs, dev)
 	}
 	return devs
 }
