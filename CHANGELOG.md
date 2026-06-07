@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `status-updater` now records each GPU's NUMA node (`numaNode`) in the per-node
+  topology ConfigMap, derived from the GPU profile's `pcie_topology`. This is the
+  data the device-plugin uses to report GPU NUMA affinity. (RUN-40241)
+
 ### Changed
 
 ### Fixed
