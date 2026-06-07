@@ -35,7 +35,7 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 	nodeTopology = &topology.NodeTopology{
 		GpuMemory:    resolved.GpuMemory,
 		GpuProduct:   resolved.GpuProduct,
-		Gpus:         generateGpuDetails(resolved.GpuCount, node.Name),
+		Gpus:         generateGpuDetails(resolved.GpuCount, node.Name, resolved.GpuNUMA),
 		MigStrategy:  p.clusterConfig.MigStrategy,
 		OtherDevices: resolved.OtherDevices,
 	}
@@ -48,11 +48,15 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 	return nil
 }
 
-func generateGpuDetails(gpuCount int, nodeName string) []topology.GpuDetails {
+func generateGpuDetails(gpuCount int, nodeName string, gpuNUMA map[int]int) []topology.GpuDetails {
 	gpus := make([]topology.GpuDetails, gpuCount)
 	for idx := range gpus {
 		gpus[idx] = topology.GpuDetails{
 			ID: fmt.Sprintf("GPU-%s", uuid.NewSHA1(uuid.Nil, []byte(fmt.Sprintf("%s-%d", nodeName, idx)))),
+		}
+		if numa, ok := gpuNUMA[idx]; ok {
+			n := numa // local copy so &n is stable per iteration
+			gpus[idx].NUMANode = &n
 		}
 	}
 
