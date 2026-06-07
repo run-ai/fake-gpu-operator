@@ -12,6 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- CI `e2e-upgrade` checkout no longer fails on tag-push (release) runs. The
+  `fetch-tags: true` added for the latest-main baseline lookup made
+  `actions/checkout` try to fetch both the release commit and `refs/tags/<tag>`
+  into the same ref (`fatal: Cannot fetch both ...`), which failed both lanes
+  and skipped `release-docker`/`release-helm`. Tags are now fetched by the
+  resolve step instead. (RUN-40080)
+
 
 ## [0.0.82] - 2026-06-04
 
