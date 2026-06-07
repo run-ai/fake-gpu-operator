@@ -137,11 +137,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Need recent origin/main history AND tags for the latest-main lane:
-          # it walks first-parent commits to find a published chart, and falls
-          # back to the latest release tag if none is published yet.
+          # Need recent origin/main history for the latest-main lane (it walks
+          # first-parent commits to find a published chart). Tags are fetched
+          # by the resolve step's own `git fetch origin --tags`, NOT here:
+          # fetch-tags:true breaks on tag-push runs (the release trigger) because
+          # checkout then fetches both the commit and refs/tags/<tag> into the
+          # same ref -> "fatal: Cannot fetch both <sha> and refs/tags/<tag>".
           fetch-depth: 40
-          fetch-tags: true
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
