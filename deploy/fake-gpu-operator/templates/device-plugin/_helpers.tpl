@@ -51,6 +51,9 @@ containers:
         name: runai-shared-directory              
       - mountPath: /var/lib/kubelet/device-plugins
         name: device-plugin
+      - mountPath: /host-sys-node
+        name: host-sys-node
+        readOnly: true
 dnsPolicy: ClusterFirst
 restartPolicy: Always
 serviceAccountName: nvidia-device-plugin
@@ -74,4 +77,8 @@ volumes:
       path: /var/lib/runai/shared
       type: DirectoryOrCreate
     name: runai-shared-directory
+  - hostPath:
+      path: /sys/devices/system/node
+      type: ""
+    name: host-sys-node
 {{- end }}
