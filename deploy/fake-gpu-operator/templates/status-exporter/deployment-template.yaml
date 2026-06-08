@@ -1,4 +1,4 @@
-{{- if .Values.statusExporter.enabled -}}
+{{- if (.Values.statusExporter).enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

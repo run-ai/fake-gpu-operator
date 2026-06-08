@@ -1,4 +1,4 @@
-{{- if .Values.statusUpdater.enabled -}}
+{{- if (.Values.statusUpdater).enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,10 +23,10 @@ spec:
     spec:
       containers:
         - name: status-updater
-          image: "{{ .Values.statusUpdater.image.repository }}:{{ .Values.statusUpdater.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.statusUpdater.image.pullPolicy }}"
+          image: "{{ (.Values.statusUpdater).image.repository }}:{{ (.Values.statusUpdater).image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ (.Values.statusUpdater).image.pullPolicy }}"
           resources:
-            {{- toYaml .Values.statusUpdater.resources | nindent 12 }}
+            {{- toYaml (.Values.statusUpdater).resources | nindent 12 }}
           env:
             - name: TOPOLOGY_CM_NAME
               value: topology
@@ -35,18 +35,18 @@ spec:
             - name: FAKE_GPU_OPERATOR_NAMESPACE
               value: "{{ .Release.Namespace }}"
             - name: RESOURCE_RESERVATION_NAMESPACE
-              value: "{{ .Values.environment.resourceReservationNamespace }}"
+              value: "{{ (.Values.environment).resourceReservationNamespace }}"
             - name: PROMETHEUS_URL
-              value: "{{ .Values.prometheus.url }}"
+              value: "{{ (.Values.prometheus).url }}"
             - name: DISABLE_NODE_LABELING
-              value: "{{ .Values.statusUpdater.disableNodeLabeling }}"
+              value: "{{ (.Values.statusUpdater).disableNodeLabeling }}"
             - name: NVML_MOCK_IMAGE
               value: "{{ (.Values.nvmlMock).image.repository | default "ghcr.io/nvidia/nvml-mock" }}:{{ (.Values.nvmlMock).image.tag | default "latest" }}"
-            {{- if .Values.statusUpdater.runaiIntegration.enabled }}
+            {{- if (.Values.statusUpdater).runaiIntegration.enabled }}
             - name: RUNAI_INTEGRATION_ENABLED
               value: "true"
             - name: RUNAI_INTEGRATION_POLLING_INTERVAL
-              value: "{{ .Values.statusUpdater.runaiIntegration.pollingInterval }}"
+              value: "{{ (.Values.statusUpdater).runaiIntegration.pollingInterval }}"
             {{- end }}
       restartPolicy: Always
       serviceAccountName: status-updater

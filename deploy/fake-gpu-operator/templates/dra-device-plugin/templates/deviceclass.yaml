@@ -1,5 +1,5 @@
 {{- /* Mirrors nvidia-dra-driver-gpu's gpu.nvidia.com DeviceClass; rendered only when that subchart is off. */ -}}
-{{- if and (or .Values.draPlugin.enabled .Values.kwokDraPlugin.enabled) (not .Values.nvidiaDraDriver.enabled) -}}
+{{- if and (or (.Values.draPlugin).enabled (.Values.kwokDraPlugin).enabled) (not (.Values.nvidiaDraDriver).enabled) -}}
 {{- $resourceApiVersion := include "dra-example-driver.resourceApiVersion" . -}}
 apiVersion: {{ $resourceApiVersion }}
 kind: DeviceClass

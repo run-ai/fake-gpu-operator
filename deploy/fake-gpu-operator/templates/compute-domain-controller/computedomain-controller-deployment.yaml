@@ -1,4 +1,4 @@
-{{- if .Values.computeDomainDraPlugin.enabled }}
+{{- if (.Values.computeDomainDraPlugin).enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -22,9 +22,9 @@ spec:
         - name: gcr-secret
       containers:
       - name: controller
-        image: "{{ .Values.computeDomainController.image.repository }}:{{ .Values.computeDomainController.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: "{{ .Values.computeDomainController.image.pullPolicy }}"
+        image: "{{ (.Values.computeDomainController).image.repository }}:{{ (.Values.computeDomainController).image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: "{{ (.Values.computeDomainController).image.pullPolicy }}"
         resources:
-          {{- toYaml .Values.computeDomainController.resources | nindent 10 }}
+          {{- toYaml (.Values.computeDomainController).resources | nindent 10 }}
 {{- end }}
 

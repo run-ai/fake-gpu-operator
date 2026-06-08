@@ -1,8 +1,8 @@
-{{- if .Values.environment.openshift }}
+{{- if (.Values.environment).openshift }}
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: gpu-operator-fake.{{ .Values.environment.fakeCSVVersion }}
+  name: gpu-operator-fake.{{ (.Values.environment).fakeCSVVersion }}
   namespace: openshift-operator-lifecycle-manager
 spec:
   description: Represents the fake-gpu-operator
@@ -18,5 +18,5 @@ spec:
   maturity: alpha
   provider:
     name: Run:AI
-  version: {{ .Values.environment.fakeCSVVersion }}
+  version: {{ (.Values.environment).fakeCSVVersion }}
 {{- end }}

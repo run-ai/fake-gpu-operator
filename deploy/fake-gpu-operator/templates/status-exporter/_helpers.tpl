@@ -24,10 +24,10 @@ annotations:
 
 {{- define "fake-gpu-operator.status-exporter.common.podTemplate.spec" -}}
 containers:
-- image: "{{ .Values.statusExporter.image.repository }}:{{ .Values.statusExporter.image.tag | default .Chart.AppVersion }}"
-  imagePullPolicy: "{{ .Values.statusExporter.image.pullPolicy }}"
+- image: "{{ (.Values.statusExporter).image.repository }}:{{ (.Values.statusExporter).image.tag | default .Chart.AppVersion }}"
+  imagePullPolicy: "{{ (.Values.statusExporter).image.pullPolicy }}"
   resources:
-    {{- toYaml .Values.statusExporter.resources | nindent 8 }}
+    {{- toYaml (.Values.statusExporter).resources | nindent 8 }}
   name: nvidia-dcgm-exporter
   env:
     - name: NODE_NAME
@@ -39,11 +39,11 @@ containers:
     - name: TOPOLOGY_CM_NAMESPACE
       value: "{{ .Release.Namespace }}"
     - name: TOPOLOGY_MAX_EXPORT_INTERVAL
-      value: "{{ .Values.statusExporter.topologyMaxExportInterval }}"
+      value: "{{ (.Values.statusExporter).topologyMaxExportInterval }}"
     - name: RESOURCE_RESERVATION_NAMESPACE
-      value: "{{ .Values.environment.resourceReservationNamespace }}"
+      value: "{{ (.Values.environment).resourceReservationNamespace }}"
     - name: PROMETHEUS_URL
-      value: "{{ .Values.prometheus.url }}"
+      value: "{{ (.Values.prometheus).url }}"
   ports:
     - containerPort: 9400
       name: http

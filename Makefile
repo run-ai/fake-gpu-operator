@@ -28,6 +28,13 @@ lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --timeout 5m
 .PHONY: lint
 
+# Render the chart under adversarial null values to catch the nil-pointer
+# render-abort class (e.g. a `helm upgrade --reuse-values` from an older
+# release leaving a top-level key absent). Needs only helm + python3.
+chart-render-guard:
+	hack/chart-render-guard.sh
+.PHONY: chart-render-guard
+
 image:
 	for component in $(COMPONENTS); do \
 		docker buildx build -t ${DOCKER_REPO_BASE}/$$component:${DOCKER_TAG} --target $$component --platform ${DOCKER_BUILDX_PLATFORMS} ${DOCKER_BUILDX_PUSH_FLAG} .; \
