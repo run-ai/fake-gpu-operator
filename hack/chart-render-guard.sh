@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# Render the chart with each top-level value nulled -- the state that a
-# `helm upgrade --reuse-values` from an older release (or a parent chart setting
-# `<key>: null`) leaves it in -- and fail if any render aborts with a Go-template
-# "nil pointer" error. A null value should make a `{{- if .Values.x.enabled -}}`
-# gate evaluate falsey and skip that section, not abort the whole `helm upgrade`.
-# Fix offenders with the nil-safe `(.Values.x).field` access form.
+# Render the chart with each top-level value nulled (as `helm upgrade --reuse-values`
+# from an older release leaves it) and fail on any "nil pointer" render abort.
+# Fix offenders with the nil-safe `(.Values.x).field` form.
 set -u
 
 CHART_SRC="${CHART_SRC:-deploy/fake-gpu-operator}"
@@ -13,10 +10,7 @@ command -v helm >/dev/null 2>&1 || { echo "chart-render-guard: helm not found in
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 cp -R "$CHART_SRC" "$work/chart"
 
-# The NGC subchart deps aren't vendored, so `helm template` refuses to render
-# until they're present (there is no flag to skip that check). They're disabled
-# in every scenario here, so drop the dependencies stanza -- the last block in
-# Chart.yaml -- to keep the guard hermetic and fast (no NGC pulls).
+# Drop the un-vendored NGC subchart deps (disabled here anyway) so helm will render.
 sed -i.bak '/^dependencies:/,$d' "$work/chart/Chart.yaml"; rm -f "$work/chart/Chart.yaml.bak"
 
 fail=0
@@ -36,7 +30,7 @@ echo "chart-render-guard: rendering ${CHART_SRC} with each top-level value nulle
 for k in $keys; do
   check "${k}: null" --set "${k}=null"
 done
-# Reported regression: a DRA plugin enabled while its subchart-condition key is null.
+# DRA plugin on while its subchart-condition key is null.
 check "draPlugin.enabled + nvidiaDraDriver: null"     --set draPlugin.enabled=true     --set nvidiaDraDriver=null
 check "kwokDraPlugin.enabled + nvidiaDraDriver: null" --set kwokDraPlugin.enabled=true --set nvidiaDraDriver=null
 
