@@ -8,9 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `make chart-render-guard` (`hack/chart-render-guard.sh`) and a matching CI
+  job that renders the chart with each top-level value nulled and asserts no
+  `nil pointer` render-abort. Runs on every PR and gates the release. Catches
+  the class of bug where a template dereferences a top-level value that a
+  `helm upgrade --reuse-values` (from a release predating the key) or a parent
+  chart leaves null/absent. (RUN-40241)
+
 ### Changed
 
 ### Fixed
+
+- Chart templates no longer abort the entire `helm upgrade` render with
+  `nil pointer evaluating interface {}.<field>` when a top-level value is
+  null/absent. All `.Values.<key>.<field>` accesses now use the nil-safe
+  `(.Values.<key>).<field>` form, so a missing/null key skips its section
+  instead of failing the whole release (which previously cascaded — e.g. a
+  null `nvidiaDraDriver` with a DRA plugin enabled took down every other
+  manifest in the chart, including namespace-scoped resources). (RUN-40241)
 
 - CI `e2e-upgrade` checkout no longer fails on tag-push (release) runs. The
   `fetch-tags: true` added for the latest-main baseline lookup made

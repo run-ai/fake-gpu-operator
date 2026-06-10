@@ -1,4 +1,4 @@
-{{- if .Values.draPlugin.enabled }}
+{{- if (.Values.draPlugin).enabled }}
 {{- $draPlugin := .Values.draPlugin }}
 
 apiVersion: apps/v1

@@ -1,4 +1,4 @@
-{{- if .Values.kwokComputeDomainDraPlugin.enabled }}
+{{- if (.Values.kwokComputeDomainDraPlugin).enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,10 +19,10 @@ spec:
     spec:
       containers:
         - name: kwok-compute-domain-dra-plugin
-          image: "{{ .Values.kwokComputeDomainDraPlugin.image.repository }}:{{ .Values.kwokComputeDomainDraPlugin.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.kwokComputeDomainDraPlugin.image.pullPolicy }}"
+          image: "{{ (.Values.kwokComputeDomainDraPlugin).image.repository }}:{{ (.Values.kwokComputeDomainDraPlugin).image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ (.Values.kwokComputeDomainDraPlugin).image.pullPolicy }}"
           resources:
-            {{- toYaml .Values.kwokComputeDomainDraPlugin.resources | nindent 12 }}
+            {{- toYaml (.Values.kwokComputeDomainDraPlugin).resources | nindent 12 }}
           env:
             - name: FAKE_GPU_OPERATOR_NAMESPACE
               value: "{{ .Release.Namespace }}"

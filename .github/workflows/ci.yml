@@ -42,6 +42,15 @@ jobs:
       - name: Run lint
         run: make lint
 
+  chart-render-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+      - name: Render chart under adversarial null values
+        run: make chart-render-guard
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -227,7 +236,7 @@ jobs:
 
   release-docker:
     runs-on: ubuntu-latest
-    needs: [set-release-vars, lint, test, e2e, e2e-profiles, e2e-mock, e2e-upgrade]
+    needs: [set-release-vars, lint, chart-render-guard, test, e2e, e2e-profiles, e2e-mock, e2e-upgrade]
     if: ${{ needs.set-release-vars.outputs.release_version != '' }}
     permissions:
       contents: read

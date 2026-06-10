@@ -1,4 +1,4 @@
-{{- if .Values.computeDomainDraPlugin.enabled }}
+{{- if (.Values.computeDomainDraPlugin).enabled }}
 ---
 apiVersion: {{ include "dra-example-driver.resourceApiVersion" . }}
 kind: DeviceClass

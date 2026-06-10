@@ -1,4 +1,4 @@
-{{- if .Values.kwokGpuDevicePlugin.enabled -}}
+{{- if (.Values.kwokGpuDevicePlugin).enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,10 +23,10 @@ spec:
     spec:
       containers:
         - name: kwok-gpu-device-plugin
-          image: "{{ .Values.kwokGpuDevicePlugin.image.repository }}:{{ .Values.kwokGpuDevicePlugin.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.kwokGpuDevicePlugin.image.pullPolicy }}"
+          image: "{{ (.Values.kwokGpuDevicePlugin).image.repository }}:{{ (.Values.kwokGpuDevicePlugin).image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ (.Values.kwokGpuDevicePlugin).image.pullPolicy }}"
           resources:
-            {{- toYaml .Values.kwokGpuDevicePlugin.resources | nindent 12 }}
+            {{- toYaml (.Values.kwokGpuDevicePlugin).resources | nindent 12 }}
           env:
             - name: TOPOLOGY_CM_NAME
               value: topology

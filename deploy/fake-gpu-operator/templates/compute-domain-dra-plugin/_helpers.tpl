@@ -22,10 +22,10 @@ labels:
 
 {{- define "fake-gpu-operator.compute-domain-dra-plugin.common.podTemplate.spec" }}
 containers:
-  - image: "{{ .Values.computeDomainDraPlugin.image.repository }}:{{ .Values.computeDomainDraPlugin.image.tag | default .Chart.AppVersion }}"
-    imagePullPolicy: "{{ .Values.computeDomainDraPlugin.image.pullPolicy }}"
+  - image: "{{ (.Values.computeDomainDraPlugin).image.repository }}:{{ (.Values.computeDomainDraPlugin).image.tag | default .Chart.AppVersion }}"
+    imagePullPolicy: "{{ (.Values.computeDomainDraPlugin).image.pullPolicy }}"
     resources:
-      {{- toYaml .Values.computeDomainDraPlugin.resources | nindent 12 }}
+      {{- toYaml (.Values.computeDomainDraPlugin).resources | nindent 12 }}
     env:
       - name: NODE_NAME
         valueFrom:
@@ -37,15 +37,15 @@ containers:
         value: "/var/lib/kubelet/plugins_registry"
       - name: KUBELET_PLUGINS_DIRECTORY_PATH
         value: "/var/lib/kubelet/plugins"
-      {{- if .Values.computeDomainDraPlugin.healthcheckPort }}
+      {{- if (.Values.computeDomainDraPlugin).healthcheckPort }}
       - name: HEALTHCHECK_PORT
-        value: {{ .Values.computeDomainDraPlugin.healthcheckPort | quote }}
+        value: {{ (.Values.computeDomainDraPlugin).healthcheckPort | quote }}
       {{- end }}
     name: compute-domain-dra-plugin-ctr
-    {{- if (gt (int .Values.computeDomainDraPlugin.healthcheckPort) 0) }}
+    {{- if (gt (int (.Values.computeDomainDraPlugin).healthcheckPort) 0) }}
     livenessProbe:
       grpc:
-        port: {{ .Values.computeDomainDraPlugin.healthcheckPort }}
+        port: {{ (.Values.computeDomainDraPlugin).healthcheckPort }}
         service: liveness
       initialDelaySeconds: 30
       periodSeconds: 10

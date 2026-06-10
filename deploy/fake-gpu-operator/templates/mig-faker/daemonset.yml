@@ -1,4 +1,4 @@
-{{- if .Values.migFaker.enabled -}}
+{{- if (.Values.migFaker).enabled -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -28,10 +28,10 @@ spec:
                 values:
                 - "true"
       containers:
-        - image: "{{ .Values.migFaker.image.repository }}:{{ .Values.migFaker.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.migFaker.image.pullPolicy }}"
+        - image: "{{ (.Values.migFaker).image.repository }}:{{ (.Values.migFaker).image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ (.Values.migFaker).image.pullPolicy }}"
           resources:
-            {{- toYaml .Values.migFaker.resources | nindent 12 }}
+            {{- toYaml (.Values.migFaker).resources | nindent 12 }}
           env:
             - name: NODE_NAME
               valueFrom:

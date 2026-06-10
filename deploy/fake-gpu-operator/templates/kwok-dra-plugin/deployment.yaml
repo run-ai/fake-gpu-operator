@@ -1,4 +1,4 @@
-{{- if .Values.kwokDraPlugin.enabled }}
+{{- if (.Values.kwokDraPlugin).enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,10 +19,10 @@ spec:
     spec:
       containers:
         - name: kwok-dra-plugin
-          image: "{{ .Values.kwokDraPlugin.image.repository }}:{{ .Values.kwokDraPlugin.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.kwokDraPlugin.image.pullPolicy }}"
+          image: "{{ (.Values.kwokDraPlugin).image.repository }}:{{ (.Values.kwokDraPlugin).image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ (.Values.kwokDraPlugin).image.pullPolicy }}"
           resources:
-            {{- toYaml .Values.kwokDraPlugin.resources | nindent 12 }}
+            {{- toYaml (.Values.kwokDraPlugin).resources | nindent 12 }}
           env:
             - name: TOPOLOGY_CM_NAME
               value: topology

@@ -80,7 +80,7 @@ Selector labels
 Full image name with tag
 */}}
 {{- define "dra-example-driver.fullimage" -}}
-{{- .Values.draPlugin.image.repository -}}:{{- .Values.draPlugin.image.tag | default .Chart.AppVersion -}}
+{{- (.Values.draPlugin).image.repository -}}:{{- (.Values.draPlugin).image.tag | default .Chart.AppVersion -}}
 {{- end -}}
 
 {{/*
@@ -88,10 +88,10 @@ Create the name of the service account to use
 */}}
 {{- define "dra-example-driver.serviceAccountName" -}}
 {{- $name := printf "%s-service-account" (include "dra-example-driver.fullname" .) }}
-{{- if .Values.draPlugin.serviceAccount.create }}
-{{- default $name .Values.draPlugin.serviceAccount.name }}
+{{- if (.Values.draPlugin).serviceAccount.create }}
+{{- default $name (.Values.draPlugin).serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.draPlugin.serviceAccount.name }}
+{{- default "default" (.Values.draPlugin).serviceAccount.name }}
 {{- end -}}
 {{- end -}}
 
@@ -100,10 +100,10 @@ Create the name of the service account to use for the webhook
 */}}
 {{- define "dra-example-driver.webhookServiceAccountName" -}}
 {{- $name := printf "%s-webhook-service-account" (include "dra-example-driver.fullname" .) }}
-{{- if .Values.webhook.serviceAccount.create }}
-{{- default $name .Values.webhook.serviceAccount.name }}
+{{- if (.Values.webhook).serviceAccount.create }}
+{{- default $name (.Values.webhook).serviceAccount.name }}
 {{- else }}
-{{- default "default-webhook" .Values.webhook.serviceAccount.name }}
+{{- default "default-webhook" (.Values.webhook).serviceAccount.name }}
 {{- end -}}
 {{- end -}}
 

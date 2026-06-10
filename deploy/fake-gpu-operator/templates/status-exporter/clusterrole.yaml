@@ -1,4 +1,4 @@
-{{- if .Values.statusExporter.enabled -}}
+{{- if (.Values.statusExporter).enabled -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -28,7 +28,7 @@ rules:
     verbs:
       - get
       - update
-{{- if .Values.environment.openshift }}
+{{- if (.Values.environment).openshift }}
   - apiGroups:
     - security.openshift.io
     resources:

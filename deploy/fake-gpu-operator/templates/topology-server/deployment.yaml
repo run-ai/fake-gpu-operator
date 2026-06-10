@@ -19,10 +19,10 @@ spec:
     spec:
       containers:
         - name: topology-server
-          image: "{{ .Values.topologyServer.image.repository }}:{{ .Values.topologyServer.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: "{{ .Values.topologyServer.image.pullPolicy }}"
+          image: "{{ (.Values.topologyServer).image.repository }}:{{ (.Values.topologyServer).image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: "{{ (.Values.topologyServer).image.pullPolicy }}"
           resources:
-            {{- toYaml .Values.topologyServer.resources | nindent 12 }}
+            {{- toYaml (.Values.topologyServer).resources | nindent 12 }}
           env:
             - name: TOPOLOGY_CM_NAME
               value: topology
