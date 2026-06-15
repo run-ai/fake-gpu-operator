@@ -1,0 +1,19 @@
+{{- if and (.Values.statusExporter).enabled (.Values.statusExporter).nodeResourceTopology.enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fake-status-exporter-nrt
+rules:
+  - apiGroups:
+      - topology.node.k8s.io
+    resources:
+      - noderesourcetopologies
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+{{- end -}}

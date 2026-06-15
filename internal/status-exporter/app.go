@@ -3,6 +3,11 @@ package status_exporter
 import (
 	"sync"
 
+	"github.com/spf13/viper"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/kubeclient"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
@@ -10,8 +15,8 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/fs"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
+	nrtexport "github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/nrt"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
-	"github.com/spf13/viper"
 )
 
 type StatusExporterAppConfig struct {
@@ -27,6 +32,7 @@ type StatusExporterApp struct {
 	MetricExporter export.Interface
 	LabelsExporter export.Interface
 	FsExporter     export.Interface
+	NRTExporter    export.Interface
 	Kubeclient     *kubeclient.KubeClient
 	stopCh         chan struct{}
 	wg             *sync.WaitGroup
@@ -55,6 +61,14 @@ func (app *StatusExporterApp) Run() {
 		app.FsExporter.Run(app.stopCh)
 	}()
 
+	if app.NRTExporter != nil {
+		app.wg.Add(1)
+		go func() {
+			defer app.wg.Done()
+			app.NRTExporter.Run(app.stopCh)
+		}()
+	}
+
 	app.wg.Wait()
 }
 
@@ -72,6 +86,15 @@ func (app *StatusExporterApp) Init(stop chan struct{}) {
 	app.MetricExporter = metrics.NewMetricsExporter(app.Watcher)
 	app.LabelsExporter = labels.NewLabelsExporter(app.Watcher, app.Kubeclient)
 	app.FsExporter = fs.NewFsExporter(app.Watcher)
+
+	if viper.GetBool(constants.EnvNodeResourceTopologyEnabled) {
+		cfg := ctrl.GetConfigOrDie()
+		app.NRTExporter = nrtexport.NewExporter(
+			app.Watcher,
+			kubernetes.NewForConfigOrDie(cfg),
+			nrtexport.NewReconciler(dynamic.NewForConfigOrDie(cfg)),
+		)
+	}
 }
 
 func (app *StatusExporterApp) Name() string {

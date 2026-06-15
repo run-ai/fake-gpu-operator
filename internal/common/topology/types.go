@@ -23,13 +23,31 @@ type NodePoolTopology struct {
 type ClusterConfig struct {
 	NodePoolLabelKey string                    `yaml:"nodePoolLabelKey"`
 	MigStrategy      string                    `yaml:"migStrategy"`
-	NodePools        map[string]NodePoolConfig  `yaml:"nodePools"`
-	GpuOperator      *GpuOperatorConfig         `yaml:"gpuOperator,omitempty"`
+	NodePools        map[string]NodePoolConfig `yaml:"nodePools"`
+	GpuOperator      *GpuOperatorConfig        `yaml:"gpuOperator,omitempty"`
 }
 
 type NodePoolConfig struct {
-	Gpu       GpuConfig          `yaml:"gpu"`
-	Resources []map[string]int   `yaml:"resources,omitempty"`
+	Gpu       GpuConfig        `yaml:"gpu"`
+	Numa      *NumaConfig      `yaml:"numa,omitempty"`
+	Resources []map[string]int `yaml:"resources,omitempty"`
+}
+
+// NumaConfig declares a node pool's simulated NUMA layout. Its presence opts the
+// pool's nodes into NodeResourceTopology publishing (fake-NRT).
+type NumaConfig struct {
+	Zones                 int            `yaml:"zones"`
+	GpusPerZone           []int          `yaml:"gpusPerZone,omitempty"`
+	TopologyManagerPolicy string         `yaml:"topologyManagerPolicy,omitempty"`
+	TopologyManagerScope  string         `yaml:"topologyManagerScope,omitempty"`
+	CPUPerZone            string         `yaml:"cpuPerZone,omitempty"`
+	MemPerZone            string         `yaml:"memPerZone,omitempty"`
+	Distances             *NumaDistances `yaml:"distances,omitempty"`
+}
+
+type NumaDistances struct {
+	Self   int `yaml:"self"`
+	Remote int `yaml:"remote"`
 }
 
 type GpuConfig struct {

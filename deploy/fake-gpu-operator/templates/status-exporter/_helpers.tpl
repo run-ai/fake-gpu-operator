@@ -44,6 +44,10 @@ containers:
       value: "{{ (.Values.environment).resourceReservationNamespace }}"
     - name: PROMETHEUS_URL
       value: "{{ (.Values.prometheus).url }}"
+    {{- if (.Values.statusExporter).nodeResourceTopology.enabled }}
+    - name: NODE_RESOURCE_TOPOLOGY_ENABLED
+      value: "true"
+    {{- end }}
   ports:
     - containerPort: 9400
       name: http

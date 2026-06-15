@@ -56,6 +56,9 @@ topologyServer:
 
 statusExporter:
   enabled: true
+  nodeResourceTopology:
+    enabled: false      # publish NodeResourceTopology CRs for pools with a `numa` block (off by default)
+    installCRD: true    # install the NRT CRD; set false if it already exists (e.g. NFD/KAI)
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-exporter
