@@ -50,10 +50,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   into the same ref (`fatal: Cannot fetch both ...`), which failed both lanes
   and skipped `release-docker`/`release-helm`. Tags are now fetched by the
   resolve step instead. (RUN-40080)
-- Pinned the `nvml-mock` image to `sha-1706195`. Upstream's rolling `:latest`
-  moved to a v0.2.0 build that broke mock-backend pods (`libnvidia-ml.so` not
-  found, `nvidia-operator-validator` never Ready). (RUN-40242)
-
 
 ## [0.0.82] - 2026-06-04
 
