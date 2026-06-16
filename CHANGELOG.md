@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.0.83] - 2026-06-16
+
+### Added
+
 - `make chart-render-guard` (`hack/chart-render-guard.sh`) and a matching CI
   job that renders the chart with each top-level value nulled and asserts no
   `nil pointer` render-abort. Runs on every PR and gates the release. Catches
@@ -42,7 +50,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   into the same ref (`fatal: Cannot fetch both ...`), which failed both lanes
   and skipped `release-docker`/`release-helm`. Tags are now fetched by the
   resolve step instead. (RUN-40080)
-
 
 ## [0.0.82] - 2026-06-04
 
