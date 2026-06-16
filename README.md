@@ -29,6 +29,7 @@ Use cases include:
 ## ✨ Features
 
 - Basic GPU topology simulation
+- NUMA topology publishing (`NodeResourceTopology`) for NUMA-aware scheduling
 - Prometheus metrics generation
 - Basic NVIDIA MIG resource scheduling (metrics monitoring not yet supported)
 - Configurable GPU types and memory
@@ -172,6 +173,27 @@ gpuOperator: { enabled: true }        # device-plugin path; also set gpu-operato
 ```
 
 See **[docs/mock-backend.md](docs/mock-backend.md)** for profiles, caveats such as the cosmetic `ClusterPolicy NotReady` status, and cleanup notes.
+
+## NUMA Topology (NodeResourceTopology)
+
+NUMA-aware schedulers (e.g. KAI-Scheduler) place GPU workloads across NUMA zones by reading a `NodeResourceTopology` (NRT) per node. fake-gpu-operator can publish those without real multi-socket hardware — **off by default**; enable it per install and add a `numa` block to each pool:
+
+```yaml
+statusUpdater:
+  nodeResourceTopology:
+    enabled: true            # off by default
+    # installCRD: false      # set if the NRT CRD already exists (NFD/KAI)
+
+topology:
+  nodePools:
+    default:
+      gpu: { backend: fake, profile: a100 }
+      numa:
+        zones: 2               # the pool's GPUs split across node-0/node-1
+        distances: { self: 10, remote: 21 }
+```
+
+When enabled, the chart installs the NRT CRD (set `installCRD: false` if you already have it) and grants the status-updater RBAC. See **[docs/fake-nrt.md](docs/fake-nrt.md)** for the full config reference, the published resource, and caveats (static `available`, NFD topology-updater conflicts).
 
 ## 🔌 Dynamic Resource Allocation (DRA)
 

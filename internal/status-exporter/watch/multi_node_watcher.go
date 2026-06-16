@@ -24,6 +24,10 @@ type LabelsExporter interface {
 	SetLabelsForNode(nodeName string, nodeTopology *topology.NodeTopology) error
 }
 
+type NRTExporter interface {
+	SetNRTForNode(nodeName string, nodeTopology *topology.NodeTopology) error
+}
+
 type MultiNodeWatcher struct {
 	client.Client
 	scheme           *runtime.Scheme
@@ -31,9 +35,10 @@ type MultiNodeWatcher struct {
 	topologyCMPrefix string
 	metricsExporter  MetricsExporter
 	labelsExporter   LabelsExporter
+	nrtExporter      NRTExporter
 }
 
-func NewMultiNodeWatcher(mgr ctrl.Manager, namespace, topologyCMPrefix string, metricsExporter MetricsExporter, labelsExporter LabelsExporter) *MultiNodeWatcher {
+func NewMultiNodeWatcher(mgr ctrl.Manager, namespace, topologyCMPrefix string, metricsExporter MetricsExporter, labelsExporter LabelsExporter, nrtExporter NRTExporter) *MultiNodeWatcher {
 	return &MultiNodeWatcher{
 		Client:           mgr.GetClient(),
 		scheme:           mgr.GetScheme(),
@@ -41,6 +46,7 @@ func NewMultiNodeWatcher(mgr ctrl.Manager, namespace, topologyCMPrefix string, m
 		topologyCMPrefix: topologyCMPrefix,
 		metricsExporter:  metricsExporter,
 		labelsExporter:   labelsExporter,
+		nrtExporter:      nrtExporter,
 	}
 }
 
@@ -85,6 +91,12 @@ func (w *MultiNodeWatcher) handleNodeUpdate(nodeName string, nodeTopology *topol
 
 	if err := w.labelsExporter.SetLabelsForNode(nodeName, nodeTopology); err != nil {
 		log.Printf("Labels exporter failed for node %s: %v\n", nodeName, err)
+	}
+
+	if w.nrtExporter != nil {
+		if err := w.nrtExporter.SetNRTForNode(nodeName, nodeTopology); err != nil {
+			log.Printf("NRT exporter failed for node %s: %v\n", nodeName, err)
+		}
 	}
 }
 
@@ -134,8 +146,8 @@ func isKWOKNodeConfigMap(cm *corev1.ConfigMap) bool {
 	return cm.Annotations[constants.AnnotationKwokNode] == "fake"
 }
 
-func SetupMultiNodeWatcherWithManager(mgr ctrl.Manager, namespace, topologyCMName string, metricsExporter MetricsExporter, labelsExporter LabelsExporter) (*MultiNodeWatcher, error) {
-	watcher := NewMultiNodeWatcher(mgr, namespace, topologyCMName, metricsExporter, labelsExporter)
+func SetupMultiNodeWatcherWithManager(mgr ctrl.Manager, namespace, topologyCMName string, metricsExporter MetricsExporter, labelsExporter LabelsExporter, nrtExporter NRTExporter) (*MultiNodeWatcher, error) {
+	watcher := NewMultiNodeWatcher(mgr, namespace, topologyCMName, metricsExporter, labelsExporter, nrtExporter)
 
 	if err := watcher.SetupWithManager(mgr); err != nil {
 		return nil, err

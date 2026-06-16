@@ -30,11 +30,11 @@ var DynamicClientFn = func(c *rest.Config) dynamic.Interface {
 }
 
 type StatusUpdaterAppConfiguration struct {
-	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
-	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
-	PrometheusURL       string `mapstructure:"PROMETHEUS_URL"`
-	DisableNodeLabeling            bool   `mapstructure:"DISABLE_NODE_LABELING"`
-	RunaiIntegrationEnabled        bool   `mapstructure:"RUNAI_INTEGRATION_ENABLED"`
+	TopologyCmName                  string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
+	TopologyCmNamespace             string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
+	PrometheusURL                   string `mapstructure:"PROMETHEUS_URL"`
+	DisableNodeLabeling             bool   `mapstructure:"DISABLE_NODE_LABELING"`
+	RunaiIntegrationEnabled         bool   `mapstructure:"RUNAI_INTEGRATION_ENABLED"`
 	RunaiIntegrationPollingInterval string `mapstructure:"RUNAI_INTEGRATION_POLLING_INTERVAL"`
 }
 

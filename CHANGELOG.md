@@ -14,6 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the class of bug where a template dereferences a top-level value that a
   `helm upgrade --reuse-values` (from a release predating the key) or a parent
   chart leaves null/absent. (RUN-40241)
+- The status-exporter can publish a `NodeResourceTopology` CR per fake-GPU node —
+  opt in with `statusExporter.nodeResourceTopology.enabled` (off by default) and
+  declare a `numa` block on a pool. It distributes the pool's GPUs across the
+  configured NUMA zones with per-zone cpu/memory, distance costs, and
+  Topology-Manager policy/scope attributes, so NUMA-aware GPU scheduling can be
+  tested without real multi-socket hardware. NRTs carry an owner reference to
+  their node (garbage-collected on node deletion). When enabled the chart installs
+  the NRT CRD (set `nodeResourceTopology.installCRD: false` if it already exists,
+  e.g. from NFD/KAI) and grants the status-exporter RBAC for it. (RUN-40242)
 
 ### Changed
 

@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -15,6 +16,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
+	nrtexport "github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/nrt"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
 )
 
@@ -94,7 +96,12 @@ func (app *KWOKStatusExporterApp) Init(stopCh chan struct{}) {
 	namespace := viper.GetString(constants.EnvTopologyCmNamespace)
 	topologyCMName := viper.GetString(constants.EnvTopologyCmName)
 
-	_, err = watch.SetupMultiNodeWatcherWithManager(app.mgr, namespace, topologyCMName, app.metricsExporter, labelsExporter)
+	var nrtExporter watch.NRTExporter
+	if viper.GetBool(constants.EnvNodeResourceTopologyEnabled) {
+		nrtExporter = nrtexport.NewMultiNodeExporter(kubeClient, nrtexport.NewReconciler(dynamic.NewForConfigOrDie(cfg)))
+	}
+
+	_, err = watch.SetupMultiNodeWatcherWithManager(app.mgr, namespace, topologyCMName, app.metricsExporter, labelsExporter, nrtExporter)
 	if err != nil {
 		log.Fatalf("Failed to setup multi-node watcher: %v", err)
 	}

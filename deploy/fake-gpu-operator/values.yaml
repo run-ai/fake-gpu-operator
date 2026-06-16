@@ -56,6 +56,9 @@ topologyServer:
 
 statusExporter:
   enabled: true
+  nodeResourceTopology:
+    enabled: false      # publish NodeResourceTopology CRs for pools with a `numa` block (off by default)
+    installCRD: true    # install the NRT CRD; set false if it already exists (e.g. NFD/KAI)
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-exporter
@@ -119,8 +122,9 @@ migFaker:
 nvmlMock:
   image:
     repository: ghcr.io/nvidia/nvml-mock
-    # Upstream publishes :latest only.
-    tag: latest
+    # Pin: upstream :latest is rolling and its v0.2.0 build (2026-06-12) broke e2e-mock's
+    # libnvidia-ml.so loading. sha-1706195 is the last green build; bump when e2e adapts to v0.2.x.
+    tag: sha-1706195
     pullPolicy: IfNotPresent
 
 # When true, installs upstream gpu-operator subchart. When false, renders a

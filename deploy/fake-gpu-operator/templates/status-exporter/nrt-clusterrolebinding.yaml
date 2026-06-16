@@ -1,0 +1,14 @@
+{{- if and (.Values.statusExporter).enabled (.Values.statusExporter).nodeResourceTopology.enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fake-status-exporter-nrt
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: fake-status-exporter-nrt
+subjects:
+  - kind: ServiceAccount
+    name: status-exporter
+    namespace: "{{ .Release.Namespace }}"
+{{- end -}}
