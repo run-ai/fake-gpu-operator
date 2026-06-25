@@ -18,13 +18,22 @@ import (
 )
 
 type nvidiaSmiArgs struct {
-	GpuProduct  string
-	GpuUsedMem  float32
-	GpuTotalMem int
-	GpuUtil     int
-	GpuIdx      int
-	ProcessName string
+	GpuProduct    string
+	DriverVersion string
+	CudaVersion   string
+	GpuUsedMem    float32
+	GpuTotalMem   int
+	GpuUtil       int
+	GpuIdx        int
+	ProcessName   string
 }
+
+// Fallback versions for pools whose config carries no driver/CUDA version
+// (e.g. old-format topology without a GPU profile).
+const (
+	defaultDriverVersion = "470.129.06"
+	defaultCudaVersion   = "11.4"
+)
 
 type config struct {
 	Debug bool
@@ -145,20 +154,24 @@ func getNvidiaSmiArgs() (args []nvidiaSmiArgs, summary string, errs []error) {
 			fmt.Printf("Found GPU %d allocated to pod %s\n", idx, currentPodName)
 		}
 		allArgs = append(allArgs, nvidiaSmiArgs{
-			GpuProduct:  nodeTopology.GpuProduct,
-			GpuTotalMem: gpuTotalMem,
-			GpuUsedMem:  float32(gpu.Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion),
-			GpuUtil:     gpu.Status.PodGpuUsageStatus.Utilization(),
-			GpuIdx:      idx,
-			ProcessName: processName,
+			GpuProduct:    nodeTopology.GpuProduct,
+			DriverVersion: nodeTopology.DriverVersion,
+			CudaVersion:   nodeTopology.CudaVersion,
+			GpuTotalMem:   gpuTotalMem,
+			GpuUsedMem:    float32(gpu.Status.PodGpuUsageStatus.FbUsed(nodeTopology.GpuMemory)) * float32(gpuPortion),
+			GpuUtil:       gpu.Status.PodGpuUsageStatus.Utilization(),
+			GpuIdx:        idx,
+			ProcessName:   processName,
 		})
 	}
 
 	if len(allArgs) == 0 {
 		allArgs = append(allArgs, nvidiaSmiArgs{
-			GpuProduct:  nodeTopology.GpuProduct,
-			GpuTotalMem: gpuTotalMem,
-			ProcessName: processName,
+			GpuProduct:    nodeTopology.GpuProduct,
+			DriverVersion: nodeTopology.DriverVersion,
+			CudaVersion:   nodeTopology.CudaVersion,
+			GpuTotalMem:   gpuTotalMem,
+			ProcessName:   processName,
 		})
 	}
 
@@ -189,10 +202,19 @@ func printArgs(allArgs []nvidiaSmiArgs) {
 		fmt.Println("Printing nvidia-smi output")
 	}
 
+	driverVersion := defaultDriverVersion
+	if allArgs[0].DriverVersion != "" {
+		driverVersion = allArgs[0].DriverVersion
+	}
+	cudaVersion := defaultCudaVersion
+	if allArgs[0].CudaVersion != "" {
+		cudaVersion = allArgs[0].CudaVersion
+	}
+
 	fmt.Println(time.Now().Format(time.ANSIC))
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.SetTitle("NVIDIA-SMI 470.129.06   Driver Version: 470.129.06   CUDA Version: 11.4")
+	t.SetTitle(fmt.Sprintf("NVIDIA-SMI %s   Driver Version: %s   CUDA Version: %s", driverVersion, driverVersion, cudaVersion))
 	t.AppendSeparator()
 	t.AppendRow(table.Row{"GPU  Name        Persistence-M", "Bus-Id        Disp.A", "Volatile Uncorr. ECC"})
 	t.AppendRow(table.Row{"Fan  Temp  Perf  Pwr:Usage/Cap", "        Memory-Usage", "GPU-Util  Compute M."})

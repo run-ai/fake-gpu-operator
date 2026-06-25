@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The fake `nvidia-smi` now reports the driver version and CUDA version from the
+  pool's GPU profile (`system.driver_version` / `system.cuda_version`) instead of
+  hardcoded values. Pools without a profile fall back to the previous defaults
+  (`470.129.06` / `11.4`). Plumbed through `NodeTopology`. (RUN-40764)
+
 ### Fixed
 
 ## [0.1.0] - 2026-06-16

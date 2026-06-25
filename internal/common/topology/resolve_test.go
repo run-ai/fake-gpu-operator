@@ -63,6 +63,12 @@ devices:
 	if resolved.GpuCount != 8 {
 		t.Errorf("GpuCount = %d, want %d", resolved.GpuCount, 8)
 	}
+	if resolved.DriverVersion != "550.163.01" {
+		t.Errorf("DriverVersion = %q, want %q", resolved.DriverVersion, "550.163.01")
+	}
+	if resolved.CudaVersion != "12.4" {
+		t.Errorf("CudaVersion = %q, want %q", resolved.CudaVersion, "12.4")
+	}
 }
 
 func TestResolveNodePool_WithProfileAndOverrides(t *testing.T) {

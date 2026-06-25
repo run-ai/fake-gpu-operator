@@ -62,11 +62,13 @@ type GpuOperatorConfig struct {
 }
 
 type NodeTopology struct {
-	GpuMemory    int             `yaml:"gpuMemory"`
-	GpuProduct   string          `yaml:"gpuProduct"`
-	Gpus         []GpuDetails    `yaml:"gpus"`
-	MigStrategy  string          `yaml:"migStrategy"`
-	OtherDevices []GenericDevice `yaml:"otherDevices,omitempty"`
+	GpuMemory     int             `yaml:"gpuMemory"`
+	GpuProduct    string          `yaml:"gpuProduct"`
+	DriverVersion string          `yaml:"driverVersion,omitempty"`
+	CudaVersion   string          `yaml:"cudaVersion,omitempty"`
+	Gpus          []GpuDetails    `yaml:"gpus"`
+	MigStrategy   string          `yaml:"migStrategy"`
+	OtherDevices  []GenericDevice `yaml:"otherDevices,omitempty"`
 }
 
 type GpuDetails struct {
