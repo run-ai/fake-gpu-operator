@@ -33,11 +33,13 @@ func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
 	}
 
 	nodeTopology = &topology.NodeTopology{
-		GpuMemory:    resolved.GpuMemory,
-		GpuProduct:   resolved.GpuProduct,
-		Gpus:         generateGpuDetails(resolved.GpuCount, node.Name),
-		MigStrategy:  p.clusterConfig.MigStrategy,
-		OtherDevices: resolved.OtherDevices,
+		GpuMemory:     resolved.GpuMemory,
+		GpuProduct:    resolved.GpuProduct,
+		DriverVersion: resolved.DriverVersion,
+		CudaVersion:   resolved.CudaVersion,
+		Gpus:          generateGpuDetails(resolved.GpuCount, node.Name),
+		MigStrategy:   p.clusterConfig.MigStrategy,
+		OtherDevices:  resolved.OtherDevices,
 	}
 
 	err = topology.CreateNodeTopologyCM(p.kubeClient, nodeTopology, node)

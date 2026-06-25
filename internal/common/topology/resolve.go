@@ -12,10 +12,12 @@ import (
 // profile resolution (Load → Merge → Extract). Downstream code uses these
 // fields to build NodeTopology ConfigMaps.
 type ResolvedPool struct {
-	GpuProduct   string
-	GpuMemory    int // MiB
-	GpuCount     int
-	OtherDevices []GenericDevice
+	GpuProduct    string
+	GpuMemory     int // MiB
+	GpuCount      int
+	DriverVersion string
+	CudaVersion   string
+	OtherDevices  []GenericDevice
 }
 
 // ResolveNodePool resolves a NodePoolConfig into concrete GPU spec fields.
@@ -63,6 +65,8 @@ func resolveWithProfile(kubeClient kubernetes.Interface, namespace string, pool 
 	resolved.GpuProduct = spec.GpuProduct
 	resolved.GpuMemory = spec.GpuMemory
 	resolved.GpuCount = spec.GpuCount
+	resolved.DriverVersion = spec.DriverVersion
+	resolved.CudaVersion = spec.CudaVersion
 
 	return resolved, nil
 }
