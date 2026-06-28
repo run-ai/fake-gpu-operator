@@ -14,4 +14,10 @@ rules:
 - apiGroups: ["resource.k8s.io"]
   resources: ["resourceslices"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+{{- if (.Values.environment).openshift }}
+- apiGroups: ["security.openshift.io"]
+  resources: ["securitycontextconstraints"]
+  resourceNames: ["privileged"]
+  verbs: ["use"]
+{{- end }}
 {{- end -}}

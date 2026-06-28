@@ -22,4 +22,14 @@ rules:
       - update
       - list
       - watch
+{{- if (.Values.environment).openshift }}
+  - apiGroups:
+      - security.openshift.io
+    resources:
+      - securitycontextconstraints
+    resourceNames:
+      - privileged
+    verbs:
+      - use
+{{- end }}
 {{- end -}}
