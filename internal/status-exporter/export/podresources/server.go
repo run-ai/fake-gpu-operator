@@ -70,3 +70,11 @@ func (s *Server) cleanup() error {
 	}
 	return nil
 }
+
+func (s *Server) snapshot() []*podresourcesv1.PodResources {
+	p := s.snap.Load()
+	if p == nil {
+		return nil
+	}
+	return *p
+}
