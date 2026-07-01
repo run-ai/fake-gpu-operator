@@ -99,10 +99,10 @@ func (e *Exporter) reconcile(nt *topology.NodeTopology) error {
 		return fmt.Errorf("list pod requests: %w", err)
 	}
 
-	e.server.SetSnapshot(BuildPodResources(nt, layout, reqs))
 	if err := RenderCpulist(e.sysfsRoot, layout); err != nil {
 		return fmt.Errorf("render cpulist: %w", err)
 	}
+	e.server.SetSnapshot(BuildPodResources(nt, layout, reqs))
 	return nil
 }
 
