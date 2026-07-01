@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/numazones"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/numazones"
 )
 
 func TestRenderCpulist(t *testing.T) {

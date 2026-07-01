@@ -25,7 +25,7 @@ func TestServer_RealSocketRoundTrip(t *testing.T) {
 	// Short path: unix socket sun_path is capped (~104 bytes on macOS), so t.TempDir() is too long.
 	dir, err := os.MkdirTemp("/tmp", "fgopr")
 	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 	sock := filepath.Join(dir, "k.sock")
 	srv := NewServer(sock)
 	require.NoError(t, srv.Start())
@@ -47,7 +47,7 @@ func TestServer_RealSocketRoundTrip(t *testing.T) {
 
 	conn, err := grpc.NewClient("unix://"+sock, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	client := podresourcesv1.NewPodResourcesListerClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
