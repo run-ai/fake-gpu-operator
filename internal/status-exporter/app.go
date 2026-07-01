@@ -16,6 +16,7 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/labels"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/metrics"
 	nrtexport "github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/nrt"
+	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/export/podresources"
 	"github.com/run-ai/fake-gpu-operator/internal/status-exporter/watch"
 )
 
@@ -28,14 +29,15 @@ type StatusExporterAppConfig struct {
 }
 
 type StatusExporterApp struct {
-	Watcher        watch.Interface
-	MetricExporter export.Interface
-	LabelsExporter export.Interface
-	FsExporter     export.Interface
-	NRTExporter    export.Interface
-	Kubeclient     *kubeclient.KubeClient
-	stopCh         chan struct{}
-	wg             *sync.WaitGroup
+	Watcher              watch.Interface
+	MetricExporter       export.Interface
+	LabelsExporter       export.Interface
+	FsExporter           export.Interface
+	NRTExporter          export.Interface
+	PodResourcesExporter export.Interface
+	Kubeclient           *kubeclient.KubeClient
+	stopCh               chan struct{}
+	wg                   *sync.WaitGroup
 }
 
 func (app *StatusExporterApp) Run() {
@@ -69,6 +71,14 @@ func (app *StatusExporterApp) Run() {
 		}()
 	}
 
+	if app.PodResourcesExporter != nil {
+		app.wg.Add(1)
+		go func() {
+			defer app.wg.Done()
+			app.PodResourcesExporter.Run(app.stopCh)
+		}()
+	}
+
 	app.wg.Wait()
 }
 
@@ -94,6 +104,11 @@ func (app *StatusExporterApp) Init(stop chan struct{}) {
 			kubernetes.NewForConfigOrDie(cfg),
 			nrtexport.NewReconciler(dynamic.NewForConfigOrDie(cfg)),
 		)
+	}
+
+	if viper.GetBool(constants.EnvPodResourcesEnabled) {
+		cfg := ctrl.GetConfigOrDie()
+		app.PodResourcesExporter = podresources.NewExporter(app.Watcher, kubernetes.NewForConfigOrDie(cfg))
 	}
 }
 

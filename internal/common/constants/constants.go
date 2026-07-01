@@ -45,4 +45,5 @@ const (
 	EnvRunaiIntegrationEnabled         = "RUNAI_INTEGRATION_ENABLED"
 	EnvRunaiIntegrationPollingInterval = "RUNAI_INTEGRATION_POLLING_INTERVAL"
 	EnvNodeResourceTopologyEnabled     = "NODE_RESOURCE_TOPOLOGY_ENABLED"
+	EnvPodResourcesEnabled             = "POD_RESOURCES_ENABLED"
 )
