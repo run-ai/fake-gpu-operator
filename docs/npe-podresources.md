@@ -76,3 +76,9 @@ memory placement, and the `cpulist` tree.
 Not covered: non-GPU pods' CPU/memory, the QoS/Guaranteed-integer CPU-Manager gate, and the
 KWOK path (a single central pod cannot serve one kubelet socket per virtual node — this feature
 targets real nodes where pods execute).
+
+Shared/fractional GPUs (the reservation model, where a GPU's `allocatedBy` names a
+reservation pod in the reservation namespace rather than the workload) are also not covered:
+the synthesized entry would be named after the reservation pod, so `npe` would annotate that
+pod and the real workload pod would get no placement. Use whole-GPU (dedicated/DRA)
+allocations, where `allocatedBy` is the workload pod.
