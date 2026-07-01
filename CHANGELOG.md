@@ -8,11 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.2.0] - 2026-07-01
+
+### Added
+
 - The status-exporter can serve a fake kubelet `podresources` gRPC socket plus a
   matching sysfs `cpulist` tree per node, so KAI-Scheduler's numa-placement-exporter
   observes fake GPU/CPU/memory NUMA placement on real nodes. Opt in with
   `statusExporter.podResources.enabled` (off by default); point `npe` at the FGO
   socket/sysfs paths (see `docs/npe-podresources.md`). (RUN-40987)
+- On OpenShift, the privileged SecurityContextConstraints is now granted to every
+  component that needs host access (previously only some). (#225)
 
 ### Changed
 
@@ -20,8 +30,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   pool's GPU profile (`system.driver_version` / `system.cuda_version`) instead of
   hardcoded values. Pools without a profile fall back to the previous defaults
   (`470.129.06` / `11.4`). Plumbed through `NodeTopology`. (RUN-40764)
-
-### Fixed
 
 ## [0.1.0] - 2026-06-16
 
