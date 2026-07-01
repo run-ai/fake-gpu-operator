@@ -59,6 +59,8 @@ statusExporter:
   nodeResourceTopology:
     enabled: false      # publish NodeResourceTopology CRs for pools with a `numa` block (off by default)
     installCRD: true    # install the NRT CRD; set false if it already exists (e.g. NFD/KAI)
+  podResources:
+    enabled: false      # run fake kubelet podresources gRPC server + sysfs cpulist renderer for KAI npe (off by default)
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/status-exporter
