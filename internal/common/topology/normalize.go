@@ -47,6 +47,7 @@ func normalizeNodePool(old NodePoolTopology) NodePoolConfig {
 			Backend:   "fake",
 			Overrides: overrides,
 		},
+		Numa: old.Numa,
 	}
 
 	if len(old.OtherDevices) > 0 {
