@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   matching sysfs `cpulist` tree per node, so KAI-Scheduler's numa-placement-exporter
   observes fake GPU/CPU/memory NUMA placement on real nodes. Opt in with
   `statusExporter.podResources.enabled` (off by default); point `npe` at the FGO
-  socket/sysfs paths (see `docs/npe-podresources.md`). (RUN-40987)
+  socket/sysfs paths (see `docs/podresources.md`). (RUN-40987)
 - On OpenShift, the privileged SecurityContextConstraints is now granted to every
   component that needs host access (previously only some). (#225)
 
