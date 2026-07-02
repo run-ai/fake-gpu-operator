@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The `kwok-compute-domain-dra-plugin` image is now built and pushed by the
+  release pipeline. It was missing from the CI release matrix, so enabling
+  `kwokComputeDomainDraPlugin.enabled` caused an `ImagePullBackOff`. (RUN-41041)
+
 ## [0.2.0] - 2026-07-01
 
 ### Added
