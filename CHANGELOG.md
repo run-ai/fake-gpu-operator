@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
+  pool is no longer silently dropped during normalization, so such pools now get
+  their `NodeResourceTopology` published when
+  `statusExporter.nodeResourceTopology.enabled` is set.
+  ([#229](https://github.com/run-ai/fake-gpu-operator/issues/229), RUN-41037)
+
 ## [0.2.0] - 2026-07-01
 
 ### Added

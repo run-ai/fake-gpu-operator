@@ -16,6 +16,7 @@ type NodePoolTopology struct {
 	GpuMemory    int             `yaml:"gpuMemory"`
 	GpuProduct   string          `yaml:"gpuProduct"`
 	OtherDevices []GenericDevice `yaml:"otherDevices"`
+	Numa         *NumaConfig     `yaml:"numa,omitempty"`
 }
 
 // ClusterConfig is the new top-level config structure (cluster: key in topology CM).
