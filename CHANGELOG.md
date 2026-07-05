@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   their `NodeResourceTopology` published when
   `statusExporter.nodeResourceTopology.enabled` is set.
   ([#229](https://github.com/run-ai/fake-gpu-operator/issues/229), RUN-41037)
+- The `kwok-compute-domain-dra-plugin` image is now built and pushed by the
+  release pipeline. It was missing from the CI release matrix, so enabling
+  `kwokComputeDomainDraPlugin.enabled` caused an `ImagePullBackOff`. (RUN-41041)
 
 ## [0.2.0] - 2026-07-01
 
@@ -26,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   matching sysfs `cpulist` tree per node, so KAI-Scheduler's numa-placement-exporter
   observes fake GPU/CPU/memory NUMA placement on real nodes. Opt in with
   `statusExporter.podResources.enabled` (off by default); point `npe` at the FGO
-  socket/sysfs paths (see `docs/npe-podresources.md`). (RUN-40987)
+  socket/sysfs paths (see `docs/podresources.md`). (RUN-40987)
 - On OpenShift, the privileged SecurityContextConstraints is now granted to every
   component that needs host access (previously only some). (#225)
 
