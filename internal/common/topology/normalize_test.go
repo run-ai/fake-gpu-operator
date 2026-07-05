@@ -337,3 +337,55 @@ func TestFromClusterConfigCM_MissingKey(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "missing key")
 }
+
+func TestNormalizeOldFormatPreservesNuma(t *testing.T) {
+	old := &ClusterTopology{
+		NodePoolLabelKey: "run.ai/simulated-gpu-node-pool",
+		NodePools: map[string]NodePoolTopology{
+			"nodepool-0": {
+				GpuCount:   16,
+				GpuMemory:  12000,
+				GpuProduct: "Tesla-V100",
+				Numa: &NumaConfig{
+					Zones:     2,
+					Distances: &NumaDistances{Self: 10, Remote: 21},
+				},
+			},
+		},
+	}
+
+	config := normalizeOldToClusterConfig(old)
+
+	require.Contains(t, config.NodePools, "nodepool-0")
+	pool := config.NodePools["nodepool-0"]
+	require.NotNil(t, pool.Numa, "numa block must survive old-format normalization")
+	assert.Equal(t, 2, pool.Numa.Zones)
+	require.NotNil(t, pool.Numa.Distances)
+	assert.Equal(t, 10, pool.Numa.Distances.Self)
+	assert.Equal(t, 21, pool.Numa.Distances.Remote)
+}
+
+func TestParseOldFormatYAMLPreservesNuma(t *testing.T) {
+	yamlData := `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+nodePools:
+  nodepool-0:
+    gpuCount: 16
+    gpuMemory: 12000
+    gpuProduct: Tesla-V100
+    numa:
+      zones: 2
+      distances:
+        self: 10
+        remote: 21
+`
+	config, err := ParseAndNormalizeTopology([]byte(yamlData))
+	require.NoError(t, err)
+
+	pool := config.NodePools["nodepool-0"]
+	require.NotNil(t, pool.Numa, "numa on an old-format pool must not be silently dropped")
+	assert.Equal(t, 2, pool.Numa.Zones)
+
+	devices := pool.Gpu.Overrides["devices"].([]interface{})
+	assert.Len(t, devices, 16)
+}
