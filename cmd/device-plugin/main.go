@@ -42,7 +42,11 @@ func main() {
 	initNvidiaSmi()
 	initPreloaders()
 
-	devicePlugins := deviceplugin.NewDevicePlugins(topology, kubeClient)
+	devicePlugins, err := deviceplugin.NewDevicePlugins(topology, kubeClient)
+	if err != nil {
+		log.Printf("Failed to create device plugins: %s\n", err)
+		os.Exit(1)
+	}
 	for _, devicePlugin := range devicePlugins {
 		log.Printf("Starting device plugin for %s\n", devicePlugin.Name())
 		if err = devicePlugin.Serve(); err != nil {
@@ -69,8 +73,12 @@ func initPreloaders() {
 
 func publish(srcFile string, destFile string) {
 	srcFileInfo, err := os.Stat(srcFile)
-	if os.IsNotExist(err) {
-		log.Printf("%s not found in %s\n", path.Base(srcFile), srcFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("%s not found in %s\n", path.Base(srcFile), srcFile)
+		} else {
+			log.Printf("Failed to stat %s: %s\n", srcFile, err)
+		}
 		return
 	}
 

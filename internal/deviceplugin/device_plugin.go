@@ -1,6 +1,7 @@
 package deviceplugin
 
 import (
+	"fmt"
 	"path"
 	"strings"
 
@@ -20,7 +21,7 @@ type Interface interface {
 	Name() string
 }
 
-func NewDevicePlugins(topology *topology.NodeTopology, kubeClient kubernetes.Interface) []Interface {
+func NewDevicePlugins(topology *topology.NodeTopology, kubeClient kubernetes.Interface) ([]Interface, error) {
 	if topology == nil {
 		panic("topology is nil")
 	}
@@ -35,26 +36,35 @@ func NewDevicePlugins(topology *topology.NodeTopology, kubeClient kubernetes.Int
 			kubeClient:   kubeClient,
 			gpuCount:     getGpuCount(topology),
 			otherDevices: otherDevices,
-		}}
+		}}, nil
+	}
+
+	gpuDevs, err := createDevices(getGpuCount(topology))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GPU devices: %w", err)
 	}
 
 	devicePlugins := []Interface{
 		&RealNodeDevicePlugin{
-			devs:         createDevices(getGpuCount(topology)),
+			devs:         gpuDevs,
 			socket:       serverSock,
 			resourceName: nvidiaGPUResourceName,
 		},
 	}
 
 	for _, genericDevice := range topology.OtherDevices {
+		otherDevs, err := createDevices(genericDevice.Count)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create devices for %s: %w", genericDevice.Name, err)
+		}
 		devicePlugins = append(devicePlugins, &RealNodeDevicePlugin{
-			devs:         createDevices(genericDevice.Count),
+			devs:         otherDevs,
 			socket:       path.Join(pluginapi.DevicePluginPath, normalizeDeviceName(genericDevice.Name)+".sock"),
 			resourceName: genericDevice.Name,
 		})
 	}
 
-	return devicePlugins
+	return devicePlugins, nil
 }
 
 func normalizeDeviceName(deviceName string) string {

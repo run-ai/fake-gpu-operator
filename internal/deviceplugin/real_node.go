@@ -65,16 +65,19 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 	return c, nil
 }
 
-func createDevices(devCount int) []*pluginapi.Device {
+func createDevices(devCount int) ([]*pluginapi.Device, error) {
 	var devs []*pluginapi.Device
 	for i := 0; i < devCount; i++ {
-		u, _ := uuid.NewRandom()
+		u, err := uuid.NewRandom()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate device UUID: %w", err)
+		}
 		devs = append(devs, &pluginapi.Device{
 			ID:     u.String(),
 			Health: pluginapi.Healthy,
 		})
 	}
-	return devs
+	return devs, nil
 }
 
 func (m *RealNodeDevicePlugin) Start() error {
@@ -148,9 +151,8 @@ func (m *RealNodeDevicePlugin) Register(kubeletEndpoint string) error {
 }
 
 func (m *RealNodeDevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.DevicePlugin_ListAndWatchServer) error {
-	err := s.Send(&pluginapi.ListAndWatchResponse{Devices: m.devs})
-	if err != nil {
-		fmt.Printf("Failed to send devices to Kubelet: %v\n", err)
+	if err := s.Send(&pluginapi.ListAndWatchResponse{Devices: m.devs}); err != nil {
+		return fmt.Errorf("failed to send devices to Kubelet: %w", err)
 	}
 
 	for {

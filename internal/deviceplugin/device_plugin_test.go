@@ -21,7 +21,7 @@ func TestDevicePlugin(t *testing.T) {
 var _ = Describe("NewDevicePlugins", func() {
 	Context("When the topology is nil", func() {
 		It("should panic", func() {
-			Expect(func() { NewDevicePlugins(nil, nil) }).To(Panic())
+			Expect(func() { _, _ = NewDevicePlugins(nil, nil) }).To(Panic())
 		})
 	})
 
@@ -37,7 +37,8 @@ var _ = Describe("NewDevicePlugins", func() {
 		It("should return a fake node device plugin", func() {
 			topology := &topology.NodeTopology{}
 			kubeClient := &fake.Clientset{}
-			devicePlugins := NewDevicePlugins(topology, kubeClient)
+			devicePlugins, err := NewDevicePlugins(topology, kubeClient)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(devicePlugins).To(HaveLen(1))
 			Expect(devicePlugins[0]).To(BeAssignableToTypeOf(&FakeNodeDevicePlugin{}))
 		})
@@ -47,7 +48,8 @@ var _ = Describe("NewDevicePlugins", func() {
 		It("should return a real node device plugin", func() {
 			topology := &topology.NodeTopology{}
 			kubeClient := &fake.Clientset{}
-			devicePlugins := NewDevicePlugins(topology, kubeClient)
+			devicePlugins, err := NewDevicePlugins(topology, kubeClient)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(devicePlugins).To(HaveLen(1))
 			Expect(devicePlugins[0]).To(BeAssignableToTypeOf(&RealNodeDevicePlugin{}))
 		})
@@ -60,7 +62,8 @@ var _ = Describe("NewDevicePlugins", func() {
 				},
 			}
 			kubeClient := &fake.Clientset{}
-			devicePlugins := NewDevicePlugins(topology, kubeClient)
+			devicePlugins, err := NewDevicePlugins(topology, kubeClient)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(devicePlugins).To(HaveLen(3))
 			Expect(devicePlugins[0]).To(BeAssignableToTypeOf(&RealNodeDevicePlugin{}))
 		})
