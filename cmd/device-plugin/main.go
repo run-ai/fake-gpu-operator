@@ -73,12 +73,8 @@ func initPreloaders() {
 
 func publish(srcFile string, destFile string) {
 	srcFileInfo, err := os.Stat(srcFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("%s not found in %s\n", path.Base(srcFile), srcFile)
-		} else {
-			log.Printf("Failed to stat %s: %s\n", srcFile, err)
-		}
+	if os.IsNotExist(err) {
+		log.Printf("%s not found in %s\n", path.Base(srcFile), srcFile)
 		return
 	}
 

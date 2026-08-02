@@ -1,8 +1,10 @@
 package deviceplugin
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/viper"
@@ -66,6 +68,23 @@ var _ = Describe("NewDevicePlugins", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(devicePlugins).To(HaveLen(3))
 			Expect(devicePlugins[0]).To(BeAssignableToTypeOf(&RealNodeDevicePlugin{}))
+		})
+	})
+
+	Context("when device UUID generation fails", func() {
+		It("should propagate the error from NewDevicePlugins", func() {
+			original := uuidNewRandom
+			uuidNewRandom = func() (uuid.UUID, error) { return uuid.UUID{}, errors.New("rng failed") }
+			defer func() { uuidNewRandom = original }()
+
+			topology := &topology.NodeTopology{
+				Gpus: []topology.GpuDetails{{ID: "gpu-0"}},
+			}
+			kubeClient := &fake.Clientset{}
+			devicePlugins, err := NewDevicePlugins(topology, kubeClient)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to create GPU devices"))
+			Expect(devicePlugins).To(BeNil())
 		})
 	})
 
