@@ -42,7 +42,11 @@ func main() {
 	initNvidiaSmi()
 	initPreloaders()
 
-	devicePlugins := deviceplugin.NewDevicePlugins(topology, kubeClient)
+	devicePlugins, err := deviceplugin.NewDevicePlugins(topology, kubeClient)
+	if err != nil {
+		log.Printf("Failed to create device plugins: %s\n", err)
+		os.Exit(1)
+	}
 	for _, devicePlugin := range devicePlugins {
 		log.Printf("Starting device plugin for %s\n", devicePlugin.Name())
 		if err = devicePlugin.Serve(); err != nil {

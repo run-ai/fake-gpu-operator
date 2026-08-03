@@ -65,16 +65,22 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 	return c, nil
 }
 
-func createDevices(devCount int) []*pluginapi.Device {
+// uuidNewRandom is overridable for tests.
+var uuidNewRandom = uuid.NewRandom
+
+func createDevices(devCount int) ([]*pluginapi.Device, error) {
 	var devs []*pluginapi.Device
 	for i := 0; i < devCount; i++ {
-		u, _ := uuid.NewRandom()
+		u, err := uuidNewRandom()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate device UUID: %w", err)
+		}
 		devs = append(devs, &pluginapi.Device{
 			ID:     u.String(),
 			Health: pluginapi.Healthy,
 		})
 	}
-	return devs
+	return devs, nil
 }
 
 func (m *RealNodeDevicePlugin) Start() error {
