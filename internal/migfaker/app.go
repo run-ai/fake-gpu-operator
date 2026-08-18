@@ -39,14 +39,14 @@ func (app *MigFakeApp) Run() {
 			var migConfig AnnotationMigConfig
 			err := yaml.Unmarshal([]byte(value), &migConfig)
 			if err != nil {
-				log.Printf("failed to unmarshal mig config: %e", err)
+				log.Printf("failed to unmarshal mig config: %v", err)
 				break
 			}
 			err = app.MigFaker.FakeMapping(&migConfig.MigConfigs)
 			if err != nil {
-				log.Printf("Failed faking mig: %e", err)
+				log.Printf("Failed faking mig: %v", err)
 			}
-			log.Printf("Successfuly updated MIG config")
+			log.Printf("Successfully updated MIG config")
 
 		}
 	}
@@ -56,7 +56,7 @@ func (app *MigFakeApp) Init(stop chan struct{}) {
 	app.stopCh = stop
 	err := viper.Unmarshal(&app.Config)
 	if err != nil {
-		log.Fatalf("failed to unmarshal configuration: %e", err)
+		log.Fatalf("failed to unmarshal configuration: %v", err)
 	}
 	config, err := clientcmd.BuildConfigFromFlags("", app.Config.KubeConfig)
 	if err != nil {

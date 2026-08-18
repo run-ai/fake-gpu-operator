@@ -1,4 +1,4 @@
-package configmamp
+package configmap
 
 import (
 	"log"

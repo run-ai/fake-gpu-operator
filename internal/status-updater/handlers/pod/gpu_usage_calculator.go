@@ -96,7 +96,7 @@ func calculateUtilizationFromAnnotation(annotationValue string) (*topology.Range
 	if len(submatches) > 2 && string(submatches[2]) != "" {
 		maxUtilization, err = strconv.Atoi(string(submatches[2]))
 		if err != nil {
-			return nil, fmt.Errorf("%s failed to parse to intt, len %d: %s", submatches[2], len(submatches), err)
+			return nil, fmt.Errorf("%s failed to parse to int, len %d: %s", submatches[2], len(submatches), err)
 		}
 	}
 

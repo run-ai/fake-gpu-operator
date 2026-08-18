@@ -180,7 +180,7 @@ func (s *DeviceState) prepareDevices(claim *resourceapi.ResourceClaim) (Prepared
 		case *configapi.GpuConfig:
 			config = castConfig
 		default:
-			return nil, fmt.Errorf("runtime object is not a regognized configuration")
+			return nil, fmt.Errorf("runtime object is not a recognized configuration")
 		}
 
 		// Normalize the config to set any implied defaults.

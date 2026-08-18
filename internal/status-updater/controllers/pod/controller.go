@@ -52,7 +52,7 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				newPod := newObj.(*v1.Pod)
-				controllers_util.LogErrorIfExist(c.handler.HandleUpdate(newPod), "Failed to handle pod addition")
+				controllers_util.LogErrorIfExist(c.handler.HandleUpdate(newPod), "Failed to handle pod update")
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)

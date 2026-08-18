@@ -45,7 +45,7 @@ func (appRunner *AppRunner) Run() {
 
 	signal.Notify(appRunner.stopSignal, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	s := <-appRunner.stopSignal
-	log.Printf("Received signal \"%v\"\n shuting down", s)
+	log.Printf("Received signal \"%v\"\nshutting down", s)
 
 	close(appRunner.stopper)
 	appRunner.wg.Wait()
@@ -80,7 +80,7 @@ func LoadConfig(app App) {
 }
 
 // patch for viper to bind all relevant envs, from here: https://github.com/spf13/viper/pull/1429
-// scan be deleted on feuture versions of viper
+// can be deleted on future versions of viper
 func bindStruct(input interface{}) error {
 	envKeysMap := map[string]interface{}{}
 	if err := mapstructure.Decode(input, &envKeysMap); err != nil {

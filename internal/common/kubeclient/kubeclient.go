@@ -33,7 +33,7 @@ func NewKubeClient(config *rest.Config, stop chan struct{}) *KubeClient {
 		var err error
 		config, err = ctrl.GetConfig()
 		if err != nil {
-			log.Fatalf("Error getting in cluster config to init kubeclient: %e", err)
+			log.Fatalf("Error getting in cluster config to init kubeclient: %v", err)
 		}
 	}
 

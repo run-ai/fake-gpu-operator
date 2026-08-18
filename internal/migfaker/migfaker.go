@@ -56,12 +56,12 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 
 	err := faker.kubeclient.SetNodeLabels(labels)
 	if err != nil {
-		log.Printf("error on setting node labels: %e", err)
+		log.Printf("error on setting node labels: %v", err)
 		return err
 	}
 	err = faker.kubeclient.SetNodeAnnotations(annotations)
 	if err != nil {
-		log.Printf("error on setting node annotations: %e", err)
+		log.Printf("error on setting node annotations: %v", err)
 		return err
 	}
 	return nil

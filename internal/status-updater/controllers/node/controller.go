@@ -103,14 +103,14 @@ func (c *NodeController) pruneTopologyConfigMaps() error {
 		LabelSelector: labels.NewSelector().Add(*gpuNodesLabelReq).String(),
 	})
 	if err != nil {
-		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
+		return fmt.Errorf("failed listing gpu nodes: %v", err)
 	}
 
 	nodeTopologyCms, err := c.kubeClient.CoreV1().ConfigMaps(viper.GetString(constants.EnvTopologyCmNamespace)).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=true", constants.LabelTopologyCMNodeTopology),
 	})
 	if err != nil {
-		return fmt.Errorf("failed listing fake gpu nodes: %v", err)
+		return fmt.Errorf("failed listing node topology configmaps: %v", err)
 	}
 
 	validNodeTopologyCMMap := make(map[string]bool)
