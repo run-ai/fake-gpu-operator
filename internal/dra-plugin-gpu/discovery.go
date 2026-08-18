@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	resourceapi "k8s.io/api/resource/v1"
@@ -19,7 +20,8 @@ const (
 
 // getTopologyFromHTTP retrieves node topology from the HTTP topology server
 func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
-	resp, err := http.Get(topologyServerURL + nodeName)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(topologyServerURL + nodeName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get topology from HTTP server: %w", err)
 	}

@@ -51,6 +51,9 @@ func (client *KubeClient) SetNodeLabels(lables map[string]string) error {
 		return err
 	}
 
+	if node.Labels == nil {
+		node.Labels = map[string]string{}
+	}
 	for k, v := range lables {
 		node.Labels[k] = v
 	}
@@ -67,6 +70,9 @@ func (client *KubeClient) SetNodeAnnotations(annotations map[string]string) erro
 		return err
 	}
 
+	if node.Annotations == nil {
+		node.Annotations = map[string]string{}
+	}
 	for k, v := range annotations {
 		node.Annotations[k] = v
 	}
@@ -114,6 +120,7 @@ func (client *KubeClient) WatchConfigMap(namespace string, configmapName string)
 }
 
 func (client *KubeClient) watchCmChange(cmWatch watch.Interface, configMapsChan chan *corev1.ConfigMap) {
+	defer cmWatch.Stop()
 	for {
 		select {
 		case result := <-cmWatch.ResultChan():
@@ -123,6 +130,7 @@ func (client *KubeClient) watchCmChange(cmWatch watch.Interface, configMapsChan 
 				}
 			}
 		case <-client.stopChan:
+			return
 		}
 	}
 }

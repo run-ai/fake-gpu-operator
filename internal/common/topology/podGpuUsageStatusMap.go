@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/tidwall/gjson"
 )
@@ -47,7 +48,8 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 
 	prometheusURL := fmt.Sprintf("%s/api/v1/query?%s", prometheusBaseURL, params.Encode())
 
-	res, err := http.Get(prometheusURL)
+	client := &http.Client{Timeout: 10 * time.Second}
+	res, err := client.Get(prometheusURL)
 	if err != nil {
 		log.Printf("Error: %v\n", err)
 		return 0

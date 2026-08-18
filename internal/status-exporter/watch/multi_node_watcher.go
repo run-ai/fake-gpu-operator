@@ -108,10 +108,10 @@ func (w *MultiNodeWatcher) handleNodeDeletion(nodeName string) {
 
 func extractNodeNameFromCMName(cmName, topologyCMPrefix string) string {
 	prefix := topologyCMPrefix + "-"
-	if strings.HasPrefix(cmName, prefix) {
-		return strings.TrimPrefix(cmName, prefix)
+	if !strings.HasPrefix(cmName, prefix) {
+		return ""
 	}
-	return cmName
+	return strings.TrimPrefix(cmName, prefix)
 }
 
 func (w *MultiNodeWatcher) SetupWithManager(mgr ctrl.Manager) error {

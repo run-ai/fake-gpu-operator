@@ -58,10 +58,10 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // The ConfigMap name format is: <topology-cm-prefix>-<node-name>
 func extractNodeNameFromCMName(cmName, topologyCMPrefix string) string {
 	prefix := topologyCMPrefix + "-"
-	if strings.HasPrefix(cmName, prefix) {
-		return strings.TrimPrefix(cmName, prefix)
+	if !strings.HasPrefix(cmName, prefix) {
+		return ""
 	}
-	return cmName
+	return strings.TrimPrefix(cmName, prefix)
 }
 
 // SetupWithManager sets up the controller with the Manager.

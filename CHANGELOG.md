@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `kwok-compute-domain-dra-plugin` image is now built and pushed by the
   release pipeline. It was missing from the CI release matrix, so enabling
   `kwokComputeDomainDraPlugin.enabled` caused an `ImagePullBackOff`. (RUN-41041)
+- Fixed a ConfigMap watch goroutine leak by stopping the watcher on shutdown,
+  added HTTP client timeouts to Prometheus and topology-server requests, added
+  nil-map guards before updating node labels/annotations, and made topology
+  ConfigMap name extraction return an empty string when the prefix does not match.
 
 ## [0.2.0] - 2026-07-01
 
