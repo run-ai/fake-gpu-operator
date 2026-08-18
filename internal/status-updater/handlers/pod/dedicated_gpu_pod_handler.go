@@ -22,6 +22,10 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *to
 		return nil
 	}
 
+	if len(pod.Spec.Containers) == 0 {
+		return fmt.Errorf("pod %s has no containers", pod.Name)
+	}
+
 	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name(constants.GpuResourceName, "")
 	if requestedGpus == nil {
 		return fmt.Errorf("no GPUs requested in pod %s", pod.Name)

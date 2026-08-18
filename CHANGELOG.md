@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `kwok-compute-domain-dra-plugin` image is now built and pushed by the
   release pipeline. It was missing from the CI release matrix, so enabling
   `kwokComputeDomainDraPlugin.enabled` caused an `ImagePullBackOff`. (RUN-41041)
+- Fixed multiple panic and edge-case risks: unsafe informer type assertions,
+  empty container lists in dedicated GPU pods, negative GPU index lookups for
+  shared GPU pods, unguarded URL path splitting in the topology server, nil
+  sharing config in the DRA plugin, unsafe string truncation in `nvidia-smi`,
+  and unsafe JSON merge-patch construction.
 
 ## [0.2.0] - 2026-07-01
 

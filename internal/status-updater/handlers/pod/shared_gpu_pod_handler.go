@@ -3,7 +3,6 @@ package pod
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/hashicorp/go-multierror"
@@ -65,8 +64,7 @@ func getMatchingReservationPodGpuIdx(kubeclient kubernetes.Interface, pod *v1.Po
 	}
 
 	if reservationPodName == "" {
-		log.Printf("Empty reservation pod name for pod %s\n", pod.Name)
-		return -1, nil
+		return -1, fmt.Errorf("empty reservation pod name for pod %s", pod.Name)
 	}
 
 	reservationPodGpuIdx := -1

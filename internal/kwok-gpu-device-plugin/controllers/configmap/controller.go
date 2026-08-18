@@ -1,4 +1,4 @@
-package configmamp
+package configmap
 
 import (
 	"log"
@@ -56,7 +56,11 @@ func NewConfigMapController(
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				go func() {
-					util.LogErrorIfExist(c.handler.HandleAdd(obj.(*v1.ConfigMap)), "Failed to handle cm addition")
+					cm, ok := obj.(*v1.ConfigMap)
+					if !ok {
+						return
+					}
+					util.LogErrorIfExist(c.handler.HandleAdd(cm), "Failed to handle cm addition")
 				}()
 			},
 		},

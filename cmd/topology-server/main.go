@@ -41,7 +41,14 @@ func main() {
 	})
 
 	http.HandleFunc("/topology/nodes/", func(w http.ResponseWriter, r *http.Request) {
-		nodeName := strings.Split(r.URL.Path, "/")[3]
+		parts := strings.Split(r.URL.Path, "/")
+		if len(parts) < 4 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("Can't get node name from url " + r.URL.Path))
+			return
+		}
+		nodeName := parts[3]
 		w.Header().Set("Content-Type", "application/json")
 
 		if nodeName == "" {

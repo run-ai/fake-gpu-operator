@@ -47,15 +47,24 @@ func NewPodController(kubeClient kubernetes.Interface, dynamicClient dynamic.Int
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				pod := obj.(*v1.Pod)
+				pod, ok := obj.(*v1.Pod)
+				if !ok {
+					return
+				}
 				controllers_util.LogErrorIfExist(c.handler.HandleAdd(pod), "Failed to handle pod addition")
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				newPod := newObj.(*v1.Pod)
+				newPod, ok := newObj.(*v1.Pod)
+				if !ok {
+					return
+				}
 				controllers_util.LogErrorIfExist(c.handler.HandleUpdate(newPod), "Failed to handle pod addition")
 			},
 			DeleteFunc: func(obj interface{}) {
-				pod := obj.(*v1.Pod)
+				pod, ok := obj.(*v1.Pod)
+				if !ok {
+					return
+				}
 				controllers_util.LogErrorIfExist(c.handler.HandleDelete(pod), "Failed to handle pod deletion")
 			},
 		},

@@ -243,6 +243,10 @@ func printArgs(allArgs []nvidiaSmiArgs) {
 }
 
 func sizeString(str string, size int, alignRight bool) string {
+	if size <= 1 {
+		return str
+	}
+
 	if len(str) < size {
 		if alignRight {
 			str = strings.Repeat(" ", size-len(str)) + str

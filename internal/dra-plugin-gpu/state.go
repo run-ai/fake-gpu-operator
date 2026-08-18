@@ -180,7 +180,7 @@ func (s *DeviceState) prepareDevices(claim *resourceapi.ResourceClaim) (Prepared
 		case *configapi.GpuConfig:
 			config = castConfig
 		default:
-			return nil, fmt.Errorf("runtime object is not a regognized configuration")
+			return nil, fmt.Errorf("runtime object is not a recognized configuration")
 		}
 
 		// Normalize the config to set any implied defaults.
@@ -252,19 +252,21 @@ func (s *DeviceState) applyConfig(config *configapi.GpuConfig, results []*resour
 			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_SHARING_STRATEGY=%s", deviceID, config.Sharing.Strategy))
 		}
 
-		switch {
-		case config.Sharing.IsTimeSlicing():
-			tsconfig, err := config.Sharing.GetTimeSlicingConfig()
-			if err != nil {
-				return nil, fmt.Errorf("unable to get time slicing config for device %v: %w", result.Device, err)
+		if config.Sharing != nil {
+			switch {
+			case config.Sharing.IsTimeSlicing():
+				tsconfig, err := config.Sharing.GetTimeSlicingConfig()
+				if err != nil {
+					return nil, fmt.Errorf("unable to get time slicing config for device %v: %w", result.Device, err)
+				}
+				envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_TIMESLICE_INTERVAL=%v", deviceID, tsconfig.Interval))
+			case config.Sharing.IsSpacePartitioning():
+				spconfig, err := config.Sharing.GetSpacePartitioningConfig()
+				if err != nil {
+					return nil, fmt.Errorf("unable to get space partitioning config for device %v: %w", result.Device, err)
+				}
+				envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_PARTITION_COUNT=%v", deviceID, spconfig.PartitionCount))
 			}
-			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_TIMESLICE_INTERVAL=%v", deviceID, tsconfig.Interval))
-		case config.Sharing.IsSpacePartitioning():
-			spconfig, err := config.Sharing.GetSpacePartitioningConfig()
-			if err != nil {
-				return nil, fmt.Errorf("unable to get space partitioning config for device %v: %w", result.Device, err)
-			}
-			envs = append(envs, fmt.Sprintf("GPU_DEVICE_%s_PARTITION_COUNT=%v", deviceID, spconfig.PartitionCount))
 		}
 
 		edits := &cdispec.ContainerEdits{

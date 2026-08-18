@@ -2,6 +2,7 @@ package pod
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
@@ -41,7 +42,16 @@ func (p *PodHandler) setReservationPodGpuIdxAnnotationIfNeeded(pod *v1.Pod, node
 
 	annotationKey := constants.AnnotationReservationPodGpuIdx
 	annotationVal := allocatedGpuID
-	patch := []byte(fmt.Sprintf(`{"metadata": {"annotations": {"%s": "%s"}}}`, annotationKey, annotationVal))
+	patch, err := json.Marshal(map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]string{
+				annotationKey: annotationVal,
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal patch for pod %s: %w", pod.Name, err)
+	}
 
 	_, err = p.kubeClient.CoreV1().Pods(pod.Namespace).Patch(context.TODO(), pod.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
