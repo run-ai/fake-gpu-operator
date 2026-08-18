@@ -45,7 +45,10 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 		mappings[gpuIdx] = migDeviceMappingInfo
 	}
 
-	smappings, _ := json.Marshal(mappings)
+	smappings, err := json.Marshal(mappings)
+	if err != nil {
+		return fmt.Errorf("failed to marshal mig mappings: %w", err)
+	}
 
 	labels := map[string]string{
 		constants.LabelMigConfigState: "success",
@@ -54,7 +57,7 @@ func (faker *MigFaker) FakeMapping(config *MigConfigs) error {
 		constants.AnnotationMigMapping: base64.StdEncoding.EncodeToString(smappings),
 	}
 
-	err := faker.kubeclient.SetNodeLabels(labels)
+	err = faker.kubeclient.SetNodeLabels(labels)
 	if err != nil {
 		log.Printf("error on setting node labels: %e", err)
 		return err

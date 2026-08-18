@@ -66,6 +66,7 @@ func exportPods(nodeTopology *topology.NodeTopology, resourceReservationNs strin
 			path := fmt.Sprintf("%s/%s/metrics/gpu/%d", podProcDir, podUuid, gpuIdx)
 			if err := os.MkdirAll(path, 0755); err != nil {
 				log.Printf("Failed creating directory for pod %s: %s", podUuid, err.Error())
+				continue
 			}
 
 			if err := writeFile(filepath.Join(path, "utilization.sm"), []byte(strconv.Itoa(gpuUsageStatus.Utilization.Random()))); err != nil {

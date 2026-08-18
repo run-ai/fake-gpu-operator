@@ -124,7 +124,7 @@ func (c *NodeController) pruneTopologyConfigMaps() error {
 		multiErr = multierror.Append(multiErr, c.pruneTopologyConfigMap(&cm, ok))
 	}
 
-	return nil
+	return multiErr
 }
 
 func (c *NodeController) pruneTopologyConfigMap(cm *v1.ConfigMap, isValidNodeTopologyCM bool) error {

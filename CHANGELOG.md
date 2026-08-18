@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `kwok-compute-domain-dra-plugin` image is now built and pushed by the
   release pipeline. It was missing from the CI release matrix, so enabling
   `kwokComputeDomainDraPlugin.enabled` caused an `ImagePullBackOff`. (RUN-41041)
+- Fixed several cases where errors were silently ignored or swallowed,
+  including MIG mapping JSON marshaling, topology ConfigMap pruning, node
+  topology lookup, and filesystem export directory creation.
 
 ## [0.2.0] - 2026-07-01
 

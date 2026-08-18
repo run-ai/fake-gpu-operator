@@ -8,10 +8,14 @@ import (
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (p *NodeHandler) createNodeTopologyCM(node *v1.Node) error {
-	nodeTopology, _ := topology.GetNodeTopologyFromCM(p.kubeClient, node.Name)
+	nodeTopology, err := topology.GetNodeTopologyFromCM(p.kubeClient, node.Name)
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get node topology for node %s: %w", node.Name, err)
+	}
 	if nodeTopology != nil {
 		return nil
 	}
