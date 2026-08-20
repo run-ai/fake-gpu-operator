@@ -71,9 +71,10 @@ COPY ./pkg/compute-domain/ ./pkg/compute-domain/
 COPY ./internal/kwok-compute-domain-dra-plugin/ ./internal/kwok-compute-domain-dra-plugin/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=kwok-compute-domain-dra-plugin
 
-FROM common-builder AS preloader-builder 
-COPY ./cmd/preloader/ ./cmd/preloader/
-RUN make build-preloader
+FROM --platform=$TARGETPLATFORM golang:1.24.0 AS preloader-builder
+WORKDIR /build
+COPY ./cmd/preloader/main.c main.c
+RUN gcc -fPIC -shared -o /preloader.so main.c
 
 FROM jupyter/minimal-notebook AS jupyter-notebook
 COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
@@ -81,8 +82,8 @@ COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/n
 FROM ubuntu AS device-plugin
 COPY --from=device-plugin-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/device-plugin /bin/
 COPY --from=nvidia-smi-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/nvidia-smi /bin/
-COPY --from=preloader-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/preloader /shared/memory/preloader.so
-COPY --from=preloader-builder /go/src/github.com/run-ai/fake-gpu-operator/bin/preloader /shared/pid/preloader.so
+COPY --from=preloader-builder /preloader.so /shared/memory/preloader.so
+COPY --from=preloader-builder /preloader.so /shared/pid/preloader.so
 ENTRYPOINT ["/bin/device-plugin"]
 
 FROM ubuntu AS status-updater
