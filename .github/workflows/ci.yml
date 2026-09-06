@@ -242,8 +242,6 @@ jobs:
       contents: read
       packages: write
     strategy:
-      # Don't let one component's push failure cancel the others (or silently
-      # block release-helm via `needs`). Surface every component result.
       fail-fast: false
       matrix:
         component: [device-plugin, dra-plugin-gpu, status-updater, kwok-gpu-device-plugin, kwok-dra-plugin, kwok-compute-domain-dra-plugin, status-exporter, topology-server, mig-faker, jupyter-notebook, compute-domain-controller, compute-domain-dra-plugin]
@@ -263,10 +261,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          # Disable provenance/SBOM attestations. Their extra attestation
-          # manifests trip a `denied: permission_denied: read_package` error on
-          # the first push to a not-yet-created GHCR package (the cause of the
-          # kwok-compute-domain-dra-plugin release failures since #232).
           provenance: false
           tags: ${{ env.DOCKER_REGISTRY }}/${{ matrix.component }}:${{ needs.set-release-vars.outputs.release_version }}
           target: ${{ matrix.component }}
