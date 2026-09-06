@@ -261,7 +261,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          provenance: false
           tags: ${{ env.DOCKER_REGISTRY }}/${{ matrix.component }}:${{ needs.set-release-vars.outputs.release_version }}
           target: ${{ matrix.component }}
           platforms: linux/amd64,linux/arm64
