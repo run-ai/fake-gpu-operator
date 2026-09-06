@@ -242,6 +242,7 @@ jobs:
       contents: read
       packages: write
     strategy:
+      fail-fast: false
       matrix:
         component: [device-plugin, dra-plugin-gpu, status-updater, kwok-gpu-device-plugin, kwok-dra-plugin, kwok-compute-domain-dra-plugin, status-exporter, topology-server, mig-faker, jupyter-notebook, compute-domain-controller, compute-domain-dra-plugin]
     steps:
@@ -260,6 +261,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
+          provenance: false
           tags: ${{ env.DOCKER_REGISTRY }}/${{ matrix.component }}:${{ needs.set-release-vars.outputs.release_version }}
           target: ${{ matrix.component }}
           platforms: linux/amd64,linux/arm64
