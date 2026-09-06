@@ -24,6 +24,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   instead of ignoring them. `NewDevicePlugins` now returns an error, and the
   device-plugin entrypoint handles it.
 
+### Security
+
+- Bumped the Go version to 1.27 (`go.mod` `go` directive `1.27.0`, Dockerfile
+  builder image `golang:1.27.1`, and CI `setup-go`) to pick up all outstanding
+  Go standard-library security fixes (Go 1.24 is end-of-life and no longer
+  receives them). The pinned `golangci-lint` was bumped `v2.1.2`→`v2.13.2` so
+  the linter can target the new Go version.
+- Upgraded Go module dependencies with known security advisories to their
+  patched releases:
+  `google.golang.org/grpc` `1.79.3`→`1.83.2` (GO-2026-6061, GHSA-vp52-pcj8-j9qc),
+  `golang.org/x/net` `0.48.0`→`0.58.0` (GO-2026-4918, GO-2026-5026),
+  `golang.org/x/text` `0.32.0`→`0.41.0` (GO-2026-5970),
+  `golang.org/x/sys` `0.39.0`→`0.47.0` (GO-2026-5024),
+  `golang.org/x/mod` `0.30.0`→`0.40.0` (GO-2026-6179, GO-2026-6180),
+  `go.opentelemetry.io/otel` `1.39.0`→`1.44.0` (GO-2026-5506), and
+  `go.etcd.io/etcd/client/pkg/v3` `3.6.4`→`3.6.14` (GO-2026-6107).
+
 ## [0.2.0] - 2026-07-01
 
 ### Added

@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.24.0 AS common-builder
+FROM --platform=$BUILDPLATFORM golang:1.27.1 AS common-builder
 WORKDIR $GOPATH/src/github.com/run-ai/fake-gpu-operator
 COPY go.mod .
 COPY go.sum .
@@ -71,7 +71,7 @@ COPY ./pkg/compute-domain/ ./pkg/compute-domain/
 COPY ./internal/kwok-compute-domain-dra-plugin/ ./internal/kwok-compute-domain-dra-plugin/
 RUN --mount=type=cache,target=/root/.cache/go-build make build OS=$TARGETOS ARCH=$TARGETARCH COMPONENTS=kwok-compute-domain-dra-plugin
 
-FROM --platform=$TARGETPLATFORM golang:1.24.0 AS preloader-builder
+FROM --platform=$TARGETPLATFORM golang:1.27.1 AS preloader-builder
 WORKDIR /build
 COPY ./cmd/preloader/main.c main.c
 RUN gcc -fPIC -shared -o /preloader.so main.c
