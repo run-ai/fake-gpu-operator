@@ -141,7 +141,7 @@ ginkgo: $(GINKGO)
 
 GOLANGCI_LINT=$(BUILD_DIR)/golangci-lint
 $(GOLANGCI_LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BUILD_DIR) v2.13.2
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v2.13.2/install.sh | sh -s -- -b $(BUILD_DIR) v2.13.2
 
 golangci-lint: $(GOLANGCI_LINT)
 .PHONY: golangci-lint
