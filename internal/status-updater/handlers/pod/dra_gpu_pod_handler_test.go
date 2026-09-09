@@ -407,6 +407,11 @@ var _ = Describe("DRA GPU Pod Handler", func() {
 			Expect(idx).To(Equal(1))
 		})
 
+		It("should find GPU by deterministic index naming (gpu-<idx>)", func() {
+			idx := findGpuIndexByID(nodeTopology, "gpu-1")
+			Expect(idx).To(Equal(1))
+		})
+
 		It("should return -1 for non-existent GPU", func() {
 			idx := findGpuIndexByID(nodeTopology, "gpu-9999-9999-9999-9999")
 			Expect(idx).To(Equal(-1))
