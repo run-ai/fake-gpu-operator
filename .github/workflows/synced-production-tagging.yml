@@ -15,8 +15,10 @@ jobs:
       # for some reason, only v1 works. v2 will return an empty value for the git branch command below!
       uses: actions/checkout@v1
     - name: Filter non-master branches
+      env:
+        TAG_REF: ${{ github.ref }}
       run: |
-        raw=$(git branch -r --contains ${{ github.ref }})
+        raw=$(git branch -r --contains "$TAG_REF")
         echo ${raw}
         branch=${raw/origin\/}
         echo ${branch}
