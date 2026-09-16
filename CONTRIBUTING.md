@@ -32,9 +32,10 @@ All work on the Fake GPU Operator is tracked in GitHub: [issues](https://github.
 
 - **Use the issue forms.** Blank issues are disabled; pick the Bug Report, Feature Request, Task, Documentation, or Question form so the issue lands with the right label and details.
 - **Confidential material.** This repository is public. Never paste customer names, internal hostnames, credentials, or other confidential data into issues or pull requests; contact the maintainers privately instead.
-- **Every pull request must be connected to an issue.** The `require-linked-issue` CI check fails otherwise, and re-runs when the PR description is edited. Accepted ways, in order of preference:
+- **Every pull request must be connected to an approved issue.** The issue must be open and labeled `approved` by a maintainer. The "PR links an approved issue" CI check fails otherwise, and re-runs when the PR description is edited or the issue's labels change. Maintainers can waive the requirement with the `skip-issue-check` PR label. Accepted ways, in order of preference:
   1. Link the issue in the PR's "Development" sidebar (right panel). This is the primary source of truth.
   2. Reference it in the PR description with `Closes #123`, `Fixes #123`, or `Refs #123`.
+  3. Maintainers: for issues tracked outside this repository, follow the internal contribution guide.
 
 ## How to Contribute
 
@@ -118,7 +119,7 @@ feat(chart)!: rename topology.nodePools to topology.pools
 
 Each pull request should meet the following requirements:
 
-- Linked issue — the PR references a GitHub issue; the `require-linked-issue` check enforces this.
+- Linked issue — the PR references an open GitHub issue labeled `approved`; the "PR links an approved issue" check enforces this.
 - All tests pass — Run the suites locally with `make test`, and if your change touches the operator's runtime behaviour, `make e2e`.
 - Test coverage — Add or update tests for any affected code.
 - Documentation — Update relevant documentation (`README.md`, in-tree docs, Helm chart values comments).
