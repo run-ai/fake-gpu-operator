@@ -1,0 +1,278 @@
+# Require linked issue
+#
+# Every pull request to `main` must be connected to a GitHub issue, either in
+# this repository or in an optional second issue tracker configured via the
+# `PRIVATE_ISSUE_REPO` repository variable (or the `private-repo` input when
+# called as a reusable workflow). The check looks for a connected issue in
+# this order:
+#
+#   1. Primary: an issue linked through the PR's "Development" sidebar
+#      (GraphQL `closingIssuesReferences`). Any linked issue passes the check
+#      immediately.
+#   2. Fallback: references in the PR description, verified as issues (not
+#      pull requests) against the GitHub API:
+#        - issue in this repository: `Closes #123`, `owner/repo#123`, or the
+#          full issue URL;
+#        - issue in the second tracker: `owner/repo#123` or the full issue
+#          URL (only when a second tracker is configured).
+#
+# Development-panel links to issues in the second tracker are invisible to the
+# default GITHUB_TOKEN, so a description reference is required for those.
+# Those references are verified only when the optional `PRIVATE_ISSUES_TOKEN`
+# secret is set (a fine-grained personal access token with read-only "Issues"
+# permission, scoped to that tracker). Without the token, which is always the
+# case for pull requests from forks, they are accepted by format alone.
+#
+# Reuse in other repositories
+#
+# The workflow also exposes a `workflow_call` trigger, so other repositories
+# can reuse it with a small caller workflow:
+#
+#     name: Require linked issue
+#     on:
+#       pull_request:
+#         types: [opened, edited, reopened, synchronize, ready_for_review]
+#         branches: [main]
+#     permissions:
+#       contents: read
+#       issues: read
+#       pull-requests: read
+#     jobs:
+#       require-linked-issue:
+#         uses: run-ai/fake-gpu-operator/.github/workflows/require-linked-issue.yml@main
+#         with:
+#           private-repo: ${{ vars.PRIVATE_ISSUE_REPO }}   # optional
+#         secrets: inherit
+#
+# When called this way the status-check context is
+# `require-linked-issue / require-linked-issue` (caller job name / called job
+# name). Nothing in the script is specific to this repository, so the file can
+# later move unchanged to an org-level `run-ai/.github` repository.
+#
+# The job name `require-linked-issue` is the status-check context to mark as
+# required in branch protection. Bot PRs (Dependabot, Renovate, ...) skip the
+# job; a skipped required check passes branch protection.
+
+name: Require linked issue
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+    branches: [main]
+  workflow_call:
+    inputs:
+      private-repo:
+        description: "owner/name of an optional second issue tracker. Defaults to the caller's PRIVATE_ISSUE_REPO variable."
+        type: string
+        required: false
+        default: ""
+    secrets:
+      PRIVATE_ISSUES_TOKEN:
+        description: "Optional fine-grained PAT (Issues: read) for the second issue tracker."
+        required: false
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  require-linked-issue:
+    name: require-linked-issue
+    if: github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check for a linked issue
+        uses: actions/github-script@v7
+        env:
+          PRIVATE_REPO: ${{ inputs.private-repo || vars.PRIVATE_ISSUE_REPO }}
+          PRIVATE_ISSUES_TOKEN: ${{ secrets.PRIVATE_ISSUES_TOKEN }}
+        with:
+          script: |
+            // ---------------------------------------------------------------
+            // Reference extraction (pure function, no API calls)
+            // ---------------------------------------------------------------
+
+            function escapeRegExp(s) {
+              return s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
+            }
+
+            // Returns { public: Set<number>, private: Set<number> } of issue
+            // numbers referenced in `body`. Only issue references count; PR
+            // URLs (`/pull/123`) are deliberately ignored.
+            function extractRefs(body, publicRepo, privateRepo) {
+              const text = (body || '')
+                .replace(/<!--[\s\S]*?-->/g, '')     // template placeholder comments
+                .replace(/```[\s\S]*?```/g, '');      // fenced code blocks (pasted logs)
+
+              const collect = (patterns) => {
+                const out = new Set();
+                for (const re of patterns) {
+                  for (const m of text.matchAll(re)) out.add(Number(m[1]));
+                }
+                return out;
+              };
+
+              const pub = escapeRegExp(publicRepo);
+              const publicRefs = collect([
+                /(?<![\w\/])#(\d+)\b/g,                                   // bare #123
+                new RegExp(`(?<![\\w\\/])${pub}#(\\d+)\\b`, 'g'),          // owner/repo#123
+                new RegExp(`https://github\\.com/${pub}/issues/(\\d+)\\b`, 'g'),
+              ]);
+
+              // A second tracker is optional; with none configured, nothing matches.
+              let privateRefs = new Set();
+              if (privateRepo) {
+                const priv = escapeRegExp(privateRepo);
+                privateRefs = collect([
+                  new RegExp(`(?<![\\w\\/])${priv}#(\\d+)\\b`, 'g'),
+                  new RegExp(`https://github\\.com/${priv}/issues/(\\d+)\\b`, 'g'),
+                ]);
+              }
+
+              return { public: publicRefs, private: privateRefs };
+            }
+
+            // ---------------------------------------------------------------
+            // Verification helpers
+            // ---------------------------------------------------------------
+
+            // Verifies each candidate number against the issues API of
+            // `owner/repo`. Returns { valid: string[], rejected: string[] }
+            // where entries are formatted as `owner/repo#N`.
+            async function verify(client, owner, repo, numbers) {
+              const valid = [];
+              const rejected = [];
+              for (const number of numbers) {
+                const ref = `${owner}/${repo}#${number}`;
+                try {
+                  const { data } = await client.rest.issues.get({ owner, repo, issue_number: number });
+                  if (data.pull_request) {
+                    // The issues API also returns pull requests; those don't count.
+                    rejected.push(`${ref} is a pull request, not an issue`);
+                  } else {
+                    valid.push(ref);
+                  }
+                } catch (err) {
+                  if (err.status === 404) {
+                    rejected.push(`${ref} does not exist`);
+                  } else {
+                    core.warning(`Could not verify ${ref}: ${err.message}`);
+                    rejected.push(`${ref} could not be verified (${err.status || 'error'})`);
+                  }
+                }
+              }
+              return { valid, rejected };
+            }
+
+            // Issues linked through the PR "Development" sidebar.
+            async function linkedViaDevelopment(owner, repo, number) {
+              const query = `
+                query($owner: String!, $repo: String!, $number: Int!) {
+                  repository(owner: $owner, name: $repo) {
+                    pullRequest(number: $number) {
+                      closingIssuesReferences(first: 20) {
+                        nodes { number repository { nameWithOwner } }
+                      }
+                    }
+                  }
+                }`;
+              try {
+                const res = await github.graphql(query, { owner, repo, number });
+                const nodes = res.repository.pullRequest.closingIssuesReferences.nodes || [];
+                return nodes.map((n) => `${n.repository.nameWithOwner}#${n.number}`);
+              } catch (err) {
+                core.warning(`Could not query Development links: ${err.message}`);
+                return [];
+              }
+            }
+
+            // ---------------------------------------------------------------
+            // Main
+            // ---------------------------------------------------------------
+
+            const pr = context.payload.pull_request;
+            const publicOwner = context.repo.owner;
+            const publicRepo = context.repo.repo;
+            const publicFull = `${publicOwner}/${publicRepo}`;
+            // Optional second issue tracker; empty when none is configured.
+            const privateFull = process.env.PRIVATE_REPO || '';
+            const [privateOwner, privateRepo] = privateFull ? privateFull.split('/') : ['', ''];
+            const privateToken = process.env.PRIVATE_ISSUES_TOKEN || '';
+
+            const summary = core.summary.addHeading('Linked issue check', 3);
+
+            async function pass(list, source) {
+              core.info(`Linked issues (${source}): ${list.join(', ')}`);
+              summary.addRaw(
+                `:white_check_mark: Linked issues (${source}): ${list.map((r) => `\`${r}\``).join(', ')}\n`
+              );
+              await summary.write();
+            }
+
+            // 1. Primary: issues linked via the Development sidebar. Any hit passes.
+            const developmentLinks = await linkedViaDevelopment(publicOwner, publicRepo, pr.number);
+            if (developmentLinks.length > 0) {
+              await pass([...new Set(developmentLinks)], 'Development sidebar');
+              return;
+            }
+            core.info('No issue linked via the Development sidebar; checking the PR description.');
+
+            // 2. Fallback: references in the PR description.
+            const refs = extractRefs(pr.body, publicFull, privateFull);
+            core.info(`Public candidates: ${[...refs.public].join(', ') || '(none)'}`);
+            core.info(`Private candidates: ${[...refs.private].join(', ') || '(none)'}`);
+
+            const linked = new Set();
+            const rejected = [];
+
+            // 2a. Public references, verified against this repository.
+            const pub = await verify(github, publicOwner, publicRepo, refs.public);
+            pub.valid.forEach((r) => linked.add(r));
+            rejected.push(...pub.rejected);
+
+            // 2b. Private references, verified only when a token is available.
+            if (refs.private.size > 0) {
+              if (privateToken) {
+                const { getOctokit } = require('@actions/github');
+                const priv = await verify(getOctokit(privateToken), privateOwner, privateRepo, refs.private);
+                priv.valid.forEach((r) => linked.add(r));
+                rejected.push(...priv.rejected);
+              } else {
+                core.notice(
+                  'PRIVATE_ISSUES_TOKEN is not available (expected for fork PRs); ' +
+                  'accepting references to the second issue tracker by format only.'
+                );
+                refs.private.forEach((n) => linked.add(`${privateFull}#${n}`));
+              }
+            }
+
+            // ---------------------------------------------------------------
+            // Report
+            // ---------------------------------------------------------------
+
+            if (linked.size === 0) {
+              const found = rejected.length
+                ? `References found in the description but not accepted:\n- ${rejected.join('\n- ')}\n\n`
+                : 'No issue is linked in the Development sidebar and no issue reference was found in the PR description.\n\n';
+              const help =
+                'Every pull request must be connected to a GitHub issue. Accepted ways, in order of preference:\n' +
+                '1. Link the issue in the PR\'s "Development" sidebar (right panel).\n' +
+                `2. Add \`Closes #123\` (or \`Fixes\` / \`Refs\`) to the description for an issue in ${publicFull}.\n` +
+                '3. Maintainers: issues tracked outside this repository must be referenced in the description ' +
+                'with the full `owner/repo#123` form; Development-sidebar links to them are not visible to this check.\n\n' +
+                'The check re-runs automatically when the PR description is edited.';
+
+              summary.addRaw(`:x: No linked issue.\n\n${found}${help}\n`);
+              await summary.write();
+              core.setFailed(`No linked issue.\n\n${found}${help}`);
+              return;
+            }
+
+            if (rejected.length) core.info(`Ignored references: ${rejected.join('; ')}`);
+            await pass([...linked], 'PR description');

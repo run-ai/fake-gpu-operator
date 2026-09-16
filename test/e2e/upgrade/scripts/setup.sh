@@ -4,7 +4,7 @@
 # eventual upgrade step, then installs the published OCI baseline release.
 # The Ginkgo suite then runs `helm upgrade` against the local chart and
 # asserts the upgrade succeeds — exercising the class of bug where a new
-# top-level chart value is referenced unsafely in a template (RUN-39195).
+# top-level chart value is referenced unsafely in a template.
 
 set -euo pipefail
 

@@ -2,6 +2,8 @@
 
 1. If this is your first time, please read our [Contributor Guide](https://github.com/run-ai/fake-gpu-operator/blob/main/CONTRIBUTING.md)
 2. If this PR is unfinished, please mark it as a draft
+3. Ensure your PR title follows the [Conventional Commits format](https://github.com/run-ai/fake-gpu-operator/blob/main/CONTRIBUTING.md#pr-title-guidelines)
+   (e.g., `feat(dra-plugin): add new feature`)
 
 -->
 
@@ -9,23 +11,43 @@
 
 <!-- What does this PR do and why? -->
 
-## Related Issues
+## Linked issue
 
-Fixes #
+<!--
+REQUIRED. Every PR must be connected to an existing GitHub issue; the
+`require-linked-issue` check fails otherwise. If no issue exists yet, open one
+first (https://github.com/run-ai/fake-gpu-operator/issues/new/choose).
+
+Ways to connect it, in order of preference:
+1. Link the issue in the "Development" sidebar (right panel).
+2. Reference it below with `Closes #<n>` (`Fixes` and `Refs` also work).
+3. Maintainers: for issues tracked outside this repository, follow the
+   internal contribution guide.
+-->
+
+<!-- Public issue: -->
+Closes #
+
+## Type of change
+
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation
+- [ ] Refactor / chore / CI
 
 ## Checklist
-
-> **Note:** Ensure your PR title follows the [Conventional Commits format](https://github.com/run-ai/fake-gpu-operator/blob/main/CONTRIBUTING.md#pr-title-guidelines) (e.g., `feat(dra-plugin): add new feature`)
 
 - [ ] Self-reviewed
 - [ ] Added/updated tests (if needed)
 - [ ] Updated documentation (if needed)
 - [ ] Updated `CHANGELOG.md` under `## [Unreleased]` (or applied `skip-changelog` label)
+- [ ] No confidential data (customer names, internal hostnames, credentials) in this PR, its commits, or the linked public issue
 
-## Breaking Changes
+## Breaking changes
 
 <!-- If yes, describe what changes and how to migrate -->
 
-## Additional Notes
+## Additional notes
 
 <!-- Screenshots, performance/security considerations, reviewer guidance, etc. -->
