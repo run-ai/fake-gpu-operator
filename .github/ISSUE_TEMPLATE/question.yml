@@ -1,0 +1,45 @@
+name: Question
+description: Ask a question about using or developing the Fake GPU Operator
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before asking, please check the [README](https://github.com/run-ai/fake-gpu-operator#readme)
+        and search [existing issues](https://github.com/run-ai/fake-gpu-operator/issues?q=label%3Aquestion).
+
+        > **This is a public repository.** Do not include customer names, internal hostnames,
+        > credentials, or other confidential data. If your report contains confidential information,
+        > contact the maintainers privately instead of opening a public issue.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: What have you tried / context
+      description: Commands, Helm values, docs you've already read, and what happened.
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Fake GPU Operator version
+      description: Helm chart version or image tag, if relevant.
+    validations:
+      required: false
+  - type: dropdown
+    id: plugin-mode
+    attributes:
+      label: Plugin mode
+      options:
+        - legacy device plugin
+        - DRA
+        - KWOK
+        - not sure
+    validations:
+      required: false

@@ -1,0 +1,35 @@
+name: Documentation
+description: Report missing, unclear, or outdated documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us keep the docs accurate!
+
+        > **This is a public repository.** Do not include customer names, internal hostnames,
+        > credentials, or other confidential data. If your report contains confidential information,
+        > contact the maintainers privately instead of opening a public issue.
+  - type: input
+    id: location
+    attributes:
+      label: Which document or page?
+      description: File path, section, or URL.
+      placeholder: "e.g. README.md § Topology configuration, or deploy/fake-gpu-operator/values.yaml"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing?
+      description: Quote the current text if relevant and explain what is inaccurate, unclear, or absent.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested change
+      description: Proposed wording, an outline, or a link to a good reference. Feel free to open a PR instead.
+    validations:
+      required: false

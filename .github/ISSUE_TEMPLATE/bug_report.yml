@@ -1,0 +1,112 @@
+name: Bug Report
+description: Tell us about a problem you are experiencing with the Fake GPU Operator
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+        > **This is a public repository.** Do not include customer names, internal hostnames,
+        > credentials, or other confidential data. If your report contains confidential information,
+        > contact the maintainers privately instead of opening a public issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: |
+        Please provide as much info as possible. Not doing so may result in your bug not being
+        addressed in a timely manner.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: false
+  - type: textarea
+    id: repro
+    attributes:
+      label: How can we reproduce it (as minimally and precisely as possible)?
+      description: |
+        Manifests, Helm values overrides, exact `kubectl` commands — paste enough that someone
+        can copy-paste and reach the same broken state.
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component(s)
+      multiple: true
+      options:
+        - device-plugin
+        - dra-plugin
+        - topology-server
+        - status-updater
+        - status-exporter
+        - kwok
+        - compute-domain
+        - mig-faker
+        - nvidia-smi
+        - chart (Helm)
+        - ci
+        - docs
+        - other
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Fake GPU Operator version
+      description: Helm chart version or image tag.
+      placeholder: "e.g. 0.0.70 or ghcr.io/run-ai/fake-gpu-operator/…:0.0.70"
+    validations:
+      required: true
+  - type: input
+    id: k8s-version
+    attributes:
+      label: Kubernetes version
+      description: Output of `kubectl version` (server version) and the distribution (kind, EKS, GKE, OpenShift, …).
+      placeholder: "e.g. v1.33.1 on kind"
+    validations:
+      required: false
+  - type: dropdown
+    id: plugin-mode
+    attributes:
+      label: Plugin mode
+      options:
+        - legacy device plugin
+        - DRA
+        - KWOK
+        - not sure
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment / additional context
+      description: Anything else relevant — CNI, OS, kernel, Helm values overrides, related issues.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: |
+        Pod logs, `kubectl describe` output, events. Redact anything confidential before pasting.
+        This field is rendered as a code block automatically.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the [existing issues](https://github.com/run-ai/fake-gpu-operator/issues) and this bug has not been reported yet.
+          required: true
+  - type: markdown
+    attributes:
+      value: Impacted by this bug? Give it a 👍 below.

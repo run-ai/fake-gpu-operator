@@ -1,10 +1,14 @@
+# When copying these templates to another repository, adjust:
+#   - the "existing issues" links in bug_report.yml, feature_request.yml and question.yml,
+#   - the component dropdown options in bug_report / feature_request / task.
+#
 # GitHub info on config.yml:
 # https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
 
-# Set to false if you only want the structured templates to be used.
-blank_issues_enabled: true
+# Blank issues are disabled: every issue must use one of the structured forms.
+blank_issues_enabled: false
 
 contact_links:
-  - name: Ask a Question
-    url: https://github.com/run-ai/fake-gpu-operator/issues/new?labels=question
-    about: Open a question issue with the `question` label.
+  - name: Security policy
+    url: https://github.com/run-ai/fake-gpu-operator/security/policy
+    about: Please do not report security vulnerabilities as public issues. Follow the security policy instead.

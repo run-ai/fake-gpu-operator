@@ -1,0 +1,73 @@
+name: Task
+description: "Internal work item: engineering task, chore, tech debt, or release work"
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for planned engineering work that is not a bug report or a feature request:
+        chores, tech debt, refactors, CI/release work, and follow-ups.
+
+        > **This is a public repository.** Do not include customer names, internal hostnames,
+        > credentials, or other confidential data. If your report contains confidential information,
+        > contact the maintainers privately instead of opening a public issue.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What needs to be done and why.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / acceptance criteria
+      description: The task is done when every item below is checked.
+      value: |
+        - [ ]
+        - [ ]
+        - [ ] Tests added or updated
+        - [ ] Documentation / CHANGELOG updated (or `skip-changelog`)
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component(s)
+      multiple: true
+      options:
+        - device-plugin
+        - dra-plugin
+        - topology-server
+        - status-updater
+        - status-exporter
+        - kwok
+        - compute-domain
+        - mig-faker
+        - nvidia-smi
+        - chart (Helm)
+        - ci
+        - docs
+        - other
+    validations:
+      required: false
+  - type: textarea
+    id: related
+    attributes:
+      label: Related issues / PRs / design docs
+      description: Link anything that gives context, e.g. `#123` or a design doc.
+    validations:
+      required: false
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 - critical
+        - P1 - high
+        - P2 - normal
+        - P3 - low
+      default: 2
+    validations:
+      required: false

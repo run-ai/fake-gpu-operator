@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Regression guard for RUN-39004: covers the legacy (non-DRA) device-plugin path, where
+// Regression guard: covers the legacy (non-DRA) device-plugin path, where
 // a pod gets its GPU via the nvidia.com/gpu extended resource and runs the fake nvidia-smi.
 var _ = Describe("Device-Plugin Path Tests", func() {
 	var testNamespaces []string
