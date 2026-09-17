@@ -59,6 +59,18 @@ rules:
       - update
       - patch
       - delete
+{{- if (.Values.environment).openshift }}
+  # OpenShift re-checks SCC on pod updates against the updating user, so
+  # annotating reservation pods requires the SCC they run under.
+  - apiGroups:
+      - security.openshift.io
+    resources:
+      - securitycontextconstraints
+    resourceNames:
+      - kai-system
+    verbs:
+      - use
+{{- end }}
   {{- if (.Values.statusUpdater).runaiIntegration.enabled }}
   - apiGroups:
       - ""

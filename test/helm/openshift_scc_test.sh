@@ -66,8 +66,10 @@ echo "=== Case 2: environment.openshift=true, default components ==="
 render --set environment.openshift=true
 # status-exporter already had SCC — now device-plugin and mig-faker should too
 assert_contains "SCC rule present in rendered output" "$SCC_PATTERN"
-# device-plugin + status-exporter + mig-faker + gpu-operator subchart = 4
-assert_count "SCC rule in 4 ClusterRoles" "$SCC_PATTERN" 4
+# device-plugin + status-exporter + mig-faker + status-updater + gpu-operator subchart = 5
+assert_count "SCC rule in 5 ClusterRoles" "$SCC_PATTERN" 5
+# status-updater patches reservation pods, so it needs the kai-system SCC
+assert_contains "status-updater granted kai-system SCC" "kai-system"
 
 echo ""
 echo "=== Case 3: environment.openshift=true, DRA enabled ==="
@@ -75,16 +77,23 @@ render --set environment.openshift=true \
        --set draPlugin.enabled=true \
        --set computeDomainDraPlugin.enabled=true \
        --namespace gpu-operator
-# device-plugin + status-exporter + mig-faker + dra-plugin + compute-domain-dra + gpu-operator subchart = 6
-assert_count "SCC rule in 6 ClusterRoles" "$SCC_PATTERN" 6
+# device-plugin + status-exporter + mig-faker + status-updater + dra-plugin + compute-domain-dra + gpu-operator subchart = 7
+assert_count "SCC rule in 7 ClusterRoles" "$SCC_PATTERN" 7
 
 echo ""
 echo "=== Case 4: environment.openshift=true, only device-plugin ==="
 render --set environment.openshift=true \
        --set statusExporter.enabled=false \
-       --set migFaker.enabled=false
+       --set migFaker.enabled=false \
+       --set statusUpdater.enabled=false
 # device-plugin + gpu-operator subchart = 2
 assert_count "SCC rule in 2 ClusterRoles" "$SCC_PATTERN" 2
+assert_absent "no kai-system SCC when status-updater is disabled" "kai-system"
+
+echo ""
+echo "=== Case 5: status-updater enabled but not OpenShift ==="
+render --set environment.openshift=false
+assert_absent "no kai-system SCC without openshift flag" "kai-system"
 
 echo ""
 echo "--- Results: $PASS passed, $FAIL failed ---"
