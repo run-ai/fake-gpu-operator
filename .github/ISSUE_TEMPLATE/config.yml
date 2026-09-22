@@ -6,9 +6,7 @@
 # https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
 
 # Blank issues are disabled: every issue must use one of the structured forms.
+# No contact_links: GitHub already adds "Report a security vulnerability" because
+# the repository has a SECURITY.md.
 blank_issues_enabled: false
 
-contact_links:
-  - name: Security policy
-    url: https://github.com/run-ai/fake-gpu-operator/security/policy
-    about: Please do not report security vulnerabilities as public issues. Follow the security policy instead.
