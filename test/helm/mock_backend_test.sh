@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Helm chart-render assertions for Phase 5 mock-backend support (RUN-38195).
+# Helm chart-render assertions for Phase 5 mock-backend support.
 # Runs `helm template` with various toggle combinations and asserts the
 # rendered manifest contains/lacks expected resource shapes.
 #

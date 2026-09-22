@@ -80,8 +80,8 @@ A node is in **one** pool at a time — either `fake` or `mock`, not both. The t
 ## Known limitations
 
 - **Switching a node's pool at runtime** doesn't re-reconcile its FGO-applied labels — status-updater's node controller only watches Add/Delete, not Update. Drain + rejoin (or delete the device-plugin pod) to force a clean transition.
-- **`--reuse-values` upgrade fails** for users whose stored values predate new top-level keys — [#195 / RUN-39195](https://github.com/run-ai/fake-gpu-operator/issues/195). Use `helm upgrade -f values.yaml` instead.
-- **In-pod `nvidia-smi` reports the compiled-in default model** (A100) regardless of pool profile. The mock library inside DRA- and device-plugin-allocated pods can't auto-locate the per-pool config. See `docs/RUN-38195-nvml-mock-failure-explainer.html`.
+- **`--reuse-values` upgrade fails** for users whose stored values predate new top-level keys — [#195](https://github.com/run-ai/fake-gpu-operator/issues/195). Use `helm upgrade -f values.yaml` instead.
+- **In-pod `nvidia-smi` reports the compiled-in default model** (A100) regardless of pool profile. The mock library inside DRA- and device-plugin-allocated pods can't auto-locate the per-pool config.
 
 ## When to use which
 

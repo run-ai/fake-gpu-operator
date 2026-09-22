@@ -1,0 +1,423 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Validate Issue Reference
+
+# Every pull request must link at least one open issue that carries the
+# approval label. The check re-runs automatically when the label is added to or
+# removed from an issue, so contributors do not need to push an empty commit.
+#
+# External issue tracker (optional)
+#
+# Issues may also live in a second GitHub repository, typically a private
+# tracker. Set the `PRIVATE_ISSUE_REPO` repository variable (or the
+# `private-repo` input when called as a reusable workflow) to its
+# `owner/repo` name; the tracker is never named in this file. References to
+# it must use the full `owner/repo#123` form or the issue URL, or be linked in
+# the pull request's "Development" sidebar. They are verified with the
+# `PRIVATE_ISSUES_TOKEN` secret, a fine-grained personal access token with
+# read-only "Issues" permission on that tracker. Without the token, which is
+# always the case for pull requests from forks, such references are reported
+# as unverifiable and the check fails closed.
+#
+# Label changes on the external tracker do not raise `issues` events here.
+# The tracker can run a tiny companion workflow that sends a
+# `repository_dispatch` to this repository instead; the `revalidate` job
+# handles it exactly like a local issue change. The companion workflow needs
+# a token with `actions: write` on this repository, for example a secret
+# named `PUBLIC_REPO_DISPATCH_TOKEN`:
+#
+#     name: Notify public repository of issue changes
+#     on:
+#       issues:
+#         types: [labeled, unlabeled, closed, reopened]
+#     permissions: {}
+#     jobs:
+#       dispatch:
+#         runs-on: ubuntu-latest
+#         steps:
+#           - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+#             with:
+#               github-token: ${{ secrets.PUBLIC_REPO_DISPATCH_TOKEN }}
+#               script: |
+#                 await github.rest.repos.createDispatchEvent({
+#                   owner: '<owner>', repo: '<public-repo>',
+#                   event_type: 'private-issue-changed',
+#                   client_payload: {
+#                     repository: `${context.repo.owner}/${context.repo.repo}`,
+#                     issue_number: context.payload.issue.number,
+#                   },
+#                 });
+#
+# Reuse in other repositories
+#
+# The workflow also exposes a `workflow_call` trigger, so other repositories
+# can reuse it with a small caller workflow:
+#
+#     name: Validate Issue Reference
+#     on:
+#       pull_request:
+#         types: [opened, reopened, edited, synchronize, ready_for_review, labeled, unlabeled]
+#     permissions: {}
+#     jobs:
+#       validate-issue-references:
+#         uses: run-ai/fake-gpu-operator/.github/workflows/validate-issue-references.yaml@main
+#         permissions:
+#           contents: read
+#           issues: read
+#           pull-requests: read
+#         with:
+#           private-repo: ${{ vars.PRIVATE_ISSUE_REPO }}   # optional
+#         secrets: inherit
+#
+# When called this way the status-check context is
+# `<caller job> / PR links an approved issue`.
+#
+# Adapted from ai-dynamo/snapshot's validate-issue-references workflow.
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+      - ready_for_review
+      - labeled
+      - unlabeled
+  issues:
+    types:
+      - labeled
+      - unlabeled
+      - closed
+      - reopened
+  repository_dispatch:
+    types:
+      - private-issue-changed
+  workflow_call:
+    inputs:
+      private-repo:
+        description: "owner/name of an optional external issue tracker. Defaults to the caller's PRIVATE_ISSUE_REPO variable."
+        type: string
+        required: false
+        default: ""
+    secrets:
+      PRIVATE_ISSUES_TOKEN:
+        description: "Optional fine-grained PAT (Issues: read) for the external issue tracker."
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || format('issue-{0}', github.event.issue.number || github.event.client_payload.issue_number) }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  # Label an issue must carry for a pull request referencing it to pass.
+  APPROVED_LABEL: approved
+  # Label on a pull request that waives the issue requirement.
+  BYPASS_LABEL: skip-issue-check
+
+jobs:
+  validate:
+    name: PR links an approved issue
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # Read the pull request body and the issues it references.
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Validate issue reference
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PRIVATE_REPO: ${{ inputs.private-repo || vars.PRIVATE_ISSUE_REPO }}
+          PRIVATE_ISSUES_TOKEN: ${{ secrets.PRIVATE_ISSUES_TOKEN }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const approvedLabel = process.env.APPROVED_LABEL;
+            const bypassLabel = process.env.BYPASS_LABEL;
+            // Optional external issue tracker as "owner/repo"; empty when none is configured.
+            const privateFull = process.env.PRIVATE_REPO || '';
+            const [privateOwner, privateRepo] = privateFull ? privateFull.split('/') : ['', ''];
+            const privateToken = process.env.PRIVATE_ISSUES_TOKEN || '';
+
+            const labels = (pr.labels || []).map(l => l.name);
+            if (labels.includes(bypassLabel)) {
+              core.info(`Pull request is labeled "${bypassLabel}" - skipping the issue requirement.`);
+              return;
+            }
+            if (pr.user && pr.user.type === 'Bot') {
+              core.info(`Pull request was opened by ${pr.user.login} (bot) - skipping the issue requirement.`);
+              return;
+            }
+            if (pr.draft) {
+              core.info('Pull request is a draft - the check runs again when it is marked ready for review.');
+              return;
+            }
+
+            // Drop HTML comments, fenced code blocks, and inline code spans so
+            // template boilerplate, pasted logs, and prose such as `#123` are
+            // not mistaken for an issue reference. GitHub does not render a
+            // reference inside backticks as a link either.
+            const body = (pr.body || '')
+              .replace(/<!--[\s\S]*?-->/g, ' ')
+              .replace(/```[\s\S]*?```/g, ' ')
+              .replace(/`[^`\n]*`/g, ' ');
+
+            const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // References are { owner, repo, number }, keyed by "owner/repo#number" to dedupe.
+            const references = new Map();
+            const addReference = (refOwner, refRepo, number) => {
+              references.set(`${refOwner}/${refRepo}#${number}`,
+                { owner: refOwner, repo: refRepo, number: Number(number) });
+            };
+            const isPublic = ref => ref.owner === owner && ref.repo === repo;
+            const describe = ref => (isPublic(ref) ? `#${ref.number}` : `${ref.owner}/${ref.repo}#${ref.number}`);
+
+            // The lookbehind keeps a bare "#123" from matching the tail of "owner/repo#123".
+            for (const m of body.matchAll(/(?<![\w/])#(\d+)\b/g)) {
+              addReference(owner, repo, m[1]);
+            }
+            const urlPattern = new RegExp(
+              `https?://github\\.com/${escapeRegExp(owner)}/${escapeRegExp(repo)}/issues/(\\d+)`, 'gi');
+            for (const m of body.matchAll(urlPattern)) {
+              addReference(owner, repo, m[1]);
+            }
+            if (privateFull) {
+              const priv = escapeRegExp(privateFull);
+              for (const m of body.matchAll(new RegExp(`(?<![\\w/])${priv}#(\\d+)\\b`, 'gi'))) {
+                addReference(privateOwner, privateRepo, m[1]);
+              }
+              for (const m of body.matchAll(new RegExp(`https?://github\\.com/${priv}/issues/(\\d+)`, 'gi'))) {
+                addReference(privateOwner, privateRepo, m[1]);
+              }
+            }
+
+            // Issues linked through the pull request's "Development" sidebar.
+            try {
+              const result = await github.graphql(`
+                query($owner: String!, $repo: String!, $number: Int!) {
+                  repository(owner: $owner, name: $repo) {
+                    pullRequest(number: $number) {
+                      closingIssuesReferences(first: 20) {
+                        nodes { number repository { nameWithOwner } }
+                      }
+                    }
+                  }
+                }`, { owner, repo, number: pr.number });
+              for (const node of result.repository.pullRequest.closingIssuesReferences.nodes || []) {
+                const [nodeOwner, nodeRepo] = node.repository.nameWithOwner.split('/');
+                addReference(nodeOwner, nodeRepo, node.number);
+              }
+            } catch (error) {
+              core.warning(`Could not read the Development sidebar: ${error.message}`);
+            }
+
+            const howTo =
+              `Link the issue from the pull request description, for example \`Fixes #123\` ` +
+              `or \`Fixes https://github.com/${owner}/${repo}/issues/123\`. ` +
+              `The issue must be open and labeled \`${approvedLabel}\` by a maintainer. ` +
+              `Maintainers can waive this by adding the \`${bypassLabel}\` label to the pull request. ` +
+              `Issues in an external tracker can be referenced with the full form \`owner/repo#123\` ` +
+              `or their URL, and are verified with the PRIVATE_ISSUES_TOKEN secret. ` +
+              `You can also link the issue in the pull request's "Development" sidebar.`;
+
+            if (references.size === 0) {
+              await core.summary
+                .addHeading('Issue reference missing')
+                .addRaw(howTo)
+                .write();
+              core.setFailed(`This pull request does not reference an issue. ${howTo}`);
+              return;
+            }
+
+            // Public references first, each group by ascending number.
+            const ordered = [...references.values()].sort((a, b) => {
+              if (isPublic(a) !== isPublic(b)) return isPublic(a) ? -1 : 1;
+              return a.number - b.number;
+            });
+            core.info(`Found issue reference(s): ${ordered.map(describe).join(', ')}`);
+
+            const externalClient = privateToken ? require('@actions/github').getOctokit(privateToken) : null;
+            const problems = [];
+            let approvedIssue = null;
+
+            for (const ref of ordered) {
+              const name = describe(ref);
+              let client = github;
+              if (!isPublic(ref)) {
+                if (!externalClient) {
+                  problems.push(
+                    `${name} could not be verified: PRIVATE_ISSUES_TOKEN is not configured ` +
+                    '(expected for pull requests from forks)');
+                  continue;
+                }
+                client = externalClient;
+              }
+
+              let issue;
+              try {
+                issue = (await client.rest.issues.get({
+                  owner: ref.owner, repo: ref.repo, issue_number: ref.number,
+                })).data;
+              } catch (error) {
+                problems.push(error.status === 404
+                  ? `${name} does not exist${isPublic(ref) ? '' : ' or is not visible to PRIVATE_ISSUES_TOKEN'}`
+                  : `${name} could not be read: ${error.message}`);
+                continue;
+              }
+
+              if (issue.pull_request) {
+                problems.push(`${name} is a pull request, not an issue`);
+                continue;
+              }
+              if (issue.state === 'closed') {
+                problems.push(`${name} is closed`);
+                continue;
+              }
+
+              const issueLabels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name));
+              if (!issueLabels.includes(approvedLabel)) {
+                problems.push(`${name} is open but is not labeled \`${approvedLabel}\``);
+                continue;
+              }
+
+              approvedIssue = name;
+              break;
+            }
+
+            if (approvedIssue === null) {
+              const details = problems.map(p => `- ${p}`).join('\n');
+              await core.summary
+                .addHeading('No approved issue referenced')
+                .addRaw(details, true)
+                .addRaw(howTo)
+                .write();
+              core.setFailed(
+                `None of the referenced issues are open and labeled "${approvedLabel}":\n${details}\n\n${howTo}`);
+              return;
+            }
+
+            core.info(`Issue ${approvedIssue} is open and labeled "${approvedLabel}".`);
+            await core.summary
+              .addHeading('Approved issue referenced')
+              .addRaw(`This pull request references ${approvedIssue}, which is open and labeled \`${approvedLabel}\`.`)
+              .write();
+
+  revalidate:
+    name: Re-run validation for linked pull requests
+    if: github.event_name == 'issues' || github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      # Re-run this workflow for the pull requests affected by the issue change.
+      actions: write
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Re-run affected pull request checks
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+
+            // The changed issue: local for `issues` events, external for `repository_dispatch`.
+            let target;
+            if (context.eventName === 'issues') {
+              target = { owner, repo, number: context.payload.issue.number };
+            } else {
+              const payload = context.payload.client_payload || {};
+              const [targetOwner, targetRepo] = String(payload.repository || '').split('/');
+              const number = Number(payload.issue_number);
+              if (!targetOwner || !targetRepo || !Number.isInteger(number) || number <= 0) {
+                core.setFailed(
+                  'repository_dispatch payload must contain client_payload.repository ("owner/repo") ' +
+                  'and client_payload.issue_number.');
+                return;
+              }
+              target = { owner: targetOwner, repo: targetRepo, number };
+            }
+            const isPublic = target.owner === owner && target.repo === repo;
+            const targetName = isPublic ? `#${target.number}` : `${target.owner}/${target.repo}#${target.number}`;
+
+            const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const targetRepoPattern = escapeRegExp(`${target.owner}/${target.repo}`);
+            const referencePattern = isPublic
+              ? new RegExp(`(?:#|/issues/)${target.number}\\b`)
+              : new RegExp(`(?:(?<![\\w/])${targetRepoPattern}#|/${targetRepoPattern}/issues/)${target.number}\\b`, 'i');
+
+            const referencesIssue = (body) => {
+              const text = (body || '')
+                .replace(/<!--[\s\S]*?-->/g, ' ')
+                .replace(/```[\s\S]*?```/g, ' ')
+                .replace(/`[^`\n]*`/g, ' ');
+              return referencePattern.test(text);
+            };
+
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100,
+            });
+            const affected = pulls.filter(pr => referencesIssue(pr.body));
+
+            if (affected.length === 0) {
+              core.info(`No open pull request references issue ${targetName}.`);
+              return;
+            }
+
+            // Look up this workflow by id so the job stays correct when the
+            // file is reused under another name via workflow_call.
+            const { data: me } = await github.rest.actions.getWorkflowRun({
+              owner, repo, run_id: context.runId,
+            });
+            const workflowId = me.workflow_id;
+
+            // A run that is still executing may have read the issue labels
+            // before this change landed, and GitHub offers no completion event
+            // to retry on, so wait for it rather than dropping the request.
+            const waitForCompletion = async (runId, prNumber) => {
+              const deadline = Date.now() + 10 * 60 * 1000;
+              while (Date.now() < deadline) {
+                await new Promise(resolve => setTimeout(resolve, 15000));
+                const { data: run } = await github.rest.actions.getWorkflowRun({
+                  owner, repo, run_id: runId,
+                });
+                if (run.status === 'completed') {
+                  return run;
+                }
+              }
+              core.warning(
+                `PR #${prNumber}: validation run ${runId} did not finish in time. ` +
+                'Re-run it by hand to pick up the label change.');
+              return null;
+            };
+
+            for (const pr of affected) {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: workflowId, head_sha: pr.head.sha, per_page: 20,
+              });
+              // Runs come back newest first; only the latest one shows on the PR.
+              let latest = runs.data.workflow_runs.find(run => run.event === 'pull_request');
+              if (!latest) {
+                core.info(`PR #${pr.number}: no validation run to re-run.`);
+                continue;
+              }
+              if (latest.status !== 'completed') {
+                core.info(
+                  `PR #${pr.number}: validation run ${latest.id} is ${latest.status}; ` +
+                  'waiting for it to finish before re-running.');
+                latest = await waitForCompletion(latest.id, pr.number);
+                if (!latest) {
+                  continue;
+                }
+              }
+              try {
+                await github.rest.actions.reRunWorkflow({ owner, repo, run_id: latest.id });
+                core.info(`PR #${pr.number}: re-running validation (run ${latest.id}).`);
+              } catch (error) {
+                core.warning(`PR #${pr.number}: could not re-run ${latest.id}: ${error.message}`);
+              }
+            }

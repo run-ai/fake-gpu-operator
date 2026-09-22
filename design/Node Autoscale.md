@@ -1,5 +1,3 @@
-[Ticket](https://runai.atlassian.net/browse/RUN-6464)
-
 # Node Autoscale Design
 
 ## Motivation

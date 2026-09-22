@@ -26,11 +26,22 @@ The main building blocks of the Fake GPU Operator live under `cmd/<component>/` 
 
 The Helm chart lives at `deploy/fake-gpu-operator/`. End-to-end Ginkgo tests live at `test/e2e/`.
 
+## Issue tracking
+
+All work on the Fake GPU Operator is tracked in GitHub: [issues](https://github.com/run-ai/fake-gpu-operator/issues) for individual items, [milestones](https://github.com/run-ai/fake-gpu-operator/milestones) for releases, and a GitHub Project board for planning.
+
+- **Use the issue forms.** Blank issues are disabled; pick the Bug Report, Feature Request, Task, Documentation, or Question form so the issue lands with the right label and details.
+- **Confidential material.** This repository is public. Never paste customer names, internal hostnames, credentials, or other confidential data into issues or pull requests; contact the maintainers privately instead.
+- **Every pull request must be connected to an approved issue.** The issue must be open and labeled `approved` by a maintainer. The "PR links an approved issue" CI check fails otherwise, and re-runs when the PR description is edited or the issue's labels change. Maintainers can waive the requirement with the `skip-issue-check` PR label. Accepted ways, in order of preference:
+  1. Link the issue in the PR's "Development" sidebar (right panel). This is the primary source of truth.
+  2. Reference it in the PR description with `Closes #123`, `Fixes #123`, or `Refs #123`.
+  3. Maintainers: for issues tracked outside this repository, follow the internal contribution guide.
+
 ## How to Contribute
 
 ### Reporting issues
 
-Open an issue with a clear description, steps to reproduce, and relevant environment details. Use the bug-report or enhancement template — both are structured forms.
+Open an issue with a clear description, steps to reproduce, and relevant environment details. Use the structured forms: **Bug Report** for defects, **Feature Request** for ideas, **Task** for planned engineering work, **Documentation** for doc fixes, and **Question** for usage questions. See [Issue tracking](#issue-tracking) for where confidential reports go.
 
 ### Improving documentation
 
@@ -39,10 +50,10 @@ Help us keep the docs clear and useful by fixing typos, updating outdated inform
 ### Contributing changes
 
 - **Fork and clone** — Fork the repository and clone it to your local machine.
-- **Create a branch** — Use a descriptive name, such as `feature/add-cool-thing` or `bugfix/fix-issue-123`.
+- **Create a branch** — Use a descriptive name that includes the issue number, such as `feat/123-add-cool-thing` or `fix/123-topology-crash`.
 - **Make changes** — Keep commits small, focused, and well-documented.
 - **Update the changelog** — For behaviour-affecting changes (features, fixes, API changes), add a line to [`CHANGELOG.md`](./CHANGELOG.md) under `## [Unreleased]`. Follow the format at [keepachangelog.com](https://keepachangelog.com/en/1.1.0/). Internal changes (refactor, tests, comments) can skip this — apply the `skip-changelog` label on your PR.
-- **Submit a PR** — Open a pull request and reference any relevant issues or RUN-XXXXX Jira tickets.
+- **Submit a PR** — Open a pull request that references the GitHub issue it addresses (see [Issue tracking](#issue-tracking)). Every PR must link an issue; CI enforces it.
 - **Coverage** — Add unit, integration, or end-to-end tests covering new functionality or behaviour changes.
 
 ### PR title guidelines
@@ -108,6 +119,7 @@ feat(chart)!: rename topology.nodePools to topology.pools
 
 Each pull request should meet the following requirements:
 
+- Linked issue — the PR references an open GitHub issue labeled `approved`; the "PR links an approved issue" check enforces this.
 - All tests pass — Run the suites locally with `make test`, and if your change touches the operator's runtime behaviour, `make e2e`.
 - Test coverage — Add or update tests for any affected code.
 - Documentation — Update relevant documentation (`README.md`, in-tree docs, Helm chart values comments).
