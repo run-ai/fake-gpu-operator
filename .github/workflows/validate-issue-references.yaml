@@ -261,7 +261,10 @@ jobs:
                     'User-Agent': 'validate-issue-references',
                   },
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status} for ${path}`);
+                if (!response.ok) {
+                  const detail = (await response.text()).slice(0, 200);
+                  throw new Error(`HTTP ${response.status} for ${path}: ${detail}`);
+                }
                 return response.json();
               };
               try {
