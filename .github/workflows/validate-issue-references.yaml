@@ -250,7 +250,7 @@ jobs:
             // lives on the private side and is visible only to people with access.
             if (privateToken && privateFull) {
               const prUrl = pr.html_url;
-              const shortRef = new RegExp(`(?<![\\w/])${escapeRegExp(publicFull)}#${pr.number}(?!\\d)`);
+              const shortRef = new RegExp(`(?<![\\w/])${escapeRegExp(`${owner}/${repo}`)}#${pr.number}(?!\\d)`);
               const mentionsPr = (text) => !!text && (text.includes(prUrl) || shortRef.test(text));
               const externalGet = async (path) => {
                 const response = await fetch(`https://api.github.com/${path}`, {
