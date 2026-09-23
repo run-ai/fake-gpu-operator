@@ -32,10 +32,10 @@ All work on the Fake GPU Operator is tracked in GitHub: [issues](https://github.
 
 - **Use the issue forms.** Blank issues are disabled; pick the Bug Report, Feature Request, Task, Documentation, or Question form so the issue lands with the right label and details.
 - **Confidential material.** This repository is public. Never paste customer names, internal hostnames, credentials, or other confidential data into issues or pull requests; contact the maintainers privately instead.
-- **Every pull request must be connected to an approved issue.** The issue must be open and labeled `approved` by a maintainer. The "PR links an approved issue" CI check fails otherwise, and re-runs when the PR description is edited or the issue's labels change. Maintainers can waive the requirement with the `skip-issue-check` PR label. Accepted ways, in order of preference:
-  1. Link the issue in the PR's "Development" sidebar (right panel). This is the primary source of truth.
-  2. Reference it in the PR description with `Closes #123`, `Fixes #123`, or `Refs #123`.
-  3. Maintainers: for issues tracked outside this repository, follow the internal contribution guide.
+- **Every pull request must be linked to an approved issue.** The issue must be open and labeled `approved` by a maintainer. The "PR links an approved issue" CI check reads the PR's "Development" panel, fails otherwise, and re-runs when the PR description is edited or the issue's labels change. Maintainers can waive the requirement with the `skip-issue-check` PR label. Accepted ways to link:
+  1. Link the issue in the PR's "Development" panel (right sidebar).
+  2. Reference it in the PR description with `Closes #123` (`Fixes` and `Resolves` also work); GitHub turns this into a Development link.
+  3. For issues tracked outside this repository, link the PR from the issue's own "Development" panel. Nothing needs to be written in the PR.
 
 ## How to Contribute
 

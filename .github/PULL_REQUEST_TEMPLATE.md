@@ -20,14 +20,14 @@ fails otherwise. If no issue exists yet, open one first
 (https://github.com/run-ai/fake-gpu-operator/issues/new/choose). Maintainers
 can waive the requirement with the `skip-issue-check` PR label.
 
-Ways to connect it, in order of preference:
-1. Link the issue in the "Development" sidebar (right panel).
-2. Reference it below with `Closes #<n>` (`Fixes` and `Refs` also work).
-3. Maintainers: for issues tracked outside this repository, follow the
-   internal contribution guide.
+Ways to connect it (the check reads the PR's "Development" panel only):
+1. Link the issue in the "Development" panel (right sidebar).
+2. Reference it below with `Closes #<n>` (`Fixes` and `Resolves` also work);
+   GitHub turns this into a Development link.
+3. For issues tracked outside this repository, link this PR from the issue's
+   own "Development" panel. Nothing needs to be written here.
 -->
 
-<!-- Public issue: -->
 Closes #
 
 ## Type of change
