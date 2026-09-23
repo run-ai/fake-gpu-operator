@@ -242,7 +242,28 @@ jobs:
             });
             core.info(`Found issue reference(s): ${ordered.map(describe).join(', ')}`);
 
-            const externalClient = privateToken ? require('@actions/github').getOctokit(privateToken) : null;
+            // actions/github-script bundles its dependencies, so a second Octokit client
+            // cannot be created with require('@actions/github'). Call the REST API
+            // directly with the external token and mimic the client shape the loop uses.
+            const externalClient = privateToken ? {
+              rest: { issues: { get: async ({ owner: o, repo: r, issue_number }) => {
+                const response = await fetch(
+                  `https://api.github.com/repos/${o}/${r}/issues/${issue_number}`, {
+                    headers: {
+                      Authorization: `Bearer ${privateToken}`,
+                      Accept: 'application/vnd.github+json',
+                      'X-GitHub-Api-Version': '2022-11-28',
+                      'User-Agent': 'validate-issue-references',
+                    },
+                  });
+                if (!response.ok) {
+                  const error = new Error(`HTTP ${response.status}`);
+                  error.status = response.status;
+                  throw error;
+                }
+                return { data: await response.json() };
+              } } },
+            } : null;
             const problems = [];
             let approvedIssue = null;
 
