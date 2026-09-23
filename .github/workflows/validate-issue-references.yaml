@@ -163,7 +163,7 @@ jobs:
               return;
             }
 
-            // Common headers for direct REST/GraphQL calls with the external token.
+            // Headers for the GraphQL call made with the external token.
             // actions/github-script bundles its dependencies, so a second Octokit
             // client cannot be created with require('@actions/github').
             const externalHeaders = {
@@ -175,10 +175,12 @@ jobs:
 
             // References are { owner, repo, number }, keyed by "owner/repo#number" to dedupe.
             const references = new Map();
-            const addReference = (nameWithOwner, number) => {
-              const [refOwner, refRepo] = nameWithOwner.split('/');
-              references.set(`${refOwner}/${refRepo}#${number}`,
-                { owner: refOwner, repo: refRepo, number: Number(number) });
+            const addReference = (node) => {
+              const [refOwner, refRepo] = node.repository.nameWithOwner.split('/');
+              references.set(`${refOwner}/${refRepo}#${node.number}`, {
+                owner: refOwner, repo: refRepo, number: Number(node.number),
+                state: node.state, labels: (node.labels && node.labels.nodes || []).map(l => l.name),
+              });
             };
             const isPublic = ref =>
               `${ref.owner}/${ref.repo}`.toLowerCase() === `${owner}/${repo}`.toLowerCase();
@@ -194,7 +196,7 @@ jobs:
                 repository(owner: $owner, name: $repo) {
                   pullRequest(number: $number) {
                     closingIssuesReferences(first: 50) {
-                      nodes { number repository { nameWithOwner } }
+                      nodes { number state repository { nameWithOwner } labels(first: 50) { nodes { name } } }
                     }
                   }
                 }
@@ -202,7 +204,7 @@ jobs:
             const variables = { owner, repo, number: pr.number };
             const addLinkedNodes = (result) => {
               for (const node of result.repository.pullRequest.closingIssuesReferences.nodes || []) {
-                addReference(node.repository.nameWithOwner, node.number);
+                addReference(node);
               }
             };
             try {
@@ -251,62 +253,21 @@ jobs:
             });
             core.info(`Linked issue(s): ${ordered.map(describe).join(', ')}`);
 
-            // Minimal REST shim for the external token, mimicking the client shape the loop uses.
-            const externalClient = privateToken ? {
-              rest: { issues: { get: async ({ owner: o, repo: r, issue_number }) => {
-                const response = await fetch(
-                  `https://api.github.com/repos/${o}/${r}/issues/${issue_number}`, { headers: externalHeaders });
-                if (!response.ok) {
-                  const error = new Error(`HTTP ${response.status}`);
-                  error.status = response.status;
-                  throw error;
-                }
-                return { data: await response.json() };
-              } } },
-            } : null;
+            // The linked-issue query already carries each issue's state and labels, so no
+            // per-issue REST call is needed (some tokens can read issues over GraphQL
+            // only). closingIssuesReferences never returns pull requests.
             const problems = [];
             let approvedIssue = null;
-
             for (const ref of ordered) {
               const name = describe(ref);
-              let client = github;
-              if (!isPublic(ref)) {
-                if (!externalClient) {
-                  problems.push(
-                    `${name} could not be verified: PRIVATE_ISSUES_TOKEN is not configured ` +
-                    '(expected for pull requests from forks)');
-                  continue;
-                }
-                client = externalClient;
-              }
-
-              let issue;
-              try {
-                issue = (await client.rest.issues.get({
-                  owner: ref.owner, repo: ref.repo, issue_number: ref.number,
-                })).data;
-              } catch (error) {
-                problems.push(error.status === 404
-                  ? `${name} does not exist${isPublic(ref) ? '' : ' or is not visible to PRIVATE_ISSUES_TOKEN'}`
-                  : `${name} could not be read: ${error.message}`);
-                continue;
-              }
-
-              if (issue.pull_request) {
-                problems.push(`${name} is a pull request, not an issue`);
-                continue;
-              }
-              if (issue.state === 'closed') {
+              if (ref.state !== 'OPEN') {
                 problems.push(`${name} is closed`);
                 continue;
               }
-
-              const issueLabels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name));
-              if (!issueLabels.includes(approvedLabel)) {
+              if (!ref.labels.includes(approvedLabel)) {
                 problems.push(`${name} is open but is not labeled \`${approvedLabel}\``);
                 continue;
               }
-
               approvedIssue = name;
               break;
             }
