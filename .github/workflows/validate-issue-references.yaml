@@ -304,6 +304,21 @@ jobs:
                 core.info(`External-tracker issues mentioning this pull request: ${found}`);
               } catch (error) {
                 core.warning(`Could not scan the external tracker for reverse links: ${error.message}`);
+                // Diagnostic: which resources can PRIVATE_ISSUES_TOKEN reach? (status codes only)
+                const probes = ['user', `repos/${privateFull}`, `repos/${privateFull}/issues?per_page=1`,
+                  `repos/${owner}/${repo}`, `repos/${owner}/${repo}/issues/${pr.number}`];
+                for (const path of probes) {
+                  try {
+                    const response = await fetch(`https://api.github.com/${path}`, {
+                      headers: { Authorization: `Bearer ${privateToken}`, Accept: 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'validate-issue-references' },
+                    });
+                    const scopes = response.headers.get('x-oauth-scopes') || response.headers.get('x-accepted-github-permissions') || '';
+                    core.info(`token probe ${path} -> HTTP ${response.status}${scopes ? ` (${scopes})` : ''}`);
+                  } catch (probeError) {
+                    core.info(`token probe ${path} -> ${probeError.message}`);
+                  }
+                }
               }
             }
 
