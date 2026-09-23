@@ -226,7 +226,7 @@ jobs:
               `in another repository, such as the external tracker, link this pull request from the ` +
               `issue's own "Development" panel. For an issue in this repository you can instead add ` +
               `\`Closes #123\` to the pull request description. ` +
-              `The issue must be open and labeled \`${approvedLabel}\` by a maintainer.`;
+              `Exactly one issue must be linked, and it must be open and labeled \`${approvedLabel}\` by a maintainer.`;
 
             if (references.size === 0) {
               await core.summary
@@ -243,6 +243,17 @@ jobs:
               return a.number - b.number;
             });
             core.info(`Linked issue(s): ${ordered.map(describe).join(', ')}`);
+
+            // One pull request addresses exactly one issue (an issue may have several PRs).
+            if (ordered.length > 1) {
+              const list = ordered.map(describe).join(', ');
+              await core.summary
+                .addHeading('More than one issue linked')
+                .addRaw(`This pull request is linked to ${ordered.length} issues (${list}). ${howTo}`)
+                .write();
+              core.setFailed(`This pull request is linked to ${ordered.length} issues (${list}); unlink all but one. ${howTo}`);
+              return;
+            }
 
             // The linked-issue query already carries each issue's state and labels, so no
             // per-issue REST call is needed (some tokens can read issues over GraphQL

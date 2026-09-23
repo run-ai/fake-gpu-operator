@@ -14,9 +14,9 @@
 ## Linked issue
 
 <!--
-REQUIRED. Every PR must be connected to an existing GitHub issue that is open
-and labeled `approved` by a maintainer; the "PR links an approved issue" check
-fails otherwise. If no issue exists yet, open one first
+REQUIRED. Every PR must be connected to exactly one existing GitHub issue that
+is open and labeled `approved` by a maintainer; the "PR links an approved issue"
+check fails otherwise (also when more than one issue is linked). If no issue exists yet, open one first
 (https://github.com/run-ai/fake-gpu-operator/issues/new/choose).
 
 Ways to connect it (the check reads the PR's "Development" panel only):
