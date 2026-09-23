@@ -267,6 +267,23 @@ jobs:
                 }
                 return response.json();
               };
+              // 1) Precise path: a mention of this PR on an external issue shows up as a
+              //    cross-referenced event on the PR's own timeline for tokens that can
+              //    see that issue. No listing of the external tracker is needed.
+              try {
+                const timeline = await externalGet(`repos/${owner}/${repo}/issues/${pr.number}/timeline?per_page=100`);
+                let found = 0;
+                for (const event of Array.isArray(timeline) ? timeline : []) {
+                  const src = event.event === 'cross-referenced' && event.source && event.source.issue;
+                  if (!src || !src.repository || src.pull_request) continue;
+                  if (src.repository.full_name.toLowerCase() !== privateFull.toLowerCase()) continue;
+                  addReference(privateOwner, privateRepo, src.number); found++;
+                }
+                core.info(`External-tracker issues cross-referencing this pull request: ${found}`);
+              } catch (error) {
+                core.warning(`Could not read the pull request timeline with PRIVATE_ISSUES_TOKEN: ${error.message}`);
+              }
+              // 2) Fallback: scan open approved issues of the external tracker for a mention.
               try {
                 let found = 0;
                 for (let page = 1; page <= 5; page++) {
