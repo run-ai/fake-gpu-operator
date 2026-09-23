@@ -122,8 +122,6 @@ permissions: {}
 env:
   # Label an issue must carry for a pull request linked to it to pass.
   APPROVED_LABEL: approved
-  # Label on a pull request that waives the issue requirement.
-  BYPASS_LABEL: skip-issue-check
 
 jobs:
   validate:
@@ -146,14 +144,8 @@ jobs:
             const { owner, repo } = context.repo;
             const pr = context.payload.pull_request;
             const approvedLabel = process.env.APPROVED_LABEL;
-            const bypassLabel = process.env.BYPASS_LABEL;
             const privateToken = process.env.PRIVATE_ISSUES_TOKEN || '';
 
-            const labels = (pr.labels || []).map(l => l.name);
-            if (labels.includes(bypassLabel)) {
-              core.info(`Pull request is labeled "${bypassLabel}" - skipping the issue requirement.`);
-              return;
-            }
             if (pr.user && pr.user.type === 'Bot') {
               core.info(`Pull request was opened by ${pr.user.login} (bot) - skipping the issue requirement.`);
               return;
@@ -234,8 +226,7 @@ jobs:
               `in another repository, such as the external tracker, link this pull request from the ` +
               `issue's own "Development" panel. For an issue in this repository you can instead add ` +
               `\`Closes #123\` to the pull request description. ` +
-              `The issue must be open and labeled \`${approvedLabel}\` by a maintainer. ` +
-              `Maintainers can waive this by adding the \`${bypassLabel}\` label to the pull request.`;
+              `The issue must be open and labeled \`${approvedLabel}\` by a maintainer.`;
 
             if (references.size === 0) {
               await core.summary
