@@ -171,7 +171,7 @@ jobs:
               const [refOwner, refRepo] = node.repository.nameWithOwner.split('/');
               references.set(`${refOwner}/${refRepo}#${node.number}`, {
                 owner: refOwner, repo: refRepo, number: Number(node.number),
-                state: node.state, stateReason: node.stateReason,
+                state: node.state,
                 labels: (node.labels && node.labels.nodes || []).map(l => l.name),
               });
             };
@@ -189,7 +189,7 @@ jobs:
                 repository(owner: $owner, name: $repo) {
                   pullRequest(number: $number) {
                     closingIssuesReferences(first: 50) {
-                      nodes { number state stateReason repository { nameWithOwner } labels(first: 50) { nodes { name } } }
+                      nodes { number state repository { nameWithOwner } labels(first: 50) { nodes { name } } }
                     }
                   }
                 }
@@ -228,8 +228,8 @@ jobs:
               `issue's own "Development" panel. For an issue in this repository you can instead add ` +
               `\`Closes #123\` to the pull request description. ` +
               `Exactly one issue must be linked, and it must be open and labeled \`${approvedLabel}\` by a maintainer. ` +
-              `Pull requests into release branches must be linked manually (GitHub ignores closing keywords there); ` +
-              `for those, an issue already closed as completed is accepted so fixes can be backported.`;
+              `Pull requests into release branches must be linked manually (GitHub ignores closing keywords there). ` +
+              `Merging never closes the issue in these repositories; the developer closes it once the fix has shipped.`;
 
             if (references.size === 0) {
               await core.summary
@@ -263,21 +263,11 @@ jobs:
             // only). closingIssuesReferences never returns pull requests.
             const problems = [];
             let approvedIssue = null;
-            // Merges into non-default branches (release branches) never auto-close
-            // issues, and a backport usually lands after the default-branch fix has
-            // already closed the issue. For such pull requests an issue closed as
-            // completed still counts; it must still carry the approved label.
-            const defaultBranch = context.payload.repository.default_branch;
-            const targetsDefaultBranch = pr.base.ref === defaultBranch;
             for (const ref of ordered) {
               const name = describe(ref);
               if (ref.state !== 'OPEN') {
-                if (!targetsDefaultBranch && ref.stateReason === 'COMPLETED') {
-                  core.info(`${name} is closed as completed; accepted because the pull request targets "${pr.base.ref}", not "${defaultBranch}".`);
-                } else {
-                  problems.push(`${name} is closed`);
-                  continue;
-                }
+                problems.push(`${name} is closed`);
+                continue;
               }
               if (!ref.labels.includes(approvedLabel)) {
                 problems.push(`${name} is open but is not labeled \`${approvedLabel}\``);

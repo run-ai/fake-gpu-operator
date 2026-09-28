@@ -26,8 +26,11 @@ Ways to connect it (the check reads the PR's "Development" panel only):
 3. For issues tracked outside this repository, link this PR from the issue's
    own "Development" panel. Nothing needs to be written here.
 4. PRs into release branches (`vX.Y`): GitHub ignores `Closes` keywords
-   there, so link the issue manually (way 1 or 3). Merging does not close
-   the issue; for backports, an issue already closed as completed is accepted.
+   there, so link the issue manually (way 1 or 3).
+
+Merging never closes the linked issue (auto-close is disabled in this
+repository). Close the issue yourself once the fix has shipped everywhere
+it needs to, including backports.
 -->
 
 Closes #

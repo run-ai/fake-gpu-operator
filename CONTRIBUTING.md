@@ -34,9 +34,11 @@ All work on the Fake GPU Operator is tracked in GitHub: [issues](https://github.
 - **Confidential material.** This repository is public. Never paste customer names, internal hostnames, credentials, or other confidential data into issues or pull requests; contact the maintainers privately instead.
 - **Every pull request must be linked to exactly one approved issue.** An issue may have several pull requests, but a pull request addresses a single issue. The issue must be open and labeled `approved` by a maintainer. The "PR links an approved issue" CI check reads the PR's "Development" panel, fails otherwise, and re-runs when the PR description is edited or the issue's labels change. Accepted ways to link:
   1. Link the issue in the PR's "Development" panel (right sidebar).
-  2. Reference it in the PR description with `Closes #123` (`Fixes` and `Resolves` also work); GitHub turns this into a Development link.
+  2. Reference it in the PR description with `Closes #123` (`Fixes` and `Resolves` also work); GitHub turns this into a Development link (it no longer closes the issue on merge).
   3. For issues tracked outside this repository, link the PR from the issue's own "Development" panel. Nothing needs to be written in the PR.
-  4. For pull requests into release branches (`vX.Y`), GitHub ignores closing keywords and does not close the issue on merge: link the issue manually (way 1 or 3), and close it by hand once the fix has shipped. Backport PRs may link an issue that is already closed as completed.
+  4. For pull requests into release branches (`vX.Y`), GitHub ignores closing keywords: link the issue manually (way 1 or 3).
+
+  Merging a pull request never closes its issue: auto-close is disabled in this repository so that one issue can be fixed on `main` and backported to release branches. The developer closes the issue once the fix has shipped everywhere it needs to.
 
 ## How to Contribute
 
