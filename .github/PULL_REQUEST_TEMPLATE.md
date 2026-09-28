@@ -14,20 +14,19 @@
 ## Linked issue
 
 <!--
-REQUIRED. Every PR must be connected to an existing GitHub issue that is open
-and labeled `approved` by a maintainer; the "PR links an approved issue" check
-fails otherwise. If no issue exists yet, open one first
-(https://github.com/run-ai/fake-gpu-operator/issues/new/choose). Maintainers
-can waive the requirement with the `skip-issue-check` PR label.
+REQUIRED. Every PR must be connected to exactly one existing GitHub issue that
+is open and labeled `approved` by a maintainer; the "PR links an approved issue"
+check fails otherwise (also when more than one issue is linked). If no issue exists yet, open one first
+(https://github.com/run-ai/fake-gpu-operator/issues/new/choose).
 
-Ways to connect it, in order of preference:
-1. Link the issue in the "Development" sidebar (right panel).
-2. Reference it below with `Closes #<n>` (`Fixes` and `Refs` also work).
-3. Maintainers: for issues tracked outside this repository, follow the
-   internal contribution guide.
+Ways to connect it (the check reads the PR's "Development" panel only):
+1. Link the issue in the "Development" panel (right sidebar).
+2. Reference it below with `Closes #<n>` (`Fixes` and `Resolves` also work);
+   GitHub turns this into a Development link.
+3. For issues tracked outside this repository, link this PR from the issue's
+   own "Development" panel. Nothing needs to be written here.
 -->
 
-<!-- Public issue: -->
 Closes #
 
 ## Type of change

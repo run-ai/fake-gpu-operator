@@ -3,29 +3,45 @@
 
 name: Validate Issue Reference
 
-# Every pull request must link at least one open issue that carries the
-# approval label. The check re-runs automatically when the label is added to or
-# removed from an issue, so contributors do not need to push an empty commit.
+# Every pull request must be linked to at least one open issue that carries the
+# approval label. The only source of linked issues is the pull request's
+# "Development" panel, read through the GraphQL `closingIssuesReferences`
+# connection. GitHub fills that panel from two places, so a pull request
+# satisfies the check by either:
+#
+#   - linking the issue through the "Development" panel, or
+#   - writing a closing keyword such as `Closes #123` in the description
+#     (GitHub turns it into the same Development link).
+#
+# Nothing else in the description is parsed. The check re-runs automatically
+# when the approval label is added to or removed from an issue, so
+# contributors do not need to push an empty commit.
 #
 # External issue tracker (optional)
 #
-# Issues may also live in a second GitHub repository, typically a private
-# tracker. Set the `PRIVATE_ISSUE_REPO` repository variable (or the
-# `private-repo` input when called as a reusable workflow) to its
-# `owner/repo` name; the tracker is never named in this file. References to
-# it must use the full `owner/repo#123` form or the issue URL, or be linked in
-# the pull request's "Development" sidebar. They are verified with the
-# `PRIVATE_ISSUES_TOKEN` secret, a fine-grained personal access token with
-# read-only "Issues" permission on that tracker. Without the token, which is
-# always the case for pull requests from forks, such references are reported
-# as unverifiable and the check fails closed.
+# Issues may also live in another GitHub repository, typically a private
+# tracker; the tracker is never named in this file. GitHub allows an issue and
+# a pull request to be in different repositories, so such an issue is linked
+# from the ISSUE's own "Development" panel. The link is visible only to people
+# with access to the issue and leaves no trace in the public pull request.
+#
+# The workflow token sees only issues of this repository. To find and verify
+# linked issues of the external tracker, set the `PRIVATE_ISSUES_TOKEN`
+# secret to a fine-grained personal access token with:
+#
+#   - resource owner: the organization
+#   - repository access: the external tracker AND this repository
+#   - permissions: Issues: read, Pull requests: read
+#
+# Without the token, which is always the case for pull requests from forks,
+# external references are reported as unverifiable and the check fails closed.
 #
 # Label changes on the external tracker do not raise `issues` events here.
 # The tracker can run a tiny companion workflow that sends a
 # `repository_dispatch` to this repository instead; the `revalidate` job
-# handles it exactly like a local issue change. The companion workflow needs
-# a token with `actions: write` on this repository, for example a secret
-# named `PUBLIC_REPO_DISPATCH_TOKEN`:
+# handles it like a local issue change. The companion workflow needs a token
+# with `actions: write` on this repository, for example a secret named
+# `PUBLIC_REPO_DISPATCH_TOKEN`:
 #
 #     name: Notify public repository of issue changes
 #     on:
@@ -66,9 +82,7 @@ name: Validate Issue Reference
 #           contents: read
 #           issues: read
 #           pull-requests: read
-#         with:
-#           private-repo: ${{ vars.PRIVATE_ISSUE_REPO }}   # optional
-#         secrets: inherit
+#         secrets: inherit   # forwards PRIVATE_ISSUES_TOKEN when the caller has it
 #
 # When called this way the status-check context is
 # `<caller job> / PR links an approved issue`.
@@ -94,15 +108,9 @@ on:
     types:
       - private-issue-changed
   workflow_call:
-    inputs:
-      private-repo:
-        description: "owner/name of an optional external issue tracker. Defaults to the caller's PRIVATE_ISSUE_REPO variable."
-        type: string
-        required: false
-        default: ""
     secrets:
       PRIVATE_ISSUES_TOKEN:
-        description: "Optional fine-grained PAT (Issues: read) for the external issue tracker."
+        description: "Optional fine-grained PAT (Issues: read, Pull requests: read on the external tracker and this repository)."
         required: false
 
 concurrency:
@@ -112,10 +120,8 @@ concurrency:
 permissions: {}
 
 env:
-  # Label an issue must carry for a pull request referencing it to pass.
+  # Label an issue must carry for a pull request linked to it to pass.
   APPROVED_LABEL: approved
-  # Label on a pull request that waives the issue requirement.
-  BYPASS_LABEL: skip-issue-check
 
 jobs:
   validate:
@@ -124,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      # Read the pull request body and the issues it references.
+      # Read the pull request's Development links and the issues they point to.
       contents: read
       pull-requests: read
       issues: read
@@ -132,24 +138,14 @@ jobs:
       - name: Validate issue reference
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          PRIVATE_REPO: ${{ inputs.private-repo || vars.PRIVATE_ISSUE_REPO }}
           PRIVATE_ISSUES_TOKEN: ${{ secrets.PRIVATE_ISSUES_TOKEN }}
         with:
           script: |
             const { owner, repo } = context.repo;
             const pr = context.payload.pull_request;
             const approvedLabel = process.env.APPROVED_LABEL;
-            const bypassLabel = process.env.BYPASS_LABEL;
-            // Optional external issue tracker as "owner/repo"; empty when none is configured.
-            const privateFull = process.env.PRIVATE_REPO || '';
-            const [privateOwner, privateRepo] = privateFull ? privateFull.split('/') : ['', ''];
             const privateToken = process.env.PRIVATE_ISSUES_TOKEN || '';
 
-            const labels = (pr.labels || []).map(l => l.name);
-            if (labels.includes(bypassLabel)) {
-              core.info(`Pull request is labeled "${bypassLabel}" - skipping the issue requirement.`);
-              return;
-            }
             if (pr.user && pr.user.type === 'Bot') {
               core.info(`Pull request was opened by ${pr.user.login} (bot) - skipping the issue requirement.`);
               return;
@@ -159,79 +155,85 @@ jobs:
               return;
             }
 
-            // Drop HTML comments, fenced code blocks, and inline code spans so
-            // template boilerplate, pasted logs, and prose such as `#123` are
-            // not mistaken for an issue reference. GitHub does not render a
-            // reference inside backticks as a link either.
-            const body = (pr.body || '')
-              .replace(/<!--[\s\S]*?-->/g, ' ')
-              .replace(/```[\s\S]*?```/g, ' ')
-              .replace(/`[^`\n]*`/g, ' ');
+            // Headers for the GraphQL call made with the external token.
+            // actions/github-script bundles its dependencies, so a second Octokit
+            // client cannot be created with require('@actions/github').
+            const externalHeaders = {
+              Authorization: `Bearer ${privateToken}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'validate-issue-references',
+            };
 
-            const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             // References are { owner, repo, number }, keyed by "owner/repo#number" to dedupe.
             const references = new Map();
-            const addReference = (refOwner, refRepo, number) => {
-              references.set(`${refOwner}/${refRepo}#${number}`,
-                { owner: refOwner, repo: refRepo, number: Number(number) });
+            const addReference = (node) => {
+              const [refOwner, refRepo] = node.repository.nameWithOwner.split('/');
+              references.set(`${refOwner}/${refRepo}#${node.number}`, {
+                owner: refOwner, repo: refRepo, number: Number(node.number),
+                state: node.state, labels: (node.labels && node.labels.nodes || []).map(l => l.name),
+              });
             };
-            const isPublic = ref => ref.owner === owner && ref.repo === repo;
+            const isPublic = ref =>
+              `${ref.owner}/${ref.repo}`.toLowerCase() === `${owner}/${repo}`.toLowerCase();
             const describe = ref => (isPublic(ref) ? `#${ref.number}` : `${ref.owner}/${ref.repo}#${ref.number}`);
 
-            // The lookbehind keeps a bare "#123" from matching the tail of "owner/repo#123".
-            for (const m of body.matchAll(/(?<![\w/])#(\d+)\b/g)) {
-              addReference(owner, repo, m[1]);
-            }
-            const urlPattern = new RegExp(
-              `https?://github\\.com/${escapeRegExp(owner)}/${escapeRegExp(repo)}/issues/(\\d+)`, 'gi');
-            for (const m of body.matchAll(urlPattern)) {
-              addReference(owner, repo, m[1]);
-            }
-            if (privateFull) {
-              const priv = escapeRegExp(privateFull);
-              for (const m of body.matchAll(new RegExp(`(?<![\\w/])${priv}#(\\d+)\\b`, 'gi'))) {
-                addReference(privateOwner, privateRepo, m[1]);
-              }
-              for (const m of body.matchAll(new RegExp(`https?://github\\.com/${priv}/issues/(\\d+)`, 'gi'))) {
-                addReference(privateOwner, privateRepo, m[1]);
-              }
-            }
-
-            // Issues linked through the pull request's "Development" sidebar.
-            try {
-              const result = await github.graphql(`
-                query($owner: String!, $repo: String!, $number: Int!) {
-                  repository(owner: $owner, name: $repo) {
-                    pullRequest(number: $number) {
-                      closingIssuesReferences(first: 20) {
-                        nodes { number repository { nameWithOwner } }
-                      }
+            // Issues linked through the pull request's "Development" panel. The
+            // workflow token only sees issues of this repository; when the external
+            // token is configured, the same query is repeated with it so issues of the
+            // external tracker are found too. GitHub hides those links from viewers
+            // without access to the issue.
+            const linkedQuery = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 50) {
+                      nodes { number state repository { nameWithOwner } labels(first: 50) { nodes { name } } }
                     }
                   }
-                }`, { owner, repo, number: pr.number });
+                }
+              }`;
+            const variables = { owner, repo, number: pr.number };
+            const addLinkedNodes = (result) => {
               for (const node of result.repository.pullRequest.closingIssuesReferences.nodes || []) {
-                const [nodeOwner, nodeRepo] = node.repository.nameWithOwner.split('/');
-                addReference(nodeOwner, nodeRepo, node.number);
+                addReference(node);
               }
+            };
+            try {
+              addLinkedNodes(await github.graphql(linkedQuery, variables));
             } catch (error) {
-              core.warning(`Could not read the Development sidebar: ${error.message}`);
+              core.warning(`Could not read the Development panel: ${error.message}`);
+            }
+            if (privateToken) {
+              try {
+                const response = await fetch('https://api.github.com/graphql', {
+                  method: 'POST',
+                  headers: { ...externalHeaders, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ query: linkedQuery, variables }),
+                });
+                const payload = await response.json();
+                if (!response.ok || payload.errors) {
+                  throw new Error(payload.errors ? payload.errors.map(e => e.message).join('; ') : `HTTP ${response.status}`);
+                }
+                addLinkedNodes(payload.data);
+              } catch (error) {
+                core.warning(`Could not read the Development panel with PRIVATE_ISSUES_TOKEN: ${error.message}`);
+              }
             }
 
             const howTo =
-              `Link the issue from the pull request description, for example \`Fixes #123\` ` +
-              `or \`Fixes https://github.com/${owner}/${repo}/issues/123\`. ` +
-              `The issue must be open and labeled \`${approvedLabel}\` by a maintainer. ` +
-              `Maintainers can waive this by adding the \`${bypassLabel}\` label to the pull request. ` +
-              `Issues in an external tracker can be referenced with the full form \`owner/repo#123\` ` +
-              `or their URL, and are verified with the PRIVATE_ISSUES_TOKEN secret. ` +
-              `You can also link the issue in the pull request's "Development" sidebar.`;
+              `Link the issue through the pull request's "Development" panel; for an issue that lives ` +
+              `in another repository, such as the external tracker, link this pull request from the ` +
+              `issue's own "Development" panel. For an issue in this repository you can instead add ` +
+              `\`Closes #123\` to the pull request description. ` +
+              `Exactly one issue must be linked, and it must be open and labeled \`${approvedLabel}\` by a maintainer.`;
 
             if (references.size === 0) {
               await core.summary
-                .addHeading('Issue reference missing')
+                .addHeading('Linked issue missing')
                 .addRaw(howTo)
                 .write();
-              core.setFailed(`This pull request does not reference an issue. ${howTo}`);
+              core.setFailed(`This pull request is not linked to an issue. ${howTo}`);
               return;
             }
 
@@ -240,52 +242,34 @@ jobs:
               if (isPublic(a) !== isPublic(b)) return isPublic(a) ? -1 : 1;
               return a.number - b.number;
             });
-            core.info(`Found issue reference(s): ${ordered.map(describe).join(', ')}`);
+            core.info(`Linked issue(s): ${ordered.map(describe).join(', ')}`);
 
-            const externalClient = privateToken ? require('@actions/github').getOctokit(privateToken) : null;
+            // One pull request addresses exactly one issue (an issue may have several PRs).
+            if (ordered.length > 1) {
+              const list = ordered.map(describe).join(', ');
+              await core.summary
+                .addHeading('More than one issue linked')
+                .addRaw(`This pull request is linked to ${ordered.length} issues (${list}). ${howTo}`)
+                .write();
+              core.setFailed(`This pull request is linked to ${ordered.length} issues (${list}); unlink all but one. ${howTo}`);
+              return;
+            }
+
+            // The linked-issue query already carries each issue's state and labels, so no
+            // per-issue REST call is needed (some tokens can read issues over GraphQL
+            // only). closingIssuesReferences never returns pull requests.
             const problems = [];
             let approvedIssue = null;
-
             for (const ref of ordered) {
               const name = describe(ref);
-              let client = github;
-              if (!isPublic(ref)) {
-                if (!externalClient) {
-                  problems.push(
-                    `${name} could not be verified: PRIVATE_ISSUES_TOKEN is not configured ` +
-                    '(expected for pull requests from forks)');
-                  continue;
-                }
-                client = externalClient;
-              }
-
-              let issue;
-              try {
-                issue = (await client.rest.issues.get({
-                  owner: ref.owner, repo: ref.repo, issue_number: ref.number,
-                })).data;
-              } catch (error) {
-                problems.push(error.status === 404
-                  ? `${name} does not exist${isPublic(ref) ? '' : ' or is not visible to PRIVATE_ISSUES_TOKEN'}`
-                  : `${name} could not be read: ${error.message}`);
-                continue;
-              }
-
-              if (issue.pull_request) {
-                problems.push(`${name} is a pull request, not an issue`);
-                continue;
-              }
-              if (issue.state === 'closed') {
+              if (ref.state !== 'OPEN') {
                 problems.push(`${name} is closed`);
                 continue;
               }
-
-              const issueLabels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name));
-              if (!issueLabels.includes(approvedLabel)) {
+              if (!ref.labels.includes(approvedLabel)) {
                 problems.push(`${name} is open but is not labeled \`${approvedLabel}\``);
                 continue;
               }
-
               approvedIssue = name;
               break;
             }
@@ -293,19 +277,19 @@ jobs:
             if (approvedIssue === null) {
               const details = problems.map(p => `- ${p}`).join('\n');
               await core.summary
-                .addHeading('No approved issue referenced')
+                .addHeading('No approved issue linked')
                 .addRaw(details, true)
                 .addRaw(howTo)
                 .write();
               core.setFailed(
-                `None of the referenced issues are open and labeled "${approvedLabel}":\n${details}\n\n${howTo}`);
+                `None of the linked issues are open and labeled "${approvedLabel}":\n${details}\n\n${howTo}`);
               return;
             }
 
             core.info(`Issue ${approvedIssue} is open and labeled "${approvedLabel}".`);
             await core.summary
-              .addHeading('Approved issue referenced')
-              .addRaw(`This pull request references ${approvedIssue}, which is open and labeled \`${approvedLabel}\`.`)
+              .addHeading('Approved issue linked')
+              .addRaw(`This pull request is linked to ${approvedIssue}, which is open and labeled \`${approvedLabel}\`.`)
               .write();
 
   revalidate:
@@ -321,9 +305,12 @@ jobs:
     steps:
       - name: Re-run affected pull request checks
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PRIVATE_ISSUES_TOKEN: ${{ secrets.PRIVATE_ISSUES_TOKEN }}
         with:
           script: |
             const { owner, repo } = context.repo;
+            const privateToken = process.env.PRIVATE_ISSUES_TOKEN || '';
 
             // The changed issue: local for `issues` events, external for `repository_dispatch`.
             let target;
@@ -341,30 +328,68 @@ jobs:
               }
               target = { owner: targetOwner, repo: targetRepo, number };
             }
-            const isPublic = target.owner === owner && target.repo === repo;
+            const targetKey = `${target.owner}/${target.repo}#${target.number}`.toLowerCase();
+            const isPublic = `${target.owner}/${target.repo}`.toLowerCase() === `${owner}/${repo}`.toLowerCase();
             const targetName = isPublic ? `#${target.number}` : `${target.owner}/${target.repo}#${target.number}`;
 
-            const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const targetRepoPattern = escapeRegExp(`${target.owner}/${target.repo}`);
-            const referencePattern = isPublic
-              ? new RegExp(`(?:#|/issues/)${target.number}\\b`)
-              : new RegExp(`(?:(?<![\\w/])${targetRepoPattern}#|/${targetRepoPattern}/issues/)${target.number}\\b`, 'i');
-
-            const referencesIssue = (body) => {
-              const text = (body || '')
-                .replace(/<!--[\s\S]*?-->/g, ' ')
-                .replace(/```[\s\S]*?```/g, ' ')
-                .replace(/`[^`\n]*`/g, ' ');
-              return referencePattern.test(text);
+            // Issues linked through a pull request's "Development" panel. The workflow
+            // token covers issues of this repository, which is all an `issues` event can
+            // be about; a `repository_dispatch` from the external tracker also needs
+            // PRIVATE_ISSUES_TOKEN to see the external links.
+            const linkedQuery = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 50) {
+                      nodes { number repository { nameWithOwner } }
+                    }
+                  }
+                }
+              }`;
+            const linkedKeys = (result) =>
+              (result.repository.pullRequest.closingIssuesReferences.nodes || [])
+                .map(node => `${node.repository.nameWithOwner}#${node.number}`.toLowerCase());
+            const linksTarget = async (prNumber) => {
+              const variables = { owner, repo, number: prNumber };
+              const keys = new Set();
+              try {
+                for (const key of linkedKeys(await github.graphql(linkedQuery, variables))) keys.add(key);
+              } catch (error) {
+                core.warning(`PR #${prNumber}: could not read the Development panel: ${error.message}`);
+              }
+              if (!isPublic && privateToken) {
+                try {
+                  const response = await fetch('https://api.github.com/graphql', {
+                    method: 'POST',
+                    headers: {
+                      Authorization: `Bearer ${privateToken}`,
+                      'Content-Type': 'application/json',
+                      'User-Agent': 'validate-issue-references',
+                    },
+                    body: JSON.stringify({ query: linkedQuery, variables }),
+                  });
+                  const payload = await response.json();
+                  if (!response.ok || payload.errors) {
+                    throw new Error(payload.errors ? payload.errors.map(e => e.message).join('; ') : `HTTP ${response.status}`);
+                  }
+                  for (const key of linkedKeys(payload.data)) keys.add(key);
+                } catch (error) {
+                  core.warning(`PR #${prNumber}: could not read the Development panel with PRIVATE_ISSUES_TOKEN: ${error.message}`);
+                }
+              }
+              return keys.has(targetKey);
             };
 
             const pulls = await github.paginate(github.rest.pulls.list, {
               owner, repo, state: 'open', per_page: 100,
             });
-            const affected = pulls.filter(pr => referencesIssue(pr.body));
+            const affected = [];
+            for (const pr of pulls) {
+              if (await linksTarget(pr.number)) affected.push(pr);
+            }
 
             if (affected.length === 0) {
-              core.info(`No open pull request references issue ${targetName}.`);
+              core.info(`No open pull request is linked to issue ${targetName}.`);
               return;
             }
 
