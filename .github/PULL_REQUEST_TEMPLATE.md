@@ -25,6 +25,9 @@ Ways to connect it (the check reads the PR's "Development" panel only):
    GitHub turns this into a Development link.
 3. For issues tracked outside this repository, link this PR from the issue's
    own "Development" panel. Nothing needs to be written here.
+4. PRs into release branches (`vX.Y`): GitHub ignores `Closes` keywords
+   there, so link the issue manually (way 1 or 3). Merging does not close
+   the issue; for backports, an issue already closed as completed is accepted.
 -->
 
 Closes #

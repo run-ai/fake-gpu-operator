@@ -36,6 +36,7 @@ All work on the Fake GPU Operator is tracked in GitHub: [issues](https://github.
   1. Link the issue in the PR's "Development" panel (right sidebar).
   2. Reference it in the PR description with `Closes #123` (`Fixes` and `Resolves` also work); GitHub turns this into a Development link.
   3. For issues tracked outside this repository, link the PR from the issue's own "Development" panel. Nothing needs to be written in the PR.
+  4. For pull requests into release branches (`vX.Y`), GitHub ignores closing keywords and does not close the issue on merge: link the issue manually (way 1 or 3), and close it by hand once the fix has shipped. Backport PRs may link an issue that is already closed as completed.
 
 ## How to Contribute
 
