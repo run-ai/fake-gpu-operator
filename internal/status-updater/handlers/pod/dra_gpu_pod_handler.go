@@ -218,12 +218,29 @@ func getDevicesFromClaim(claim *resourceapi.ResourceClaim) []string {
 // findGpuIndexByID finds the index of a GPU in the topology by its ID.
 // The comparison is case-insensitive because the DRA plugin uses lowercase device names
 // while the topology may have uppercase GPU IDs.
+//
+// Tries deterministic index naming first, then falls back to UUID matching --
+// kwok-dra-plugin's naming mode is a per-deployment config choice, so this
+// stays correct regardless of which mode produced the allocated device name.
 func findGpuIndexByID(nodeTopology *topology.NodeTopology, gpuID string) int {
 	for idx, gpu := range nodeTopology.Gpus {
+		if gpu.ID == "" {
+			continue
+		}
+		if strings.EqualFold(fmt.Sprintf("gpu-%d", idx), gpuID) {
+			return idx
+		}
+	}
+
+	for idx, gpu := range nodeTopology.Gpus {
+		if gpu.ID == "" {
+			continue
+		}
 		if strings.EqualFold(gpu.ID, gpuID) {
 			return idx
 		}
 	}
+
 	return -1
 }
 

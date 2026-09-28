@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `kwok-dra-plugin` now supports a `GPU_DEVICE_NAMING` setting
+  (`kwokDraPlugin.gpuDeviceNaming` in the Helm chart) to opt into a
+  deterministic per-node sequential device naming scheme (`gpu-0`,
+  `gpu-1`, ...) matching the real NVIDIA driver, as an alternative to the
+  existing UUID-based naming (`uuid`, still the default).
+  `status-updater`'s device lookup tries deterministic-index matching
+  first, then falls back to UUID matching, so it works correctly
+  regardless of which mode produced the allocated device name.
+
 ### Changed
 
 ### Fixed

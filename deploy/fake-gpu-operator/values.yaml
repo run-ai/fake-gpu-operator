@@ -101,6 +101,7 @@ kwokGpuDevicePlugin:
 
 kwokDraPlugin:
   enabled: false
+  gpuDeviceNaming: uuid
   image:
     pullPolicy: Always
     repository: ghcr.io/run-ai/fake-gpu-operator/kwok-dra-plugin

@@ -46,4 +46,8 @@ const (
 	EnvRunaiIntegrationPollingInterval = "RUNAI_INTEGRATION_POLLING_INTERVAL"
 	EnvNodeResourceTopologyEnabled     = "NODE_RESOURCE_TOPOLOGY_ENABLED"
 	EnvPodResourcesEnabled             = "POD_RESOURCES_ENABLED"
+	EnvGpuDeviceNaming                 = "GPU_DEVICE_NAMING"
+
+	GpuDeviceNamingDeterministic = "deterministic"
+	GpuDeviceNamingUuid          = "uuid"
 )

@@ -50,7 +50,7 @@ var _ = Describe("ResourceSliceHandler", func() {
 
 			fakeClient := fake.NewSimpleClientset()
 
-			handler := NewResourceSliceHandler(fakeClient)
+			handler := NewResourceSliceHandler(fakeClient, "")
 			err = handler.HandleAddOrUpdate(configMap)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -90,7 +90,7 @@ var _ = Describe("ResourceSliceHandler", func() {
 
 			fakeClient := fake.NewSimpleClientset()
 
-			handler := NewResourceSliceHandler(fakeClient)
+			handler := NewResourceSliceHandler(fakeClient, "")
 
 			// Create initial ResourceSlice
 			err = handler.HandleAddOrUpdate(configMap)
@@ -146,7 +146,7 @@ var _ = Describe("ResourceSliceHandler", func() {
 
 			fakeClient := fake.NewSimpleClientset()
 
-			handler := NewResourceSliceHandler(fakeClient)
+			handler := NewResourceSliceHandler(fakeClient, "")
 
 			// Create ResourceSlice
 			err = handler.HandleAddOrUpdate(configMap)
@@ -196,6 +196,38 @@ var _ = Describe("ResourceSliceHandler", func() {
 
 			// Check second device
 			Expect(devices[1].Name).To(Equal("gpu-0002-0002-0002-0002"))
+			Expect(*devices[1].Attributes["uuid"].StringValue).To(Equal("GPU-0002-0002-0002-0002"))
+			Expect(*devices[1].Attributes["gpu.nvidia.com/type"].StringValue).To(Equal("gpu"))
+			Expect(*devices[1].Attributes["gpu.nvidia.com/uuid"].StringValue).To(Equal("GPU-0002-0002-0002-0002"))
+		})
+
+		It("should convert topology GPUs to DRA devices using deterministic index naming when configured", func() {
+			handler := &ResourceSliceHandler{gpuDeviceNaming: constants.GpuDeviceNamingDeterministic}
+
+			nodeTopology := &topology.NodeTopology{
+				GpuProduct: "NVIDIA-A100-SXM4-40GB",
+				GpuMemory:  40960,
+				Gpus: []topology.GpuDetails{
+					{ID: "GPU-0001-0001-0001-0001"},
+					{ID: "GPU-0002-0002-0002-0002"},
+				},
+			}
+
+			devices := handler.devicesFromTopology(nodeTopology)
+
+			Expect(devices).To(HaveLen(2))
+
+			// Check first device
+			Expect(devices[0].Name).To(Equal("gpu-0"))
+			Expect(*devices[0].Attributes["uuid"].StringValue).To(Equal("GPU-0001-0001-0001-0001"))
+			Expect(*devices[0].Attributes["model"].StringValue).To(Equal("NVIDIA-A100-SXM4-40GB"))
+
+			Expect(*devices[0].Attributes["gpu.nvidia.com/type"].StringValue).To(Equal("gpu"))
+			Expect(*devices[0].Attributes["gpu.nvidia.com/uuid"].StringValue).To(Equal("GPU-0001-0001-0001-0001"))
+			Expect(*devices[0].Attributes["gpu.nvidia.com/productName"].StringValue).To(Equal("NVIDIA-A100-SXM4-40GB"))
+
+			// Check second device
+			Expect(devices[1].Name).To(Equal("gpu-1"))
 			Expect(*devices[1].Attributes["uuid"].StringValue).To(Equal("GPU-0002-0002-0002-0002"))
 			Expect(*devices[1].Attributes["gpu.nvidia.com/type"].StringValue).To(Equal("gpu"))
 			Expect(*devices[1].Attributes["gpu.nvidia.com/uuid"].StringValue).To(Equal("GPU-0002-0002-0002-0002"))

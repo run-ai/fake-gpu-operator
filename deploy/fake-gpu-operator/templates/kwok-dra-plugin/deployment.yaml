@@ -30,6 +30,8 @@ spec:
               value: "{{ .Release.Namespace }}"
             - name: FAKE_GPU_OPERATOR_NAMESPACE
               value: "{{ .Release.Namespace }}"
+            - name: GPU_DEVICE_NAMING
+              value: "{{ (.Values.kwokDraPlugin).gpuDeviceNaming | default "uuid" }}"
       restartPolicy: Always
       serviceAccountName: kwok-dra-plugin
       imagePullSecrets:
