@@ -171,7 +171,8 @@ jobs:
               const [refOwner, refRepo] = node.repository.nameWithOwner.split('/');
               references.set(`${refOwner}/${refRepo}#${node.number}`, {
                 owner: refOwner, repo: refRepo, number: Number(node.number),
-                state: node.state, labels: (node.labels && node.labels.nodes || []).map(l => l.name),
+                state: node.state,
+                labels: (node.labels && node.labels.nodes || []).map(l => l.name),
               });
             };
             const isPublic = ref =>
@@ -226,7 +227,9 @@ jobs:
               `in another repository, such as the external tracker, link this pull request from the ` +
               `issue's own "Development" panel. For an issue in this repository you can instead add ` +
               `\`Closes #123\` to the pull request description. ` +
-              `Exactly one issue must be linked, and it must be open and labeled \`${approvedLabel}\` by a maintainer.`;
+              `Exactly one issue must be linked, and it must be open and labeled \`${approvedLabel}\` by a maintainer. ` +
+              `Pull requests into release branches must be linked manually (GitHub ignores closing keywords there). ` +
+              `Merging never closes the issue in these repositories; the developer closes it once the fix has shipped.`;
 
             if (references.size === 0) {
               await core.summary
