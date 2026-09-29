@@ -12,6 +12,7 @@ import (
 
 type Interface interface {
 	HandleAdd(node *v1.Node) error
+	HandleUpdate(node *v1.Node) error
 	HandleDelete(node *v1.Node) error
 }
 
@@ -50,7 +51,7 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return fmt.Errorf("failed to label node: %w", err)
 	}
 
-	err = p.setGpuFractioningReadyCondition(node.Name)
+	err = p.setGpuFractioningReadyCondition(node)
 	if err != nil {
 		return fmt.Errorf("failed to set GPU fractioning readiness: %w", err)
 	}
@@ -76,10 +77,20 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 		return fmt.Errorf("failed to unlabel node: %w", err)
 	}
 
-	err = p.removeGpuFractioningReadyCondition(node.Name)
+	err = p.removeGpuFractioningReadyCondition(node)
 	if err != nil {
 		return fmt.Errorf("failed to remove GPU fractioning readiness: %w", err)
 	}
 
 	return nil
+}
+
+// KWOK and the kubelet both rewrite node status on their own schedule, and either can drop a
+// condition they do not know about, so re-assert it on every update rather than only on add.
+func (p *NodeHandler) HandleUpdate(node *v1.Node) error {
+	if p.disableLabeling {
+		return nil
+	}
+
+	return p.setGpuFractioningReadyCondition(node)
 }

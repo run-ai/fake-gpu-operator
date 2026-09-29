@@ -65,6 +65,12 @@ func NewNodeController(kubeClient kubernetes.Interface, wg *sync.WaitGroup, disa
 					util.LogErrorIfExist(c.handler.HandleAdd(node), "Failed to handle node addition")
 				}()
 			},
+			UpdateFunc: func(_, newObj interface{}) {
+				go func() {
+					node := newObj.(*v1.Node)
+					util.LogErrorIfExist(c.handler.HandleUpdate(node), "Failed to handle node update")
+				}()
+			},
 			DeleteFunc: func(obj interface{}) {
 				go func() {
 					node := obj.(*v1.Node)

@@ -52,9 +52,10 @@ func TestSetGpuFractioningReadyCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := &NodeHandler{kubeClient: kfake.NewSimpleClientset(nodeWithConditions("n1", tc.existing...))}
+			node := nodeWithConditions("n1", tc.existing...)
+			handler := &NodeHandler{kubeClient: kfake.NewSimpleClientset(node)}
 
-			if err := handler.setGpuFractioningReadyCondition("n1"); err != nil {
+			if err := handler.setGpuFractioningReadyCondition(node); err != nil {
 				t.Fatalf("setGpuFractioningReadyCondition: %v", err)
 			}
 
@@ -77,12 +78,13 @@ func TestSetGpuFractioningReadyCondition(t *testing.T) {
 }
 
 func TestRemoveGpuFractioningReadyCondition(t *testing.T) {
-	handler := &NodeHandler{kubeClient: kfake.NewSimpleClientset(nodeWithConditions("n1",
+	node := nodeWithConditions("n1",
 		v1.NodeCondition{Type: v1.NodeReady, Status: v1.ConditionTrue},
 		v1.NodeCondition{Type: gpuFractioningReadyConditionType, Status: v1.ConditionTrue},
-	))}
+	)
+	handler := &NodeHandler{kubeClient: kfake.NewSimpleClientset(node)}
 
-	if err := handler.removeGpuFractioningReadyCondition("n1"); err != nil {
+	if err := handler.removeGpuFractioningReadyCondition(node); err != nil {
 		t.Fatalf("removeGpuFractioningReadyCondition: %v", err)
 	}
 
