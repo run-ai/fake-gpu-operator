@@ -50,6 +50,11 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 		return fmt.Errorf("failed to label node: %w", err)
 	}
 
+	err = p.setGpuFractioningReadyCondition(node.Name)
+	if err != nil {
+		return fmt.Errorf("failed to set GPU fractioning readiness: %w", err)
+	}
+
 	return nil
 }
 
@@ -69,6 +74,11 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	err = p.unlabelNode(node)
 	if err != nil {
 		return fmt.Errorf("failed to unlabel node: %w", err)
+	}
+
+	err = p.removeGpuFractioningReadyCondition(node.Name)
+	if err != nil {
+		return fmt.Errorf("failed to remove GPU fractioning readiness: %w", err)
 	}
 
 	return nil
