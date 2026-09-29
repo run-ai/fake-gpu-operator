@@ -10,9 +10,7 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// KAI refuses to place a fractional workload on a node without this condition. On a real cluster
-// the GPU fractioning operator writes it after verifying the driver and its daemons; nothing here
-// is real enough to produce one, so simulate it alongside the GPUs themselves.
+// Fractional GPU scheduling is gated on this condition, so simulate it like the GPUs themselves.
 const gpuFractioningReadyConditionType = "gpu-fractioning.nvidia.com/Ready"
 
 func (p *NodeHandler) setGpuFractioningReadyCondition(nodeName string) error {
@@ -62,8 +60,6 @@ func (p *NodeHandler) removeGpuFractioningReadyCondition(nodeName string) error 
 	return nil
 }
 
-// updateNodeCondition re-reads the node on conflict because the kubelet writes the same condition
-// list on its own schedule, and a stale read would drop whatever it set in between.
 func (p *NodeHandler) updateNodeCondition(
 	nodeName string, mutate func([]v1.NodeCondition) ([]v1.NodeCondition, bool),
 ) error {

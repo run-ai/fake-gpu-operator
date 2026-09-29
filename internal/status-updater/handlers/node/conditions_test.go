@@ -69,8 +69,6 @@ func TestSetGpuFractioningReadyCondition(t *testing.T) {
 			if got.Reason != "AllDaemonsReady" {
 				t.Errorf("reason = %q, want AllDaemonsReady", got.Reason)
 			}
-			// The kubelet owns the rest of the list; overwriting it would make the node
-			// look NotReady until the kubelet's next heartbeat.
 			if findCondition(conditions, v1.NodeReady) == nil {
 				t.Error("kubelet-owned Ready condition was dropped")
 			}
