@@ -40,8 +40,6 @@ spec:
               value: "{{ (.Values.prometheus).url }}"
             - name: DISABLE_NODE_LABELING
               value: "{{ (.Values.statusUpdater).disableNodeLabeling }}"
-            - name: SIMULATE_GPU_FRACTIONING_READY
-              value: "{{ (.Values.statusUpdater).simulateGpuFractioningReady }}"
             - name: NVML_MOCK_IMAGE
               value: "{{ (.Values.nvmlMock).image.repository | default "ghcr.io/nvidia/nvml-mock" }}:{{ (.Values.nvmlMock).image.tag | default "latest" }}"
             {{- if (.Values.statusUpdater).runaiIntegration.enabled }}

@@ -18,7 +18,7 @@ func (p *NodeHandler) reconcileGpuFractioningReadyCondition(node *v1.Node) error
 	poolName := node.Labels[p.clusterConfig.NodePoolLabelKey]
 	pool, found := p.clusterConfig.NodePools[poolName]
 	gpu, hasGpu := node.Status.Allocatable[v1.ResourceName("nvidia.com/gpu")]
-	if !p.simulateGpuFractioningReady || !found || pool.Gpu.Backend != constants.BackendFake || !hasGpu || gpu.Sign() <= 0 {
+	if !found || pool.Gpu.Backend != constants.BackendFake || !hasGpu || gpu.Sign() <= 0 {
 		return p.removeGpuFractioningReadyCondition(node)
 	}
 	return p.setGpuFractioningReadyCondition(node)

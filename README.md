@@ -198,14 +198,7 @@ When enabled, the chart installs the NRT CRD (set `installCRD: false` if you alr
 
 ## Simulated GPU fractioning readiness
 
-If an external scheduler requires `gpu-fractioning.nvidia.com/Ready` for fake fractional workloads, enable the simulation explicitly:
-
-```yaml
-statusUpdater:
-  simulateGpuFractioningReady: true
-```
-
-The status updater sets the condition only on `fake` backend pool nodes after the legacy `nvidia.com/gpu` resource becomes allocatable. It removes its own condition if that resource disappears. It does not set the condition on NVML `mock` pools, and it leaves conditions written by another controller alone. DRA allocation does not require this condition. The condition signals simulated scheduling readiness; it does not provide fraction enforcement.
+The status updater sets `gpu-fractioning.nvidia.com/Ready` on `fake` backend pool nodes after the legacy `nvidia.com/gpu` resource becomes allocatable. It removes its own condition if that resource disappears. It does not set the condition on NVML `mock` pools, and it leaves conditions written by another controller alone. DRA allocation does not require this condition. The condition signals simulated scheduling readiness; it does not provide fraction enforcement.
 
 ## 🔌 Dynamic Resource Allocation (DRA)
 

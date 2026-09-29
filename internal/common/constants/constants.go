@@ -41,7 +41,6 @@ const (
 	EnvResourceReservationNamespace    = "RESOURCE_RESERVATION_NAMESPACE"
 	EnvPrometheusURL                   = "PROMETHEUS_URL"
 	EnvDisableNodeLabeling             = "DISABLE_NODE_LABELING"
-	EnvSimulateGpuFractioningReady     = "SIMULATE_GPU_FRACTIONING_READY"
 	EnvNvmlMockImage                   = "NVML_MOCK_IMAGE"
 	EnvRunaiIntegrationEnabled         = "RUNAI_INTEGRATION_ENABLED"
 	EnvRunaiIntegrationPollingInterval = "RUNAI_INTEGRATION_POLLING_INTERVAL"

@@ -19,19 +19,17 @@ type Interface interface {
 type NodeHandler struct {
 	kubeClient kubernetes.Interface
 
-	clusterConfig               *topology.ClusterConfig
-	disableLabeling             bool
-	simulateGpuFractioningReady bool
+	clusterConfig   *topology.ClusterConfig
+	disableLabeling bool
 }
 
 var _ Interface = &NodeHandler{}
 
-func NewNodeHandler(kubeClient kubernetes.Interface, clusterConfig *topology.ClusterConfig, disableLabeling, simulateGpuFractioningReady bool) *NodeHandler {
+func NewNodeHandler(kubeClient kubernetes.Interface, clusterConfig *topology.ClusterConfig, disableLabeling bool) *NodeHandler {
 	return &NodeHandler{
-		kubeClient:                  kubeClient,
-		clusterConfig:               clusterConfig,
-		disableLabeling:             disableLabeling,
-		simulateGpuFractioningReady: simulateGpuFractioningReady,
+		kubeClient:      kubeClient,
+		clusterConfig:   clusterConfig,
+		disableLabeling: disableLabeling,
 	}
 }
 

@@ -118,19 +118,16 @@ func TestReconcileGpuFractioningReadyCondition(t *testing.T) {
 		name       string
 		backend    string
 		gpuCount   string
-		enabled    bool
 		existing   bool
 		external   bool
 		wantExists bool
 	}{
-		{name: "fake GPU with opt-in", backend: "fake", gpuCount: "8", enabled: true, wantExists: true},
-		{name: "mock GPU with opt-in", backend: "mock", gpuCount: "8", enabled: true},
-		{name: "remove simulated condition from mock GPU", backend: "mock", gpuCount: "8", enabled: true, existing: true},
-		{name: "fake GPU without opt-in", backend: "fake", gpuCount: "8"},
-		{name: "remove simulated condition when opt-in is disabled", backend: "fake", gpuCount: "8", existing: true},
-		{name: "fake GPU before allocation", backend: "fake", gpuCount: "0", enabled: true},
-		{name: "remove simulated condition when GPU disappears", backend: "fake", gpuCount: "0", enabled: true, existing: true},
-		{name: "preserve external condition on mock GPU", backend: "mock", gpuCount: "8", enabled: true, external: true, wantExists: true},
+		{name: "fake GPU", backend: "fake", gpuCount: "8", wantExists: true},
+		{name: "mock GPU", backend: "mock", gpuCount: "8"},
+		{name: "remove simulated condition from mock GPU", backend: "mock", gpuCount: "8", existing: true},
+		{name: "fake GPU before allocation", backend: "fake", gpuCount: "0"},
+		{name: "remove simulated condition when GPU disappears", backend: "fake", gpuCount: "0", existing: true},
+		{name: "preserve external condition on mock GPU", backend: "mock", gpuCount: "8", external: true, wantExists: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			node := nodeWithConditions("n1", v1.NodeCondition{Type: v1.NodeReady, Status: v1.ConditionTrue})
@@ -152,7 +149,6 @@ func TestReconcileGpuFractioningReadyCondition(t *testing.T) {
 					NodePoolLabelKey: "pool",
 					NodePools:        map[string]topology.NodePoolConfig{"test": {Gpu: topology.GpuConfig{Backend: tc.backend}}},
 				},
-				simulateGpuFractioningReady: tc.enabled,
 			}
 			if err := handler.HandleUpdate(node); err != nil {
 				t.Fatalf("HandleUpdate: %v", err)
