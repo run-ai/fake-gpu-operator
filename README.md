@@ -34,6 +34,7 @@ Use cases include:
 - Basic NVIDIA MIG resource scheduling (metrics monitoring not yet supported)
 - Configurable GPU types and memory
 - Basic nvidia-smi simulation
+- GPU fractioning readiness (`gpu-fractioning.nvidia.com/Ready`), so schedulers that gate fractional workloads on it can place them
 
 ## 🏃 Quick Start
 
