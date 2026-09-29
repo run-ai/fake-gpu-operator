@@ -34,6 +34,7 @@ type StatusUpdaterAppConfiguration struct {
 	TopologyCmNamespace             string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
 	PrometheusURL                   string `mapstructure:"PROMETHEUS_URL"`
 	DisableNodeLabeling             bool   `mapstructure:"DISABLE_NODE_LABELING"`
+	SimulateGpuFractioningReady     bool   `mapstructure:"SIMULATE_GPU_FRACTIONING_READY"`
 	RunaiIntegrationEnabled         bool   `mapstructure:"RUNAI_INTEGRATION_ENABLED"`
 	RunaiIntegrationPollingInterval string `mapstructure:"RUNAI_INTEGRATION_POLLING_INTERVAL"`
 }
@@ -74,9 +75,10 @@ func (app *StatusUpdaterApp) Init(stopCh chan struct{}) {
 	dynamicClient := DynamicClientFn(clusterConfig)
 
 	disableNodeLabeling := viper.GetBool(constants.EnvDisableNodeLabeling)
+	simulateGpuFractioningReady := viper.GetBool(constants.EnvSimulateGpuFractioningReady)
 
 	app.Controllers = append(app.Controllers, podcontroller.NewPodController(app.kubeClient, dynamicClient, app.wg))
-	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(app.kubeClient, app.wg, disableNodeLabeling))
+	app.Controllers = append(app.Controllers, nodecontroller.NewNodeController(app.kubeClient, app.wg, disableNodeLabeling, simulateGpuFractioningReady))
 
 	pullPolicy := corev1.PullPolicy(viper.GetString("IMAGE_PULL_POLICY"))
 	if pullPolicy == "" {

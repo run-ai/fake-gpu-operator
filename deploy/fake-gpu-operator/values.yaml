@@ -23,6 +23,7 @@ devicePlugin:
 statusUpdater:
   enabled: true
   disableNodeLabeling: false
+  simulateGpuFractioningReady: false
   podPatchRbac:
     enabled: true
   runaiIntegration:

@@ -5,18 +5,31 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Fractional GPU scheduling is gated on this condition, so simulate it like the GPUs themselves.
 const gpuFractioningReadyConditionType = "gpu-fractioning.nvidia.com/Ready"
+const simulatedGpuFractioningReason = "FakeGpuSimulation"
+
+func (p *NodeHandler) reconcileGpuFractioningReadyCondition(node *v1.Node) error {
+	poolName := node.Labels[p.clusterConfig.NodePoolLabelKey]
+	pool, found := p.clusterConfig.NodePools[poolName]
+	gpu, hasGpu := node.Status.Allocatable[v1.ResourceName("nvidia.com/gpu")]
+	if !p.simulateGpuFractioningReady || !found || pool.Gpu.Backend != constants.BackendFake || !hasGpu || gpu.Sign() <= 0 {
+		return p.removeGpuFractioningReadyCondition(node)
+	}
+	return p.setGpuFractioningReadyCondition(node)
+}
 
 func (p *NodeHandler) setGpuFractioningReadyCondition(node *v1.Node) error {
 	for _, existing := range node.Status.Conditions {
-		if existing.Type == gpuFractioningReadyConditionType && existing.Status == v1.ConditionTrue {
-			return nil
+		if existing.Type == gpuFractioningReadyConditionType {
+			if existing.Reason != simulatedGpuFractioningReason || existing.Status == v1.ConditionTrue {
+				return nil
+			}
 		}
 	}
 
@@ -24,8 +37,8 @@ func (p *NodeHandler) setGpuFractioningReadyCondition(node *v1.Node) error {
 	err := p.patchNodeConditions(node.Name, map[string]interface{}{
 		"type":               gpuFractioningReadyConditionType,
 		"status":             string(v1.ConditionTrue),
-		"reason":             "AllDaemonsReady",
-		"message":            "all gpu-fractioning daemons are running",
+		"reason":             simulatedGpuFractioningReason,
+		"message":            "fake GPU fractioning readiness is simulated",
 		"lastHeartbeatTime":  now,
 		"lastTransitionTime": now,
 	})
@@ -39,7 +52,7 @@ func (p *NodeHandler) setGpuFractioningReadyCondition(node *v1.Node) error {
 func (p *NodeHandler) removeGpuFractioningReadyCondition(node *v1.Node) error {
 	found := false
 	for _, existing := range node.Status.Conditions {
-		if existing.Type == gpuFractioningReadyConditionType {
+		if existing.Type == gpuFractioningReadyConditionType && existing.Reason == simulatedGpuFractioningReason {
 			found = true
 			break
 		}

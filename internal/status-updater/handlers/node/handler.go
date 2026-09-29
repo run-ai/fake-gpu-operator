@@ -19,17 +19,19 @@ type Interface interface {
 type NodeHandler struct {
 	kubeClient kubernetes.Interface
 
-	clusterConfig   *topology.ClusterConfig
-	disableLabeling bool
+	clusterConfig               *topology.ClusterConfig
+	disableLabeling             bool
+	simulateGpuFractioningReady bool
 }
 
 var _ Interface = &NodeHandler{}
 
-func NewNodeHandler(kubeClient kubernetes.Interface, clusterConfig *topology.ClusterConfig, disableLabeling bool) *NodeHandler {
+func NewNodeHandler(kubeClient kubernetes.Interface, clusterConfig *topology.ClusterConfig, disableLabeling, simulateGpuFractioningReady bool) *NodeHandler {
 	return &NodeHandler{
-		kubeClient:      kubeClient,
-		clusterConfig:   clusterConfig,
-		disableLabeling: disableLabeling,
+		kubeClient:                  kubeClient,
+		clusterConfig:               clusterConfig,
+		disableLabeling:             disableLabeling,
+		simulateGpuFractioningReady: simulateGpuFractioningReady,
 	}
 }
 
@@ -43,17 +45,16 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 
 	if p.disableLabeling {
 		log.Printf("Skipping node labeling for %s (disabled via config)\n", node.Name)
-		return nil
+	} else {
+		err = p.labelNode(node)
+		if err != nil {
+			return fmt.Errorf("failed to label node: %w", err)
+		}
 	}
 
-	err = p.labelNode(node)
+	err = p.reconcileGpuFractioningReadyCondition(node)
 	if err != nil {
-		return fmt.Errorf("failed to label node: %w", err)
-	}
-
-	err = p.setGpuFractioningReadyCondition(node)
-	if err != nil {
-		return fmt.Errorf("failed to set GPU fractioning readiness: %w", err)
+		return fmt.Errorf("failed to reconcile GPU fractioning readiness: %w", err)
 	}
 
 	return nil
@@ -69,12 +70,11 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 
 	if p.disableLabeling {
 		log.Printf("Skipping node unlabeling for %s (disabled via config)\n", node.Name)
-		return nil
-	}
-
-	err = p.unlabelNode(node)
-	if err != nil {
-		return fmt.Errorf("failed to unlabel node: %w", err)
+	} else {
+		err = p.unlabelNode(node)
+		if err != nil {
+			return fmt.Errorf("failed to unlabel node: %w", err)
+		}
 	}
 
 	err = p.removeGpuFractioningReadyCondition(node)
@@ -88,9 +88,5 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 // Re-assert on update: KWOK and the kubelet rewrite node status on their own schedule and drop
 // conditions they do not know about.
 func (p *NodeHandler) HandleUpdate(node *v1.Node) error {
-	if p.disableLabeling {
-		return nil
-	}
-
-	return p.setGpuFractioningReadyCondition(node)
+	return p.reconcileGpuFractioningReadyCondition(node)
 }
