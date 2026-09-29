@@ -85,8 +85,8 @@ func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	return nil
 }
 
-// KWOK and the kubelet both rewrite node status on their own schedule, and either can drop a
-// condition they do not know about, so re-assert it on every update rather than only on add.
+// Re-assert on update: KWOK and the kubelet rewrite node status on their own schedule and drop
+// conditions they do not know about.
 func (p *NodeHandler) HandleUpdate(node *v1.Node) error {
 	if p.disableLabeling {
 		return nil

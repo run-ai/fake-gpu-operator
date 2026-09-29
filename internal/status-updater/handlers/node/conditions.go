@@ -59,9 +59,8 @@ func (p *NodeHandler) removeGpuFractioningReadyCondition(node *v1.Node) error {
 	return nil
 }
 
-// Node conditions carry a strategic-merge key of "type", so sending only our own entry lets the
-// API server merge it in place. Reading the node and writing the whole list back would instead
-// hand back a stale copy of every condition the kubelet owns.
+// Sending only our own entry lets the API server merge it by type, so the kubelet's conditions
+// are never ours to hand back.
 func (p *NodeHandler) patchNodeConditions(nodeName string, conditions ...map[string]interface{}) error {
 	patch, err := json.Marshal(map[string]interface{}{
 		"status": map[string]interface{}{"conditions": conditions},
