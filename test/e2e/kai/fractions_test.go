@@ -42,6 +42,15 @@ func TestFractionalGpuScheduling(t *testing.T) {
 	}
 	ctx := context.Background()
 	worker := waitForGpuWorker(t, ctx, client)
+	slices, err := client.ResourceV1().ResourceSlices().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, slice := range slices.Items {
+		if slice.Spec.Driver == "gpu.nvidia.com" && slice.Spec.NodeName != nil && *slice.Spec.NodeName == worker.Name {
+			t.Fatalf("worker %s has GPU DRA ResourceSlice %s; fractional KAI scheduling requires the legacy device plugin", worker.Name, slice.Name)
+		}
+	}
 	hostname := worker.Labels["kubernetes.io/hostname"]
 	if hostname == "" {
 		t.Fatalf("GPU worker %s has no kubernetes.io/hostname label", worker.Name)
