@@ -2,13 +2,17 @@ package node
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	kfake "k8s.io/client-go/kubernetes/fake"
+	ktesting "k8s.io/client-go/testing"
 )
 
 func nodeWithConditions(name string, conditions ...v1.NodeCondition) *v1.Node {
@@ -110,6 +114,140 @@ func TestRemoveGpuFractioningReadyCondition(t *testing.T) {
 	}
 	if findCondition(conditions, v1.NodeReady) == nil {
 		t.Error("kubelet-owned Ready condition was dropped")
+	}
+}
+
+func TestRemoveGpuFractioningReadyConditionUsesLiveOwnership(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		stale      v1.NodeCondition
+		live       v1.NodeCondition
+		wantExists bool
+	}{
+		{
+			name:  "condition gained after event",
+			stale: v1.NodeCondition{Type: v1.NodeReady, Status: v1.ConditionTrue},
+			live:  v1.NodeCondition{Type: gpuFractioningReadyConditionType, Status: v1.ConditionTrue, Reason: simulatedGpuFractioningReason},
+		},
+		{
+			name:       "another controller replaced condition",
+			stale:      v1.NodeCondition{Type: gpuFractioningReadyConditionType, Status: v1.ConditionTrue, Reason: simulatedGpuFractioningReason},
+			live:       v1.NodeCondition{Type: gpuFractioningReadyConditionType, Status: v1.ConditionFalse, Reason: "GPUDriverVersionUnsupported"},
+			wantExists: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stale := nodeWithConditions("n1", tc.stale)
+			live := nodeWithConditions("n1", tc.live)
+			handler := &NodeHandler{kubeClient: kfake.NewSimpleClientset(live)}
+
+			if err := handler.removeGpuFractioningReadyCondition(stale); err != nil {
+				t.Fatalf("removeGpuFractioningReadyCondition: %v", err)
+			}
+			got := findCondition(conditionsOf(t, handler, "n1"), gpuFractioningReadyConditionType)
+			if (got != nil) != tc.wantExists {
+				t.Fatalf("condition exists = %v, want %v", got != nil, tc.wantExists)
+			}
+			if tc.wantExists && got.Reason != tc.live.Reason {
+				t.Errorf("condition reason = %q, want %q", got.Reason, tc.live.Reason)
+			}
+		})
+	}
+}
+
+func TestRemoveGpuFractioningReadyConditionPreservesConcurrentReplacement(t *testing.T) {
+	owned := v1.NodeCondition{Type: gpuFractioningReadyConditionType, Status: v1.ConditionTrue, Reason: simulatedGpuFractioningReason}
+	node := nodeWithConditions("n1", owned)
+	client := kfake.NewSimpleClientset(node)
+	client.PrependReactor("patch", "nodes", func(action ktesting.Action) (bool, runtime.Object, error) {
+		resource := v1.SchemeGroupVersion.WithResource("nodes")
+		current, err := client.Tracker().Get(resource, "", "n1")
+		if err != nil {
+			return true, nil, err
+		}
+		replacement := current.(*v1.Node).DeepCopy()
+		replacement.Status.Conditions[0].Reason = "GPUDriverVersionUnsupported"
+		if err := client.Tracker().Update(resource, replacement, ""); err != nil {
+			return true, nil, err
+		}
+		return false, nil, nil
+	})
+	handler := &NodeHandler{kubeClient: client}
+
+	if err := handler.removeGpuFractioningReadyCondition(node); err != nil {
+		t.Fatalf("removeGpuFractioningReadyCondition: %v", err)
+	}
+	got := findCondition(conditionsOf(t, handler, "n1"), gpuFractioningReadyConditionType)
+	if got == nil || got.Reason != "GPUDriverVersionUnsupported" {
+		t.Fatalf("concurrent condition was removed or changed: %+v", got)
+	}
+}
+
+func TestHandleDeleteRemovesConditionAfterTopologyFailure(t *testing.T) {
+	node := nodeWithConditions("n1", v1.NodeCondition{
+		Type: gpuFractioningReadyConditionType, Status: v1.ConditionTrue, Reason: simulatedGpuFractioningReason,
+	})
+	client := kfake.NewSimpleClientset(node)
+	client.PrependReactor("delete", "configmaps", func(ktesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("topology deletion failed")
+	})
+	handler := &NodeHandler{kubeClient: client, disableLabeling: true}
+
+	err := handler.HandleDelete(node)
+	if err == nil || !strings.Contains(err.Error(), "topology deletion failed") {
+		t.Fatalf("HandleDelete error = %v, want topology deletion failure", err)
+	}
+	if got := findCondition(conditionsOf(t, handler, "n1"), gpuFractioningReadyConditionType); got != nil {
+		t.Errorf("condition remained after topology deletion failed: %+v", *got)
+	}
+}
+
+func TestHandleDeleteRemovesConditionAfterUnlabelFailure(t *testing.T) {
+	node := nodeWithConditions("n1", v1.NodeCondition{
+		Type: gpuFractioningReadyConditionType, Status: v1.ConditionTrue, Reason: simulatedGpuFractioningReason,
+	})
+	client := kfake.NewSimpleClientset(node)
+	client.PrependReactor("patch", "nodes", func(action ktesting.Action) (bool, runtime.Object, error) {
+		if action.GetSubresource() == "" {
+			return true, nil, errors.New("unlabel failed")
+		}
+		return false, nil, nil
+	})
+	handler := &NodeHandler{kubeClient: client}
+
+	err := handler.HandleDelete(node)
+	if err == nil || !strings.Contains(err.Error(), "unlabel failed") {
+		t.Fatalf("HandleDelete error = %v, want unlabel failure", err)
+	}
+	if got := findCondition(conditionsOf(t, handler, "n1"), gpuFractioningReadyConditionType); got != nil {
+		t.Errorf("condition remained after unlabel failed: %+v", *got)
+	}
+}
+
+func TestStaleUpdateDoesNotRestoreConditionAfterPoolExit(t *testing.T) {
+	stale := nodeWithConditions("n1", v1.NodeCondition{
+		Type: gpuFractioningReadyConditionType, Status: v1.ConditionTrue, Reason: simulatedGpuFractioningReason,
+	})
+	stale.Labels = map[string]string{"pool": "test"}
+	stale.Status.Allocatable = v1.ResourceList{v1.ResourceName("nvidia.com/gpu"): resource.MustParse("8")}
+	live := stale.DeepCopy()
+	delete(live.Labels, "pool")
+	client := kfake.NewSimpleClientset(live)
+	handler := &NodeHandler{
+		kubeClient: client,
+		clusterConfig: &topology.ClusterConfig{
+			NodePoolLabelKey: "pool",
+			NodePools: map[string]topology.NodePoolConfig{
+				"test": {Gpu: topology.GpuConfig{Backend: "fake"}},
+			},
+		},
+	}
+
+	if err := handler.HandleUpdate(stale); err != nil {
+		t.Fatalf("HandleUpdate: %v", err)
+	}
+	if got := findCondition(conditionsOf(t, handler, "n1"), gpuFractioningReadyConditionType); got != nil {
+		t.Errorf("condition remained after pool exit: %+v", *got)
 	}
 }
 
