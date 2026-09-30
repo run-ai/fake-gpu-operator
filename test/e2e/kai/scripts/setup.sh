@@ -10,16 +10,19 @@ export RESOURCE_RESERVATION_NAMESPACE=kai-resource-reservation
 
 "${PROJECT_ROOT}/test/e2e/scripts/setup.sh"
 
+if [[ -z "${KAI_VERSION:-}" ]]; then
+    KAI_VERSION="$(curl -fsSL --retry 3 https://api.github.com/repos/kai-scheduler/KAI-Scheduler/releases/latest | jq -er '.tag_name')"
+fi
+echo "Installing KAI Scheduler ${KAI_VERSION}"
+
 HELM_ARGS=(
     upgrade -i kai-scheduler oci://ghcr.io/kai-scheduler/kai-scheduler/kai-scheduler
     --namespace kai-scheduler --create-namespace
+    --version "${KAI_VERSION}"
     --set global.gpuSharingMode=NonMemoryEnforced
     --set-string admission.gpuFractionRuntimeClassName=
     --wait --timeout 10m
 )
-if [[ -n "${KAI_VERSION:-}" ]]; then
-    HELM_ARGS+=(--version "${KAI_VERSION}")
-fi
 helm "${HELM_ARGS[@]}"
 
 kubectl -n kai-scheduler wait --for=condition=Available deployment --all --timeout=300s
