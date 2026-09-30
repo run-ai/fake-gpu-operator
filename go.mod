@@ -124,3 +124,23 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
+
+// k8s.io/kubernetes lists unused staging modules at the unpublished v0.0.0 version.
+exclude (
+	k8s.io/cli-runtime v0.0.0
+	k8s.io/cloud-provider v0.0.0
+	k8s.io/cluster-bootstrap v0.0.0
+	k8s.io/controller-manager v0.0.0
+	k8s.io/cri-client v0.0.0
+	k8s.io/csi-translation-lib v0.0.0
+	k8s.io/endpointslice v0.0.0
+	k8s.io/externaljwt v0.0.0
+	k8s.io/kube-aggregator v0.0.0
+	k8s.io/kube-controller-manager v0.0.0
+	k8s.io/kube-proxy v0.0.0
+	k8s.io/kube-scheduler v0.0.0
+	k8s.io/kubectl v0.0.0
+	k8s.io/metrics v0.0.0
+	k8s.io/pod-security-admission v0.0.0
+	k8s.io/sample-apiserver v0.0.0
+)
