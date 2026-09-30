@@ -10,13 +10,17 @@ export RESOURCE_RESERVATION_NAMESPACE=kai-resource-reservation
 
 "${PROJECT_ROOT}/test/e2e/scripts/setup.sh"
 
-KAI_VERSION="${KAI_VERSION:-v0.17.0}"
-helm upgrade -i kai-scheduler oci://ghcr.io/kai-scheduler/kai-scheduler/kai-scheduler \
-    --namespace kai-scheduler --create-namespace \
-    --version "${KAI_VERSION}" \
-    --set global.gpuSharing=true \
-    --set-string admission.gpuFractionRuntimeClassName= \
+HELM_ARGS=(
+    upgrade -i kai-scheduler oci://ghcr.io/kai-scheduler/kai-scheduler/kai-scheduler
+    --namespace kai-scheduler --create-namespace
+    --set global.gpuSharingMode=NonMemoryEnforced
+    --set-string admission.gpuFractionRuntimeClassName=
     --wait --timeout 10m
+)
+if [[ -n "${KAI_VERSION:-}" ]]; then
+    HELM_ARGS+=(--version "${KAI_VERSION}")
+fi
+helm "${HELM_ARGS[@]}"
 
 kubectl -n kai-scheduler wait --for=condition=Available deployment --all --timeout=300s
 kubectl -n kai-scheduler get pods
