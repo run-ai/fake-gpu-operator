@@ -16,6 +16,11 @@ CURRENT_PLATFORM="linux/$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm6
 # Values file for Helm install (override to test profile-based config)
 : ${VALUES_FILE:="${FIXTURES_DIR}/values.yaml"}
 
+RESERVATION_NAMESPACE_ARGS=()
+if [[ -n "${RESOURCE_RESERVATION_NAMESPACE:-}" ]]; then
+    RESERVATION_NAMESPACE_ARGS=(--set "environment.resourceReservationNamespace=${RESOURCE_RESERVATION_NAMESPACE}")
+fi
+
 # The path to kind's cluster configuration file
 : ${KIND_CLUSTER_CONFIG_PATH:="${FIXTURES_DIR}/kind-cluster-config.yaml"}
 
@@ -89,6 +94,7 @@ if [[ "${SKIP_SETUP}" != "true" ]]; then
         --namespace gpu-operator \
         --create-namespace \
         -f "${VALUES_FILE}" \
+        "${RESERVATION_NAMESPACE_ARGS[@]}" \
         --set devicePlugin.image.tag="${DOCKER_TAG}" \
         --set draPlugin.image.tag="${DOCKER_TAG}" \
         --set statusUpdater.image.tag="${DOCKER_TAG}" \
