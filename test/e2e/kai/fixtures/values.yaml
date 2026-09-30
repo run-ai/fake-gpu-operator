@@ -1,0 +1,40 @@
+environment:
+  resourceReservationNamespace: kai-resource-reservation
+
+devicePlugin:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+statusUpdater:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+statusExporter:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+topologyServer:
+  enabled: true
+  image:
+    pullPolicy: Never
+
+kwokGpuDevicePlugin:
+  enabled: false
+
+migFaker:
+  enabled: false
+
+runtimeClass:
+  enabled: false
+
+topology:
+  nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+  migStrategy: none
+  nodePools:
+    default:
+      gpuProduct: NVIDIA A100-SXM4-40GB
+      gpuCount: 2
+      gpuMemory: 40960

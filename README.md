@@ -34,6 +34,7 @@ Use cases include:
 - Basic NVIDIA MIG resource scheduling (metrics monitoring not yet supported)
 - Configurable GPU types and memory
 - Basic nvidia-smi simulation
+- Optional simulated GPU fractioning readiness for fake GPU pools
 
 ## 🏃 Quick Start
 
@@ -194,6 +195,10 @@ topology:
 ```
 
 When enabled, the chart installs the NRT CRD (set `installCRD: false` if you already have it) and grants the status-updater RBAC. See **[docs/fake-nrt.md](docs/fake-nrt.md)** for the full config reference, the published resource, and caveats (static `available`, NFD topology-updater conflicts).
+
+## Simulated GPU fractioning readiness
+
+The status updater sets `gpu-fractioning.nvidia.com/Ready` on `fake` backend pool nodes after the legacy `nvidia.com/gpu` resource becomes allocatable. It removes its own condition if that resource disappears. It does not set the condition on NVML `mock` pools, and it leaves conditions written by another controller alone. DRA allocation does not require this condition. The condition signals simulated scheduling readiness; it does not provide fraction enforcement.
 
 ## 🔌 Dynamic Resource Allocation (DRA)
 

@@ -1,17 +1,19 @@
 package node
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
 type Interface interface {
 	HandleAdd(node *v1.Node) error
+	HandleUpdate(node *v1.Node) error
 	HandleDelete(node *v1.Node) error
 }
 
@@ -42,12 +44,16 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 
 	if p.disableLabeling {
 		log.Printf("Skipping node labeling for %s (disabled via config)\n", node.Name)
-		return nil
+	} else {
+		err = p.labelNode(node)
+		if err != nil {
+			return fmt.Errorf("failed to label node: %w", err)
+		}
 	}
 
-	err = p.labelNode(node)
+	err = p.reconcileGpuFractioningReadyCondition(node)
 	if err != nil {
-		return fmt.Errorf("failed to label node: %w", err)
+		return fmt.Errorf("failed to reconcile GPU fractioning readiness: %w", err)
 	}
 
 	return nil
@@ -56,20 +62,28 @@ func (p *NodeHandler) HandleAdd(node *v1.Node) error {
 func (p *NodeHandler) HandleDelete(node *v1.Node) error {
 	log.Printf("Handling node deletion: %s\n", node.Name)
 
-	err := topology.DeleteNodeTopologyCM(p.kubeClient, node.Name)
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to delete node topology: %w", err)
+	var cleanupErrors []error
+	if err := topology.DeleteNodeTopologyCM(p.kubeClient, node.Name); err != nil && !apierrors.IsNotFound(err) {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to delete node topology: %w", err))
 	}
 
 	if p.disableLabeling {
 		log.Printf("Skipping node unlabeling for %s (disabled via config)\n", node.Name)
-		return nil
+	} else {
+		if err := p.unlabelNode(node); err != nil {
+			cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to unlabel node: %w", err))
+		}
 	}
 
-	err = p.unlabelNode(node)
-	if err != nil {
-		return fmt.Errorf("failed to unlabel node: %w", err)
+	if err := p.removeGpuFractioningReadyCondition(node); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to remove GPU fractioning readiness: %w", err))
 	}
 
-	return nil
+	return errors.Join(cleanupErrors...)
+}
+
+// Re-assert on update: KWOK and the kubelet rewrite node status on their own schedule and drop
+// conditions they do not know about.
+func (p *NodeHandler) HandleUpdate(node *v1.Node) error {
+	return p.reconcileGpuFractioningReadyCondition(node)
 }

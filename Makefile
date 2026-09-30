@@ -64,6 +64,21 @@ e2e-profiles:
 	VALUES_FILE=$(shell pwd)/test/e2e/fixtures/values-profiles.yaml $(MAKE) e2e
 .PHONY: e2e-profiles
 
+setup-e2e-kai:
+	test/e2e/kai/scripts/setup.sh
+.PHONY: setup-e2e-kai
+
+test-e2e-kai:
+	KAI_E2E=true go test ./test/e2e/kai -v -timeout=15m
+.PHONY: test-e2e-kai
+
+teardown-e2e-kai:
+	test/e2e/kai/scripts/teardown.sh
+.PHONY: teardown-e2e-kai
+
+e2e-kai: setup-e2e-kai test-e2e-kai teardown-e2e-kai
+.PHONY: e2e-kai
+
 setup-e2e-mock: ginkgo
 	test/e2e/mock/scripts/setup.sh
 .PHONY: setup-e2e-mock
