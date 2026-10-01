@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `nvidia-smi` and the DRA plugin now reach the topology server in the
+  namespace the chart is installed in. Both had `gpu-operator` hardcoded, so
+  installing into any other namespace broke `nvidia-smi` and left the DRA
+  plugin without devices. The device plugin and the DRA CDI spec now pass
+  `TOPOLOGY_CM_NAMESPACE` into GPU containers.
+  ([#266](https://github.com/run-ai/fake-gpu-operator/issues/266))
 - A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
   pool is no longer silently dropped during normalization, so such pools now get
   their `NodeResourceTopology` published when

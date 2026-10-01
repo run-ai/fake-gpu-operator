@@ -77,7 +77,7 @@ func getNvidiaSmiArgs() (args []nvidiaSmiArgs, summary string, errs []error) {
 		fmt.Printf("Node name: %s\n", nodeName)
 	}
 
-	topologyUrl := "http://topology-server.gpu-operator/topology/nodes/" + nodeName
+	topologyUrl := topology.NodeTopologyServerURL(os.Getenv(constants.EnvTopologyCmNamespace), nodeName)
 	if conf.Debug {
 		fmt.Printf("Requesting topology from: %s\n", topologyUrl)
 	}
