@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	"github.com/run-ai/fake-gpu-operator/internal/common/topology"
 	"github.com/run-ai/fake-gpu-operator/internal/status-updater/util"
 	v1 "k8s.io/api/core/v1"
@@ -22,31 +21,32 @@ func (p *PodHandler) handleDedicatedGpuPodAddition(pod *v1.Pod, nodeTopology *to
 		return nil
 	}
 
-	requestedGpus := pod.Spec.Containers[0].Resources.Limits.Name(constants.GpuResourceName, "")
-	if requestedGpus == nil {
-		return fmt.Errorf("no GPUs requested in pod %s", pod.Name)
-	}
-
-	requestedGpusCount := requestedGpus.Value()
-	log.Printf("Requested GPUs: %d\n", requestedGpusCount)
-	for idx := range nodeTopology.Gpus {
-		gpu := &nodeTopology.Gpus[idx]
-
+	for _, container := range pod.Spec.Containers {
+		requestedGpusCount := util.ContainerGpuLimit(&container)
 		if requestedGpusCount <= 0 {
-			break
+			continue
 		}
 
-		if gpu.Status.AllocatedBy.Pod == "" {
-			log.Printf("GPU %s is free, allocating...\n", gpu.ID)
-			gpu.Status.AllocatedBy.Namespace = pod.Namespace
-			gpu.Status.AllocatedBy.Pod = pod.Name
-			gpu.Status.AllocatedBy.Container = pod.Spec.Containers[0].Name
+		log.Printf("Container %s requested GPUs: %d\n", container.Name, requestedGpusCount)
+		for idx := range nodeTopology.Gpus {
+			gpu := &nodeTopology.Gpus[idx]
 
-			if !util.IsGpuReservationPod(pod) {
-				gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
+			if requestedGpusCount <= 0 {
+				break
 			}
 
-			requestedGpusCount--
+			if gpu.Status.AllocatedBy.Pod == "" {
+				log.Printf("GPU %s is free, allocating...\n", gpu.ID)
+				gpu.Status.AllocatedBy.Namespace = pod.Namespace
+				gpu.Status.AllocatedBy.Pod = pod.Name
+				gpu.Status.AllocatedBy.Container = container.Name
+
+				if !util.IsGpuReservationPod(pod) {
+					gpu.Status.PodGpuUsageStatus[pod.UID] = calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
+				}
+
+				requestedGpusCount--
+			}
 		}
 	}
 
@@ -66,10 +66,7 @@ func (p *PodHandler) handleDedicatedGpuPodUpdate(pod *v1.Pod, nodeTopology *topo
 	for idx := range nodeTopology.Gpus {
 		gpu := &nodeTopology.Gpus[idx]
 
-		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
-			gpu.Status.AllocatedBy.Pod == pod.Name &&
-			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
-		if isGpuOccupiedByPod {
+		if isGpuOccupiedByPod(gpu, pod) {
 			if !util.IsGpuReservationPod(pod) {
 				gpu.Status.PodGpuUsageStatus[pod.UID] =
 					calculateUsage(p.dynamicClient, pod, nodeTopology.GpuMemory)
@@ -85,25 +82,24 @@ func (p *PodHandler) handleDedicatedGpuPodDeletion(pod *v1.Pod, nodeTopology *to
 		return
 	}
 
-	for idx, gpu := range nodeTopology.Gpus {
-		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
-			gpu.Status.AllocatedBy.Pod == pod.Name &&
-			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
-		if isGpuOccupiedByPod {
+	for idx := range nodeTopology.Gpus {
+		if isGpuOccupiedByPod(&nodeTopology.Gpus[idx], pod) {
 			nodeTopology.Gpus[idx].Status = topology.GpuStatus{}
 		}
 	}
 }
 
 func isAlreadyAllocated(pod *v1.Pod, nodeTopology *topology.NodeTopology) bool {
-	for _, gpu := range nodeTopology.Gpus {
-		isGpuOccupiedByPod := gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
-			gpu.Status.AllocatedBy.Pod == pod.Name &&
-			gpu.Status.AllocatedBy.Container == pod.Spec.Containers[0].Name
-		if isGpuOccupiedByPod {
+	for idx := range nodeTopology.Gpus {
+		if isGpuOccupiedByPod(&nodeTopology.Gpus[idx], pod) {
 			return true
 		}
 	}
 
 	return false
+}
+
+func isGpuOccupiedByPod(gpu *topology.GpuDetails, pod *v1.Pod) bool {
+	return gpu.Status.AllocatedBy.Namespace == pod.Namespace &&
+		gpu.Status.AllocatedBy.Pod == pod.Name
 }

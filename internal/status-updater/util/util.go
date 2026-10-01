@@ -16,7 +16,17 @@ func IsSharedGpuPod(pod *v1.Pod) bool {
 }
 
 func IsDedicatedGpuPod(pod *v1.Pod) bool {
-	return !pod.Spec.Containers[0].Resources.Limits[constants.GpuResourceName].Equal(resource.MustParse("0"))
+	for _, container := range pod.Spec.Containers {
+		if ContainerGpuLimit(&container) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainerGpuLimit returns the number of whole GPUs the container requests.
+func ContainerGpuLimit(container *v1.Container) int64 {
+	return container.Resources.Limits.Name(constants.GpuResourceName, resource.DecimalSI).Value()
 }
 
 func IsPodRunning(pod *v1.Pod) bool {
