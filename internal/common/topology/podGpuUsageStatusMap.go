@@ -41,7 +41,9 @@ func (m *PodGpuUsageStatusMap) FbUsed(fbTotal int) int {
 }
 
 func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
-	query := fmt.Sprintf("(rate(revision_app_request_count[1m]) + on(pod) group_left(uid) kube_pod_info{uid=\"%s\"})", uid)
+	// kube_pod_info is always 1, so multiplying by it only selects the pod's
+	// series. sum() adds up the per-response-code series into one rate.
+	query := fmt.Sprintf("sum(rate(revision_app_request_count[1m]) * on(pod) group_left(uid) kube_pod_info{uid=\"%s\"})", uid)
 	params := url.Values{}
 	params.Set("query", query)
 
@@ -74,5 +76,5 @@ func (m *PodGpuUsageStatusMap) knativeUtilization(uid string) int {
 		return 0
 	}
 
-	return int(val[1].Float())
+	return int(math.Round(val[1].Float()))
 }

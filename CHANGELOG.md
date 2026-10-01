@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Knative inference utilization now reports the pod's total request rate. The
+  query added `kube_pod_info` (always 1) instead of multiplying by it, so idle
+  pods showed 1% and busy pods showed one response code's rate plus 1.
+  ([#268](https://github.com/run-ai/fake-gpu-operator/issues/268))
 - A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
   pool is no longer silently dropped during normalization, so such pools now get
   their `NodeResourceTopology` published when
