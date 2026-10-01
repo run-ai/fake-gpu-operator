@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The README and `docs/fake-nrt.md` now enable NRT publishing with
+  `statusExporter.nodeResourceTopology.enabled`. They named a
+  `statusUpdater` key the chart never reads.
+  ([#269](https://github.com/run-ai/fake-gpu-operator/issues/269))
 - A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
   pool is no longer silently dropped during normalization, so such pools now get
   their `NodeResourceTopology` published when

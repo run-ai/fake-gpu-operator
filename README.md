@@ -180,7 +180,7 @@ See **[docs/mock-backend.md](docs/mock-backend.md)** for profiles, caveats such 
 NUMA-aware schedulers (e.g. KAI-Scheduler) place GPU workloads across NUMA zones by reading a `NodeResourceTopology` (NRT) per node. fake-gpu-operator can publish those without real multi-socket hardware — **off by default**; enable it per install and add a `numa` block to each pool:
 
 ```yaml
-statusUpdater:
+statusExporter:
   nodeResourceTopology:
     enabled: true            # off by default
     # installCRD: false      # set if the NRT CRD already exists (NFD/KAI)
@@ -194,7 +194,7 @@ topology:
         distances: { self: 10, remote: 21 }
 ```
 
-When enabled, the chart installs the NRT CRD (set `installCRD: false` if you already have it) and grants the status-updater RBAC. See **[docs/fake-nrt.md](docs/fake-nrt.md)** for the full config reference, the published resource, and caveats (static `available`, NFD topology-updater conflicts).
+When enabled, the chart installs the NRT CRD (set `installCRD: false` if you already have it) and grants the status-exporter RBAC. See **[docs/fake-nrt.md](docs/fake-nrt.md)** for the full config reference, the published resource, and caveats (static `available`, NFD topology-updater conflicts).
 
 ## Simulated GPU fractioning readiness
 
