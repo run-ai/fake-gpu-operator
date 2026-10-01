@@ -2,14 +2,14 @@
 
 fake-gpu-operator can publish a [`NodeResourceTopology`](https://github.com/k8stopologyawareschedwg/noderesourcetopology-api) (NRT) custom resource per fake-GPU node. NRT is what NUMA-aware schedulers (e.g. KAI-Scheduler) read to place GPU workloads across NUMA zones — they **filter** on a zone's `available` resources and **score** on the inter-zone `costs` (distances).
 
-This lets you test NUMA-aware GPU scheduling on KWOK / KIND / EKS **without real multi-socket hardware**: the topology is declared in config and the status-updater fabricates the NRT, rather than relying on a real kubelet reading `/sys`.
+This lets you test NUMA-aware GPU scheduling on KWOK / KIND / EKS **without real multi-socket hardware**: the topology is declared in config and the status-exporter fabricates the NRT, rather than relying on a real kubelet reading `/sys`.
 
 ## Enabling
 
-NRT publishing is **off by default**. Turn it on with `statusUpdater.nodeResourceTopology.enabled`, then add a `numa` block to each pool you want NRTs for (pools without one are unaffected):
+NRT publishing is **off by default**. Turn it on with `statusExporter.nodeResourceTopology.enabled`, then add a `numa` block to each pool you want NRTs for (pools without one are unaffected):
 
 ```yaml
-statusUpdater:
+statusExporter:
   nodeResourceTopology:
     enabled: true              # master switch (default false)
     installCRD: true           # install the NRT CRD; set false if it already exists
@@ -27,7 +27,7 @@ topology:
           remote: 21
 ```
 
-When enabled, the chart installs the NRT `CustomResourceDefinition` (annotated `helm.sh/resource-policy: keep`, so uninstalling fake-gpu-operator never deletes it or anyone's NRTs) and grants the status-updater RBAC for it. If the CRD already exists — NFD's topology-updater or KAI-Scheduler commonly install it — set `installCRD: false` so Helm doesn't try to re-create a CRD it doesn't own.
+When enabled, the chart installs the NRT `CustomResourceDefinition` (annotated `helm.sh/resource-policy: keep`, so uninstalling fake-gpu-operator never deletes it or anyone's NRTs) and grants the status-exporter RBAC for it. If the CRD already exists — NFD's topology-updater or KAI-Scheduler commonly install it — set `installCRD: false` so Helm doesn't try to re-create a CRD it doesn't own.
 
 ## What gets published
 
