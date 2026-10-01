@@ -187,6 +187,8 @@ func (m *RealNodeDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.All
 				// Propagate NODE_NAME (from the DaemonSet's downward API) so the workload's
 				// nvidia-smi can resolve its node topology.
 				constants.EnvNodeName: os.Getenv(constants.EnvNodeName),
+				// The install namespace, so nvidia-smi can reach the topology server.
+				constants.EnvTopologyCmNamespace: os.Getenv(constants.EnvTopologyCmNamespace),
 			},
 			Mounts: []*pluginapi.Mount{
 				{

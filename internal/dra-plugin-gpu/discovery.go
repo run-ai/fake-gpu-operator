@@ -12,14 +12,9 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const (
-	// topologyServerURL is the base URL for the topology server
-	topologyServerURL = "http://topology-server.gpu-operator/topology/nodes/"
-)
-
 // getTopologyFromHTTP retrieves node topology from the HTTP topology server
-func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
-	resp, err := http.Get(topologyServerURL + nodeName)
+func getTopologyFromHTTP(namespace, nodeName string) (*topology.NodeTopology, error) {
+	resp, err := http.Get(topology.NodeTopologyServerURL(namespace, nodeName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get topology from HTTP server: %w", err)
 	}
@@ -39,9 +34,9 @@ func getTopologyFromHTTP(nodeName string) (*topology.NodeTopology, error) {
 	return &nodeTopology, nil
 }
 
-func enumerateAllPossibleDevices(nodeName string) (AllocatableDevices, error) {
+func enumerateAllPossibleDevices(namespace, nodeName string) (AllocatableDevices, error) {
 	// Get topology from HTTP server
-	nodeTopology, err := getTopologyFromHTTP(nodeName)
+	nodeTopology, err := getTopologyFromHTTP(namespace, nodeName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get topology for node %s: %w", nodeName, err)
 	}

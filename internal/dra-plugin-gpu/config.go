@@ -13,6 +13,7 @@ const (
 // Flags contains configuration flags for the DRA plugin
 type Flags struct {
 	NodeName                      string `mapstructure:"NODE_NAME" validator:"required"`
+	Namespace                     string `mapstructure:"NAMESPACE"`
 	CDIRoot                       string `mapstructure:"CDI_ROOT"`
 	KubeletRegistrarDirectoryPath string `mapstructure:"KUBELET_REGISTRAR_DIRECTORY_PATH"`
 	KubeletPluginsDirectoryPath   string `mapstructure:"KUBELET_PLUGINS_DIRECTORY_PATH"`
