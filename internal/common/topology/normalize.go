@@ -74,6 +74,9 @@ func ParseAndNormalizeTopology(data []byte) (*ClusterConfig, error) {
 		if err := yaml.Unmarshal(data, &config); err != nil {
 			return nil, fmt.Errorf("failed to parse new format topology: %w", err)
 		}
+		if err := normalizeLegacyPools(data, &config); err != nil {
+			return nil, err
+		}
 		return &config, nil
 	}
 
@@ -82,6 +85,46 @@ func ParseAndNormalizeTopology(data []byte) (*ClusterConfig, error) {
 		return nil, fmt.Errorf("failed to parse old format topology: %w", err)
 	}
 	return normalizeOldToClusterConfig(&old), nil
+}
+
+var legacyPoolKeys = []string{"gpuProduct", "gpuCount", "gpuMemory", "otherDevices"}
+
+// normalizeLegacyPools re-parses the pools of a mixed-format topology that use
+// the flat legacy fields (and no `gpu:` block) in the old format and normalizes
+// them. Parsed as new format they would carry an empty GpuConfig and resolve to
+// zero GPUs.
+func normalizeLegacyPools(data []byte, config *ClusterConfig) error {
+	var raw struct {
+		NodePools map[string]map[string]interface{} `yaml:"nodePools"`
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("failed to parse topology node pools: %w", err)
+	}
+
+	var old ClusterTopology
+	if err := yaml.Unmarshal(data, &old); err != nil {
+		return fmt.Errorf("failed to parse legacy node pools: %w", err)
+	}
+
+	for name, pool := range raw.NodePools {
+		if isLegacyPool(pool) {
+			config.NodePools[name] = normalizeNodePool(old.NodePools[name])
+		}
+	}
+
+	return nil
+}
+
+func isLegacyPool(pool map[string]interface{}) bool {
+	if _, hasGpu := pool["gpu"]; hasGpu {
+		return false
+	}
+	for _, key := range legacyPoolKeys {
+		if _, ok := pool[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // isNewFormat checks if the YAML contains new-format markers.
