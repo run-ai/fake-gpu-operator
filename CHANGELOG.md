@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The status-updater now tracks `nvidia.com/gpu` requests from every container
+  in a pod. It only read the first container, so a pod whose GPU container was
+  not first got no allocation, no metrics and no `nvidia-smi` devices.
+  ([#267](https://github.com/run-ai/fake-gpu-operator/issues/267))
 - A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
   pool is no longer silently dropped during normalization, so such pools now get
   their `NodeResourceTopology` published when
