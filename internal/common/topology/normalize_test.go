@@ -327,6 +327,69 @@ nodePools:
 	}
 }
 
+// In a mixed-format topology the legacy pools must still be normalized, or
+// their nodes resolve to zero GPUs.
+func TestParseAndNormalize_MixedFormatKeepsLegacyPools(t *testing.T) {
+	yamlData := `
+nodePoolLabelKey: run.ai/simulated-gpu-node-pool
+migStrategy: mixed
+nodePools:
+  default:
+    gpuProduct: Tesla-K80
+    gpuCount: 2
+    gpuMemory: 11441
+    otherDevices:
+      - name: rdma/rdma_shared_device_a
+        count: 1
+    numa:
+      zones: 2
+  my-mock-pool:
+    gpu:
+      backend: mock
+      profile: a100
+`
+	config, err := ParseAndNormalizeTopology([]byte(yamlData))
+	require.NoError(t, err)
+
+	legacy := config.NodePools["default"]
+	assert.Equal(t, "fake", legacy.Gpu.Backend)
+	require.NotNil(t, legacy.Numa)
+	assert.Equal(t, 2, legacy.Numa.Zones)
+
+	resolved, err := ResolveNodePool(nil, "gpu-operator", legacy)
+	require.NoError(t, err)
+	assert.Equal(t, "Tesla-K80", resolved.GpuProduct)
+	assert.Equal(t, 2, resolved.GpuCount)
+	assert.Equal(t, 11441, resolved.GpuMemory)
+	assert.Equal(t, []GenericDevice{{Name: "rdma/rdma_shared_device_a", Count: 1}}, resolved.OtherDevices)
+
+	mock := config.NodePools["my-mock-pool"]
+	assert.Equal(t, "mock", mock.Gpu.Backend)
+	assert.Equal(t, "a100", mock.Gpu.Profile)
+}
+
+func TestParseAndNormalize_MixedFormatKeepsNewPoolWithoutGpu(t *testing.T) {
+	yamlData := `
+nodePools:
+  default:
+    gpuProduct: Tesla-K80
+    gpuCount: 2
+  cpu-only:
+    resources:
+      - rdma/rdma_shared_device_a: 1
+  pool-a:
+    gpu:
+      backend: fake
+      profile: h100
+`
+	config, err := ParseAndNormalizeTopology([]byte(yamlData))
+	require.NoError(t, err)
+
+	cpuOnly := config.NodePools["cpu-only"]
+	assert.Empty(t, cpuOnly.Gpu.Backend)
+	assert.Equal(t, []map[string]int{{"rdma/rdma_shared_device_a": 1}}, cpuOnly.Resources)
+}
+
 func TestFromClusterConfigCM_MissingKey(t *testing.T) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "topology", Namespace: "gpu-operator"},
