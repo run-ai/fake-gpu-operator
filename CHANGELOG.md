@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The README quickstart pod used `nvidia/cuda-vector-add:v0.1`, which does not
+  exist on Docker Hub. It now runs `nvidia-smi` in `ubuntu:22.04`.
+  ([#270](https://github.com/run-ai/fake-gpu-operator/issues/270))
 - A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
   pool is no longer silently dropped during normalization, so such pools now get
   their `NodeResourceTopology` published when
