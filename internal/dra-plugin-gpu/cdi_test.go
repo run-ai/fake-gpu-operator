@@ -51,8 +51,9 @@ func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 
 	config := &Config{
 		Flags: &Flags{
-			CDIRoot:  tmpDir,
-			NodeName: cdiTestNodeName,
+			CDIRoot:   tmpDir,
+			NodeName:  cdiTestNodeName,
+			Namespace: "fake-gpu-operator",
 		},
 	}
 
@@ -105,6 +106,8 @@ func TestCDIHandler_CreateCommonSpecFile(t *testing.T) {
 		// Find the common device
 		for _, device := range spec.Devices {
 			if device.Name == cdiCommonDeviceName {
+				assert.Contains(t, device.ContainerEdits.Env, "TOPOLOGY_CM_NAMESPACE=fake-gpu-operator",
+					"nvidia-smi needs the namespace to reach the topology server")
 				// Verify NODE_NAME environment variable exists
 				if device.ContainerEdits.Env != nil {
 					for _, env := range device.ContainerEdits.Env {

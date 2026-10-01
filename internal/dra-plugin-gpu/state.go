@@ -59,12 +59,12 @@ type DeviceState struct {
 }
 
 // waitForTopology polls for the topology from the HTTP server every 3 seconds until available.
-func waitForTopology(ctx context.Context, nodeName string) (AllocatableDevices, error) {
+func waitForTopology(ctx context.Context, namespace, nodeName string) (AllocatableDevices, error) {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
 	for {
-		allocatable, err := enumerateAllPossibleDevices(nodeName)
+		allocatable, err := enumerateAllPossibleDevices(namespace, nodeName)
 		if err == nil {
 			log.Printf("Successfully fetched topology from server, deviceCount=%d", len(allocatable))
 			return allocatable, nil
@@ -80,7 +80,7 @@ func waitForTopology(ctx context.Context, nodeName string) (AllocatableDevices, 
 }
 
 func NewDeviceState(ctx context.Context, config *Config, helper *kubeletplugin.Helper) (*DeviceState, error) {
-	allocatable, err := waitForTopology(ctx, config.Flags.NodeName)
+	allocatable, err := waitForTopology(ctx, config.Flags.Namespace, config.Flags.NodeName)
 	if err != nil {
 		return nil, fmt.Errorf("error enumerating all possible devices: %v", err)
 	}

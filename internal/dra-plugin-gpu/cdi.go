@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/run-ai/fake-gpu-operator/internal/common/constants"
 	cdiapi "tags.cncf.io/container-device-interface/pkg/cdi"
 	cdiparser "tags.cncf.io/container-device-interface/pkg/parser"
 	cdispec "tags.cncf.io/container-device-interface/specs-go"
@@ -18,8 +19,9 @@ const (
 )
 
 type CDIHandler struct {
-	cache    *cdiapi.Cache
-	nodeName string
+	cache     *cdiapi.Cache
+	nodeName  string
+	namespace string
 }
 
 func NewCDIHandler(config *Config) (*CDIHandler, error) {
@@ -30,8 +32,9 @@ func NewCDIHandler(config *Config) (*CDIHandler, error) {
 		return nil, fmt.Errorf("unable to create a new CDI cache: %w", err)
 	}
 	handler := &CDIHandler{
-		cache:    cache,
-		nodeName: config.Flags.NodeName,
+		cache:     cache,
+		nodeName:  config.Flags.NodeName,
+		namespace: config.Flags.Namespace,
 	}
 
 	return handler, nil
@@ -46,6 +49,7 @@ func (cdi *CDIHandler) CreateCommonSpecFile() error {
 				ContainerEdits: cdispec.ContainerEdits{
 					Env: []string{
 						fmt.Sprintf("NODE_NAME=%s", cdi.nodeName),
+						fmt.Sprintf("%s=%s", constants.EnvTopologyCmNamespace, cdi.namespace),
 					},
 					Mounts: []*cdispec.Mount{
 						{
