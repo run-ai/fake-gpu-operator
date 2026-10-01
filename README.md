@@ -66,11 +66,14 @@ metadata:
 spec:
   containers:
   - name: gpu-container
-    image: nvidia/cuda-vector-add:v0.1
+    image: ubuntu:22.04
+    command: ["bash", "-c", "nvidia-smi && sleep infinity"]
     resources:
       limits:
         nvidia.com/gpu: 1
 ```
+
+The GPUs are simulated, so the pod can't run real CUDA code. The operator mounts a simulated `nvidia-smi` into the container; check it with `kubectl logs gpu-pod`.
 
 ## 🛠️ Configuration
 
