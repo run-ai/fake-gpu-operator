@@ -16,6 +16,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   are now normalized instead of parsed as empty pools. Before this, adding any
   `gpu:` pool (for example the mock-backend example in the README) left the
   chart's default `Tesla-K80` pool with zero GPUs.
+- `nvidia-smi` and the DRA plugin now reach the topology server in the
+  namespace the chart is installed in. Both had `gpu-operator` hardcoded, so
+  installing into any other namespace broke `nvidia-smi` and left the DRA
+  plugin without devices. The device plugin and the DRA CDI spec now pass
+  `TOPOLOGY_CM_NAMESPACE` into GPU containers.
+- The status-updater now tracks `nvidia.com/gpu` requests from every container
+  in a pod. It only read the first container, so a pod whose GPU container was
+  not first got no allocation, no metrics and no `nvidia-smi` devices.
+- Knative inference utilization now reports the pod's total request rate. The
+  query added `kube_pod_info` (always 1) instead of multiplying by it, so idle
+  pods showed 1% and busy pods showed one response code's rate plus 1.
+- The README and `docs/fake-nrt.md` now enable NRT publishing with
+  `statusExporter.nodeResourceTopology.enabled`. They named a
+  `statusUpdater` key the chart never reads.
+- The README quickstart pod used `nvidia/cuda-vector-add:v0.1`, which does not
+  exist on Docker Hub. It now runs `nvidia-smi` in `ubuntu:22.04`.
 - A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
   pool is no longer silently dropped during normalization, so such pools now get
   their `NodeResourceTopology` published when
