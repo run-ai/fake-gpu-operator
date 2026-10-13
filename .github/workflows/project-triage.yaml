@@ -1,0 +1,412 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Project Triage
+
+# Moves issues on the GitHub Project board out of the triage column once they
+# have been triaged, so nobody has to drag cards by hand.
+#
+# The rule, evaluated for every project item whose content is an Issue:
+#
+#   Status == "Needs Triage"  AND  Priority is set (any value)
+#   AND (the issue has a label starting with `area/`  OR  that check is off)
+#     => set Status to "Backlog"
+#
+# Pull requests and draft issues on the board are ignored, and so are closed
+# issues. Items are read and written only through the Projects (v2) GraphQL
+# API; nothing on the issue itself is changed.
+#
+# Why a schedule plus an `issues` fast path
+#
+# Editing a Project field (Status, Priority, ...) emits no GitHub Actions
+# event, so there is nothing to subscribe to. The workflow therefore runs on
+# a 15-minute schedule and sweeps every item of the project; a field edit may
+# take up to 15 minutes to be picked up. Label changes on an issue DO raise
+# `issues` events, so those run a fast path that evaluates just that issue.
+# `workflow_dispatch` runs a sweep by hand, in dry-run mode by default.
+#
+# Token
+#
+# The default GITHUB_TOKEN cannot read or write organization Projects. Set the
+# `PROJECT_TOKEN` secret to one of:
+#
+#   - a fine-grained personal access token with resource owner = the
+#     organization, Organization permission "Projects: read and write", and
+#     repository permission "Issues: read" on every repository whose issues
+#     are on the board (the token also needs repository access to them), or
+#   - a classic token with the `project` and `repo` scopes.
+#
+# The workflow fails fast with a clear message when the secret is empty.
+#
+# Revert (optional, off by default)
+#
+# With `revert: true` an issue that sits in the target status but no longer
+# meets the rule (its Priority was cleared, or its area label was removed) is
+# moved back to the triage status. The Projects API gives no per-field
+# timestamps, so "neither the project item nor the issue changed for
+# `revert_grace_hours` hours" is the proxy for "nobody is mid-edit": without
+# it, clearing the Priority to pick another value would flip the card back
+# and forth. Closed issues are never reverted either.
+#
+# Reuse in other repositories
+#
+# Any repository whose issues are on a Project can call this workflow. The
+# area-label condition is specific to this repository; others turn it off:
+#
+#     name: Project Triage
+#     on:
+#       schedule: [{ cron: "*/15 * * * *" }]
+#       issues: { types: [opened, reopened, labeled, unlabeled] }
+#     permissions: {}
+#     jobs:
+#       triage:
+#         uses: run-ai/fake-gpu-operator/.github/workflows/project-triage.yaml@main
+#         permissions: { contents: read, issues: read }
+#         with: { project_owner: run-ai, project_number: 15, require_area_label: false }
+#         secrets:
+#           PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+#
+# All inputs are optional; see `workflow_call.inputs` below for the defaults.
+on:
+  schedule:
+    # Project field edits raise no event; sweep the board every 15 minutes.
+    - cron: "*/15 * * * *"
+  issues:
+    # Fast path: evaluate just this issue right after a label change.
+    types: [opened, reopened, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what would change; do not write to the project."
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      project_owner:
+        description: "Organization (or user) that owns the project."
+        type: string
+        default: run-ai
+      project_number:
+        description: "Project number as shown in its URL."
+        type: number
+        default: 15
+      require_area_label:
+        description: "Require a label starting with `area_label_prefix` before promoting."
+        type: boolean
+        default: true
+      area_label_prefix:
+        description: "Label prefix that marks a triaged area."
+        type: string
+        default: area/
+      triage_status:
+        description: "Status option items wait in until triaged."
+        type: string
+        default: Needs Triage
+      target_status:
+        description: "Status option triaged items are moved to."
+        type: string
+        default: Backlog
+      priority_field:
+        description: "Name of the single-select field that must be set."
+        type: string
+        default: Priority
+      revert:
+        description: "Move items back to `triage_status` when they no longer meet the rule."
+        type: boolean
+        default: false
+      revert_grace_hours:
+        description: "Hours the item and issue must be untouched before a revert."
+        type: number
+        default: 24
+      dry_run:
+        description: "Only report what would change; do not write to the project."
+        type: boolean
+        default: false
+    secrets:
+      PROJECT_TOKEN:
+        description: "Token that can read and write the project (see the header comment)."
+        required: true
+
+permissions: {}
+
+jobs:
+  triage:
+    name: Move triaged issues to backlog
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Never run two sweeps of the same project at once; let the earlier one finish.
+    concurrency:
+      group: project-triage-${{ inputs.project_owner || 'run-ai' }}-${{ inputs.project_number || 15 }}
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - name: Evaluate project items
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          # On `schedule` and `issues` runs the `inputs` context is empty, so every
+          # value falls back to the `workflow_call` default. Booleans need care: an
+          # absent input is null, and GitHub coerces null == false to true, so
+          # `inputs.x || 'true'` and `inputs.x == false` both misfire. format()
+          # renders null as '' (falsy) and false as the non-empty string 'false'
+          # (truthy), which makes `format('{0}', inputs.x) || '<default>'` pick the
+          # default only when the input is absent. The script compares strings.
+          PROJECT_OWNER: ${{ inputs.project_owner || 'run-ai' }}
+          PROJECT_NUMBER: ${{ format('{0}', inputs.project_number) || '15' }}
+          REQUIRE_AREA_LABEL: ${{ format('{0}', inputs.require_area_label) || 'true' }}
+          AREA_LABEL_PREFIX: ${{ inputs.area_label_prefix || 'area/' }}
+          TRIAGE_STATUS: ${{ inputs.triage_status || 'Needs Triage' }}
+          TARGET_STATUS: ${{ inputs.target_status || 'Backlog' }}
+          PRIORITY_FIELD: ${{ inputs.priority_field || 'Priority' }}
+          REVERT: ${{ format('{0}', inputs.revert) || 'false' }}
+          REVERT_GRACE_HOURS: ${{ format('{0}', inputs.revert_grace_hours) || '24' }}
+          DRY_RUN: ${{ format('{0}', inputs.dry_run) || 'false' }}
+        with:
+          script: |
+            const env = process.env;
+            const flag = (value) => String(value).toLowerCase() === 'true';
+            const cfg = {
+              owner: env.PROJECT_OWNER,
+              number: Number(env.PROJECT_NUMBER),
+              requireAreaLabel: flag(env.REQUIRE_AREA_LABEL),
+              areaLabelPrefix: env.AREA_LABEL_PREFIX,
+              triageStatus: env.TRIAGE_STATUS,
+              targetStatus: env.TARGET_STATUS,
+              priorityField: env.PRIORITY_FIELD,
+              revert: flag(env.REVERT),
+              revertGraceHours: Number(env.REVERT_GRACE_HOURS),
+              dryRun: flag(env.DRY_RUN),
+            };
+            const token = env.PROJECT_TOKEN || '';
+            if (!token) {
+              core.setFailed(
+                'The PROJECT_TOKEN secret is empty. The default GITHUB_TOKEN cannot access ' +
+                'organization Projects; see the header comment of this workflow for the token to create.');
+              return;
+            }
+            if (!Number.isInteger(cfg.number) || cfg.number <= 0) {
+              core.setFailed(`project_number must be a positive integer, got "${env.PROJECT_NUMBER}".`);
+              return;
+            }
+            core.info(`Project ${cfg.owner}/${cfg.number}: "${cfg.triageStatus}" -> "${cfg.targetStatus}" ` +
+              `when ${cfg.priorityField} is set` +
+              (cfg.requireAreaLabel ? ` and a "${cfg.areaLabelPrefix}" label is present` : '') +
+              (cfg.revert ? `; revert after ${cfg.revertGraceHours}h` : '') +
+              (cfg.dryRun ? ' [dry run]' : ''));
+
+            // The pure decision for one item. Kept free of I/O so it can be unit-tested
+            // by copying it verbatim. Returns { action: 'PROMOTE' | 'REVERT' | 'NOOP', reason }.
+            const decide = ({ status, prioritySet, hasArea, issueState, itemUpdatedAt, issueUpdatedAt, now, cfg }) => {
+              if (issueState === 'CLOSED') return { action: 'NOOP', reason: 'issue is closed' };
+              const triaged = prioritySet && hasArea;
+              if (status === cfg.triageStatus) {
+                if (triaged) return { action: 'PROMOTE', reason: 'priority set and area label present' };
+                const missing = [];
+                if (!prioritySet) missing.push(`${cfg.priorityField} not set`);
+                if (!hasArea) missing.push(`no ${cfg.areaLabelPrefix} label`);
+                return { action: 'NOOP', reason: missing.join(', ') };
+              }
+              if (cfg.revert && status === cfg.targetStatus && !triaged) {
+                // No per-field timestamps exist, so require the whole item and issue to be
+                // idle for the grace period before treating the missing data as intended.
+                const lastTouched = Math.max(Date.parse(itemUpdatedAt), Date.parse(issueUpdatedAt));
+                const idleHours = (now - lastTouched) / 3600000;
+                if (idleHours >= cfg.revertGraceHours) {
+                  return { action: 'REVERT', reason: `${!prioritySet ? `${cfg.priorityField} not set` : `no ${cfg.areaLabelPrefix} label`}, idle ${Math.floor(idleHours)}h` };
+                }
+                return { action: 'NOOP', reason: 'no longer meets the rule but inside the grace period' };
+              }
+              return { action: 'NOOP', reason: `status is "${status || 'unset'}"` };
+            };
+
+            const graphql = async (query, variables) => {
+              const response = await fetch('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'project-triage',
+                },
+                body: JSON.stringify({ query, variables }),
+              });
+              const payload = await response.json().catch(() => ({}));
+              if (!response.ok || payload.errors) {
+                const detail = payload.errors ? payload.errors.map(e => e.message).join('; ') : `HTTP ${response.status}`;
+                throw new Error(detail);
+              }
+              return payload.data;
+            };
+
+            // 1. The project, its Status/Priority fields and the two Status options.
+            const projectSelection = `
+              projectV2(number: $number) {
+                id title
+                fields(first: 50) {
+                  nodes {
+                    ... on ProjectV2SingleSelectField { id name options { id name } }
+                    ... on ProjectV2Field { id name }
+                  }
+                }
+              }`;
+            let project = null;
+            for (const kind of ['organization', 'user']) {
+              try {
+                const data = await graphql(
+                  `query($login: String!, $number: Int!) { ${kind}(login: $login) { ${projectSelection} } }`,
+                  { login: cfg.owner, number: cfg.number });
+                project = data[kind] && data[kind].projectV2;
+                if (project) break;
+              } catch (error) {
+                core.debug(`${kind}(${cfg.owner}) lookup: ${error.message}`);
+              }
+            }
+            if (!project) {
+              core.setFailed(`Project ${cfg.number} of "${cfg.owner}" was not found or PROJECT_TOKEN cannot read it.`);
+              return;
+            }
+            const fields = project.fields.nodes.filter(f => f && f.name);
+            const statusField = fields.find(f => f.name === 'Status' && f.options);
+            const priorityField = fields.find(f => f.name === cfg.priorityField);
+            const option = name => statusField && statusField.options.find(o => o.name === name);
+            const triageOption = option(cfg.triageStatus);
+            const targetOption = option(cfg.targetStatus);
+            const problems = [];
+            if (!statusField) problems.push('no single-select field named "Status"');
+            if (statusField && !triageOption) problems.push(`Status has no option "${cfg.triageStatus}"`);
+            if (statusField && !targetOption) problems.push(`Status has no option "${cfg.targetStatus}"`);
+            if (!priorityField) problems.push(`no field named "${cfg.priorityField}"`);
+            if (problems.length) {
+              core.setFailed(`Project "${project.title}": ${problems.join('; ')}.`);
+              return;
+            }
+
+            // 2. The items to evaluate: the one issue of an `issues` event, else the whole board.
+            const fieldValuesSelection = `
+              fieldValues(first: 30) {
+                nodes {
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    name field { ... on ProjectV2SingleSelectField { name } }
+                  }
+                }
+              }`;
+            const issueSelection = `
+              id number title url state updatedAt
+              labels(first: 100) { nodes { name } }
+              repository { nameWithOwner }`;
+            const items = [];
+            if (context.eventName === 'issues') {
+              const issueId = context.payload.issue.node_id;
+              const data = await graphql(`
+                query($id: ID!) {
+                  node(id: $id) {
+                    ... on Issue {
+                      ${issueSelection}
+                      projectItems(first: 20) {
+                        nodes {
+                          id updatedAt
+                          project { number owner { ... on Organization { login } ... on User { login } } }
+                          ${fieldValuesSelection}
+                        }
+                      }
+                    }
+                  }
+                }`, { id: issueId });
+              const issue = data.node;
+              for (const node of (issue && issue.projectItems.nodes) || []) {
+                const sameProject = node.project.number === cfg.number &&
+                  String(node.project.owner.login).toLowerCase() === cfg.owner.toLowerCase();
+                if (sameProject) items.push({ ...node, content: { __typename: 'Issue', ...issue } });
+              }
+              if (items.length === 0) {
+                core.info(`Issue #${context.payload.issue.number} is not on project ${cfg.owner}/${cfg.number}; nothing to do.`);
+                return;
+              }
+            } else {
+              let cursor = null;
+              do {
+                const data = await graphql(`
+                  query($id: ID!, $cursor: String) {
+                    node(id: $id) {
+                      ... on ProjectV2 {
+                        items(first: 100, after: $cursor) {
+                          nodes {
+                            id updatedAt
+                            ${fieldValuesSelection}
+                            content { __typename ... on Issue { ${issueSelection} } }
+                          }
+                          pageInfo { hasNextPage endCursor }
+                        }
+                      }
+                    }
+                  }`, { id: project.id, cursor });
+                const page = data.node.items;
+                items.push(...page.nodes);
+                cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+              } while (cursor);
+            }
+
+            // 3. Decide, 4. mutate.
+            const mutation = `
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId, itemId: $itemId, fieldId: $fieldId,
+                  value: { singleSelectOptionId: $optionId }
+                }) { projectV2Item { id } }
+              }`;
+            const now = Date.now();
+            const prefix = cfg.areaLabelPrefix.toLowerCase();
+            const counts = { PROMOTE: 0, REVERT: 0, NOOP: 0, skipped: 0 };
+            const rows = [];
+            for (const item of items) {
+              const issue = item.content;
+              if (!issue || issue.__typename !== 'Issue') { counts.skipped++; continue; }
+              const name = `${issue.repository.nameWithOwner}#${issue.number}`;
+              const value = fieldName => {
+                const v = item.fieldValues.nodes.find(n => n && n.field && n.field.name === fieldName);
+                return v && v.name ? v.name : '';
+              };
+              const status = value('Status');
+              const priority = value(cfg.priorityField);
+              const areaLabels = issue.labels.nodes.map(l => l.name).filter(l => l.toLowerCase().startsWith(prefix));
+              const { action, reason } = decide({
+                status,
+                prioritySet: priority !== '',
+                hasArea: !cfg.requireAreaLabel || areaLabels.length > 0,
+                issueState: issue.state,
+                itemUpdatedAt: item.updatedAt,
+                issueUpdatedAt: issue.updatedAt,
+                now, cfg,
+              });
+              counts[action]++;
+              if (action === 'NOOP') { core.debug(`NOOP ${name}: ${reason}`); continue; }
+
+              const [from, to] = action === 'PROMOTE'
+                ? [cfg.triageStatus, targetOption] : [cfg.targetStatus, triageOption];
+              const detail = `priority ${priority || 'none'}, ${areaLabels.length ? areaLabels.join(' ') : 'no area label'}`;
+              core.info(`${cfg.dryRun ? 'DRY-RUN ' : ''}${action} ${name}  ${from} -> ${to.name}  (${detail})`);
+              rows.push([`<a href="${issue.url}">${name}</a>`, action, priority || '-', areaLabels.join(', ') || '-', reason]);
+              if (cfg.dryRun) continue;
+              try {
+                await graphql(mutation, {
+                  projectId: project.id, itemId: item.id, fieldId: statusField.id, optionId: to.id,
+                });
+              } catch (error) {
+                core.setFailed(`${action} ${name} failed: ${error.message}`);
+              }
+            }
+
+            // 5. Report.
+            const summaryLine = `${items.length} item(s) examined: ${counts.PROMOTE} promoted, ${counts.REVERT} reverted, ` +
+              `${counts.NOOP} unchanged, ${counts.skipped} skipped (not issues)${cfg.dryRun ? ' [dry run: nothing written]' : ''}.`;
+            core.info(summaryLine);
+            const summary = core.summary
+              .addHeading(`Project triage: ${project.title}`, 3)
+              .addRaw(summaryLine, true);
+            if (rows.length) {
+              summary.addTable([
+                ['Issue', 'Action', cfg.priorityField, 'Area labels', 'Reason'].map(data => ({ data, header: true })),
+                ...rows,
+              ]);
+            }
+            await summary.write();
