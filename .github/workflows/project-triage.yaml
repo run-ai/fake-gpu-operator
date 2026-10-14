@@ -20,8 +20,8 @@ name: Project Triage
 #
 # Editing a Project field (Status, Priority, ...) emits no GitHub Actions
 # event, so there is nothing to subscribe to. The workflow therefore runs on
-# a 15-minute schedule and sweeps every item of the project; a field edit may
-# take up to 15 minutes to be picked up. Label changes on an issue DO raise
+# a 5-minute schedule and sweeps every item of the project; a field edit may
+# take up to 5 minutes to be picked up. Label changes on an issue DO raise
 # `issues` events, so those run a fast path that evaluates just that issue.
 # `workflow_dispatch` runs a sweep by hand, in dry-run mode by default.
 #
@@ -55,7 +55,7 @@ name: Project Triage
 #
 #     name: Project Triage
 #     on:
-#       schedule: [{ cron: "*/15 * * * *" }]
+#       schedule: [{ cron: "*/5 * * * *" }]
 #       issues: { types: [opened, reopened, labeled, unlabeled] }
 #     permissions: {}
 #     jobs:
@@ -69,8 +69,8 @@ name: Project Triage
 # All inputs are optional; see `workflow_call.inputs` below for the defaults.
 on:
   schedule:
-    # Project field edits raise no event; sweep the board every 15 minutes.
-    - cron: "*/15 * * * *"
+    # Project field edits raise no event; sweep the board every 5 minutes.
+    - cron: "*/5 * * * *"
   issues:
     # Fast path: evaluate just this issue right after a label change.
     types: [opened, reopened, labeled, unlabeled]
