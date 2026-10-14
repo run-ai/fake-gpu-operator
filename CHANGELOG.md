@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The CI `lint` job failed on every pull request once `setup-go` resolved
+  `1.27` to Go 1.27.2, whose standard-library export data the pinned
+  `golangci-lint v2.13.2` (built with Go 1.27.0) could not read. Bumped the pin
+  to `v2.14.0`, verified against Go 1.27.0 and 1.27.2.
+  ([#280](https://github.com/run-ai/fake-gpu-operator/issues/280))
 - A `numa` block on an old-format (flat `gpuCount`/`gpuProduct`/`gpuMemory`) node
   pool is no longer silently dropped during normalization, so such pools now get
   their `NodeResourceTopology` published when
