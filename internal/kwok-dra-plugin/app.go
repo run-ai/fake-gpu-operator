@@ -19,6 +19,7 @@ import (
 type KWOKDraPluginAppConfiguration struct {
 	TopologyCmName      string `mapstructure:"TOPOLOGY_CM_NAME" validate:"required"`
 	TopologyCmNamespace string `mapstructure:"TOPOLOGY_CM_NAMESPACE" validate:"required"`
+	GpuDeviceNaming     string `mapstructure:"GPU_DEVICE_NAMING"`
 }
 
 type KWOKDraPluginApp struct {
@@ -80,8 +81,13 @@ func (app *KWOKDraPluginApp) Init(stopCh chan struct{}) {
 		log.Fatalf("Failed to create kubernetes client: %v", err)
 	}
 
+	// An empty/unset value is handled by devicesFromTopology itself,
+	// which treats anything other than an explicit "deterministic" as
+	// "uuid" -- upstream's original, unconditional naming.
+	gpuDeviceNaming := viper.GetString(constants.EnvGpuDeviceNaming)
+
 	// Setup ConfigMap reconciler
-	if err := cmcontroller.SetupWithManager(app.mgr, kubeClient, namespace, topologyCMName); err != nil {
+	if err := cmcontroller.SetupWithManager(app.mgr, kubeClient, namespace, topologyCMName, gpuDeviceNaming); err != nil {
 		log.Fatalf("Failed to setup ConfigMap controller: %v", err)
 	}
 }

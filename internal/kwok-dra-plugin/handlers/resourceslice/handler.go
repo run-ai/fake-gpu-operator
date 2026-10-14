@@ -30,15 +30,17 @@ type Interface interface {
 
 // ResourceSliceHandler handles ResourceSlice operations for KWOK nodes
 type ResourceSliceHandler struct {
-	kubeClient kubernetes.Interface
+	kubeClient      kubernetes.Interface
+	gpuDeviceNaming string
 }
 
 var _ Interface = &ResourceSliceHandler{}
 
 // NewResourceSliceHandler creates a new ResourceSliceHandler
-func NewResourceSliceHandler(kubeClient kubernetes.Interface) *ResourceSliceHandler {
+func NewResourceSliceHandler(kubeClient kubernetes.Interface, gpuDeviceNaming string) *ResourceSliceHandler {
 	return &ResourceSliceHandler{
-		kubeClient: kubeClient,
+		kubeClient:      kubeClient,
+		gpuDeviceNaming: gpuDeviceNaming,
 	}
 }
 
@@ -127,14 +129,24 @@ func (h *ResourceSliceHandler) devicesFromTopology(nodeTopology *topology.NodeTo
 	// Convert GpuMemory from MB to bytes for resource.Quantity
 	memoryBytes := int64(nodeTopology.GpuMemory) * 1024 * 1024
 
-	for _, gpu := range nodeTopology.Gpus {
+	for i, gpu := range nodeTopology.Gpus {
 		if gpu.ID == "" {
 			log.Printf("Warning: GPU entry missing ID in topology, skipping")
 			continue
 		}
 
-		// Use ID (UUID) as device name, convert to lowercase for RFC 1123 compliance
-		deviceName := strings.ToLower(gpu.ID)
+		var deviceName string
+		if h.gpuDeviceNaming == constants.GpuDeviceNamingDeterministic {
+			// Use deterministic per-node sequential index (gpu-0, gpu-1, ...) matching real NVIDIA driver
+			deviceName = fmt.Sprintf("gpu-%d", i)
+		} else {
+			// UUID is upstream's original, unconditional naming -- the
+			// fallback for anything other than an explicit "deterministic"
+			// opt-in, so a zero-value handler (e.g. one constructed
+			// without going through NewResourceSliceHandler at all)
+			// still matches upstream's original behavior.
+			deviceName = strings.ToLower(gpu.ID)
+		}
 
 		// gpu.nvidia.com/* keys are required: upstream DeviceClass CEL reads
 		// device.attributes['gpu.nvidia.com'].type. Unqualified uuid/model kept for back-compat.

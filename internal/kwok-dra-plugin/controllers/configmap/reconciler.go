@@ -100,8 +100,8 @@ func isFakeGpuKWOKNodeConfigMap(cm *corev1.ConfigMap) bool {
 }
 
 // SetupWithManager creates and sets up the ConfigMap reconciler with the manager
-func SetupWithManager(mgr ctrl.Manager, kubeClient kubernetes.Interface, namespace, topologyCMName string) error {
-	handler := rshandler.NewResourceSliceHandler(kubeClient)
+func SetupWithManager(mgr ctrl.Manager, kubeClient kubernetes.Interface, namespace, topologyCMName, gpuDeviceNaming string) error {
+	handler := rshandler.NewResourceSliceHandler(kubeClient, gpuDeviceNaming)
 
 	reconciler := &ConfigMapReconciler{
 		Client:           mgr.GetClient(),
