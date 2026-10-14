@@ -38,7 +38,7 @@ name: Project Triage
 #
 # The workflow fails fast with a clear message when the secret is empty.
 #
-# Revert (optional, off by default)
+# Revert (on for this repository, off by default for callers)
 #
 # With `revert: true` an issue that sits in the target status but no longer
 # meets the rule (its Priority was cleared, or its area label was removed) is
@@ -46,7 +46,9 @@ name: Project Triage
 # timestamps, so "neither the project item nor the issue changed for
 # `revert_grace_hours` hours" is the proxy for "nobody is mid-edit": without
 # it, clearing the Priority to pick another value would flip the card back
-# and forth. Closed issues are never reverted either.
+# and forth. Closed issues are never reverted either. This repository's own
+# scheduled runs enable the revert with the 24-hour grace; the `workflow_call`
+# input stays `false` so other repositories opt in explicitly.
 #
 # Reuse in other repositories
 #
@@ -159,7 +161,7 @@ jobs:
           TRIAGE_STATUS: ${{ inputs.triage_status || 'Needs Triage' }}
           TARGET_STATUS: ${{ inputs.target_status || 'Backlog' }}
           PRIORITY_FIELD: ${{ inputs.priority_field || 'Priority' }}
-          REVERT: ${{ format('{0}', inputs.revert) || 'false' }}
+          REVERT: ${{ format('{0}', inputs.revert) || 'true' }}
           REVERT_GRACE_HOURS: ${{ format('{0}', inputs.revert_grace_hours) || '24' }}
           DRY_RUN: ${{ format('{0}', inputs.dry_run) || 'false' }}
         with:
