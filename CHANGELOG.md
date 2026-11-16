@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `status-exporter` no longer busy-loops once the apiserver closes its topology
+  ConfigMap watch (30-60 min after start by default). It pinned its CPU limit and
+  stopped receiving topology updates, falling back to the
+  `TOPOLOGY_MAX_EXPORT_INTERVAL` poll. The watch is now re-opened when it closes.
+  ([#ISSUE](https://github.com/run-ai/fake-gpu-operator/issues/ISSUE))
 - The CI `lint` job failed on every pull request once `setup-go` resolved
   `1.27` to Go 1.27.2, whose standard-library export data the pinned
   `golangci-lint v2.13.2` (built with Go 1.27.0) could not read. Bumped the pin
