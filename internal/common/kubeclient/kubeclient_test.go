@@ -16,7 +16,9 @@ import (
 // The apiserver closes every watch after a timeout. The client must re-open it
 // (retrying failures) and keep delivering updates, not spin on the closed channel.
 func TestWatchConfigMapSurvivesClosedWatch(t *testing.T) {
+	defaultRetryInterval := watchRetryInterval
 	watchRetryInterval = time.Millisecond
+	t.Cleanup(func() { watchRetryInterval = defaultRetryInterval })
 
 	clientset := fake.NewClientset()
 	watchers := make(chan *watch.FakeWatcher, 3)
